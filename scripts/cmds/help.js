@@ -17,29 +17,30 @@ module.exports = {
     // 🔥 HELP ANGEL (IMAGE + MENU)
     if (args[0]?.toLowerCase() === "angel") {
 
-      const imageURL = "https://i.imgur.com/TON_IMAGE.png"; // ⚠️ remplace
+      // ⚠️ IMPORTANT : mettre un lien DIRECT (.jpg / .png)
+      const imageURL = "https://ibb.co/v6jv1q0H.jpg";
 
       const menu = `
 ━━━━━━━━━━━━━━
 𝙰𝚟𝚊𝚒𝚕𝚊𝚋𝚕𝚎 𝙲𝚘𝚖𝚖𝚊𝚗𝚍𝚜:
 ━━━━━━━━━━━━━━
 ┍─━〔 🤖 | 𝐀𝐈 〕
-╎ᯓ✧. ai
-╎ᯓ✧. ask
-╎ᯓ✧. gemini
+╎ᯓ✧ ai
+╎ᯓ✧ ask
+╎ᯓ✧ gemini
 ┕━─────୨ৎ─────━ᥫ᭡
 ┍─━〔 💖 | LOVE 〕
-╎ᯓ✧. kiss
-╎ᯓ✧. hug
-╎ᯓ✧. couple
+╎ᯓ✧ kiss
+╎ᯓ✧ hug
+╎ᯓ✧ couple
 ┕━─────୨ৎ─────━ᥫ᭡
 ┍─━〔 🎮 | GAME 〕
-╎ᯓ✧. quiz
-╎ᯓ✧. ttt
+╎ᯓ✧ quiz
+╎ᯓ✧ ttt
 ┕━─────୨ৎ─────━ᥫ᭡
 
 ╭──────୨ৎ──────╮
-╎ ⚡️ Prefix: !
+╎ ⚡ Prefix: !
 ╎ 👑 Owner: SHADE
 ╰──────୨ৎ──────╯
 `;
@@ -48,6 +49,9 @@ module.exports = {
         body: "💖 Angel Menu",
         attachment: await global.utils.getStreamFromURL(imageURL)
       });
+
+      // ⚠️ sécurité
+      if (!global.GoatBot.onReply) global.GoatBot.onReply = new Map();
 
       global.GoatBot.onReply.set(msg.messageID, {
         commandName: "help",
