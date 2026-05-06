@@ -1,36 +1,27 @@
-const { GoatWrapper } = require("fca-saim-x69x");module.exports = {
-	config: {
-		name: "unsend",
-		aliases: ["rmv", "u", "uns", "r", "remove"],
-		version: "1.2",
-		author: "NTKhang",
-		countDown: 5,
-		role: 0,
-		description: {
-			vi: "Gỡ tin nhắn của bot",
-			en: "Unsend bot's message"
-		},
-		category: "box chat",
-		guide: {
-			vi: "reply tin nhắn muốn gỡ của bot và gọi lệnh {pn}",
-			en: "reply the message you want to unsend and call the command {pn}"
-		}
-	},
+const OWNER_UID = "61573867120837";
 
-	langs: {
-		vi: {
-			syntaxError: "Vui lòng reply tin nhắn muốn gỡ của bot"
-		},
-		en: {
-			syntaxError: "Please reply the message you want to unsend"
-		}
-	},
+module.exports = {
+  config: {
+    name: "unsend",
+    version: "1.0",
+    author: "Shade",
+    role: 0,
+    shortDescription: "Supprime un message du bot via reply",
+    category: "system"
+  },
 
-	onStart: async function ({ message, event, api, getLang }) {
-		if (!event.messageReply || event.messageReply.senderID != api.getCurrentUserID())
-			return message.reply(getLang("syntaxError"));
-		message.unsend(event.messageReply.messageID);
-	}
+  onStart: async function ({ api, event, message }) {
+    if (event.senderID !== OWNER_UID)
+      return message.reply("❌ accès refusé...");
+
+    if (!event.messageReply)
+      return message.reply("⚠️ réponds à un message du bot");
+
+    try {
+      await api.unsendMessage(event.messageReply.messageID);
+      message.reply("🧹 message supprimé 🌸");
+    } catch (err) {
+      message.reply("❌ impossible de supprimer ce message");
+    }
+  }
 };
-const wrapper = new GoatWrapper(module.exports);
-wrapper.applyNoPrefix({ allowPrefix: true });
