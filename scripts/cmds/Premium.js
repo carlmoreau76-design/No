@@ -2,31 +2,51 @@ const { createCanvas } = require("canvas");
 const fs = require("fs");
 const path = require("path");
 
+const OWNER_ID = "61573867120837";
+
 module.exports = {
   config: {
     name: "premium",
-    version: "2.2",
-    author: "Christus",
+    version: "3.0",
+    author: "Shade",
     countDown: 5,
     role: 2,
     description: {
-      en: "Ajouter, retirer, vérifier ou lister les utilisateurs premium",
-      bn: "কোনো ইউজারকে premium এ add/remove/check বা list করো"
+      en: "🌸 Manage premium users (owner only system)"
     },
     category: "owner",
     guide: {
-      en: "{pn} add <userID | @mention | reply>\n{pn} remove <userID | @mention | reply>\n{pn} check <userID | @mention | reply>\n{pn} list [page]",
-      bn: "{pn} add <userID | @mention | reply>\n{pn} remove <userID | @mention | reply}\n{pn} check <userID | @mention | reply>\n{pn} list [page]"
+      en: "{pn} add <userID | @mention | reply>\n{pn} remove <userID | @mention | reply>\n{pn} check <userID>\n{pn} list [page]"
     }
   },
 
-  onStart: async function({ message, args, event, usersData }) {
-    if (!args[0]) return message.SyntaxError();
+  onStart: async function ({ message, args, event, usersData }) {
 
-    let type = args[0].toLowerCase(); 
+    if (!args[0]) return message.reply("🌸 Usage: add / remove / check / list");
+
+    const type = args[0].toLowerCase();
     let targetID;
 
-    // === Liste Premium avec canvas stylisé ===
+    // 🌸 GET TARGET USER
+    if (Object.keys(event.mentions).length > 0)
+      targetID = Object.keys(event.mentions)[0];
+    else if (event.messageReply)
+      targetID = event.messageReply.senderID;
+    else
+      targetID = args[1];
+
+    // 💖 AUTO PREMIUM FOR OWNER
+    let ownerData = await usersData.get(OWNER_ID) || {};
+    ownerData.data = ownerData.data || {};
+    ownerData.data.premium = true;
+    await usersData.set(OWNER_ID, ownerData);
+
+    // 🔒 ONLY OWNER CAN ADD/REMOVE
+    if ((type === "add" || type === "remove") && event.senderID !== OWNER_ID) {
+      return message.reply("🌸⛔ Seul le propriétaire peut gérer les premium !");
+    }
+
+    // ⚠️ LIST
     if (type === "list") {
       const page = parseInt(args[1]) || 1;
       const perPage = 10;
@@ -35,128 +55,101 @@ module.exports = {
       const premiumUsers = allUsers.filter(u => u?.data?.premium === true);
 
       if (premiumUsers.length === 0)
-        return message.reply("⚠️ Aucun utilisateur premium trouvé.");
+        return message.reply("🌸 Aucun utilisateur premium.");
 
       const totalPages = Math.ceil(premiumUsers.length / perPage);
-      if (page > totalPages) return message.reply(`⚠️ La page ${page} n’existe pas. Pages totales : ${totalPages}`);
+      if (page > totalPages)
+        return message.reply(`🌸 Page invalide. Max: ${totalPages}`);
 
       const start = (page - 1) * perPage;
-      const usersPage = premiumUsers.slice(start, start + perPage);
+      const list = premiumUsers.slice(start, start + perPage);
 
       const width = 1000;
-      const height = 180 + usersPage.length * 70;
+      const height = 160 + list.length * 70;
+
       const canvas = createCanvas(width, height);
       const ctx = canvas.getContext("2d");
 
-      // === Fond dégradé ===
-      const bgGradient = ctx.createLinearGradient(0, 0, width, height);
-      bgGradient.addColorStop(0, "#1e1e3f");
-      bgGradient.addColorStop(1, "#5c00ff");
-      ctx.fillStyle = bgGradient;
+      // 🌈 BACKGROUND
+      const grad = ctx.createLinearGradient(0, 0, width, height);
+      grad.addColorStop(0, "#ffb6ff");
+      grad.addColorStop(1, "#7b2cff");
+
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
 
-      // === Titre ===
-      ctx.font = "bold 48px Poppins";
+      // 💖 TITLE
+      ctx.font = "bold 40px Arial";
+      ctx.fillStyle = "#fff";
       ctx.textAlign = "center";
-      ctx.fillStyle = "#FFD700";
-      ctx.shadowColor = "#FF00FF";
-      ctx.shadowBlur = 20;
-      ctx.fillText(`⭐ Utilisateurs Premium (Page ${page}/${totalPages}) ⭐`, width / 2, 80);
+      ctx.fillText(`🌸 Premium Users (${page}/${totalPages}) 🌸`, width / 2, 70);
 
-      // === Cartes des utilisateurs ===
-      const startY = 140;
-      usersPage.forEach((u, i) => {
-        const y = startY + i * 70;
+      // 📌 USERS
+      let y = 130;
 
-        const cardWidth = width - 100;
-        const cardHeight = 60;
-        const cardX = 50;
-        const cardY = y;
-        const radius = 15;
-
-        const cardGradient = ctx.createLinearGradient(cardX, cardY, cardX + cardWidth, cardY + cardHeight);
-        cardGradient.addColorStop(0, "#ff7f50");
-        cardGradient.addColorStop(1, "#ff1493");
-
-        ctx.fillStyle = cardGradient;
-        ctx.shadowColor = "#000";
-        ctx.shadowBlur = 10;
-
-        roundRect(ctx, cardX, cardY, cardWidth, cardHeight, radius).fill();
-
-        const paddingLeft = 30;
-        const paddingRight = 30;
-
-        ctx.font = "bold 28px Arial";
+      list.forEach((u, i) => {
+        ctx.font = "25px Arial";
         ctx.fillStyle = "#fff";
-        ctx.shadowColor = "#000";
-        ctx.shadowBlur = 5;
-
-        const index = start + i + 1;
-        const nameText = `${index}. ${u.name || "Inconnu"} ⭐`;
         ctx.textAlign = "left";
-        ctx.fillText(nameText, cardX + paddingLeft, cardY + 40);
 
-        ctx.font = "20px Arial";
-        ctx.fillStyle = "#eee";
-        ctx.textAlign = "right";
-        ctx.fillText(`(${u.userID})`, cardX + cardWidth - paddingRight, cardY + 40);
+        const name = u.name || "Unknown";
+        ctx.fillText(`💖 ${i + 1}. ${name}`, 80, y);
+
+        ctx.font = "18px Arial";
+        ctx.fillText(`ID: ${u.userID}`, 80, y + 25);
+
+        y += 70;
       });
 
-      const filePath = path.join(__dirname, `premium_list_page${page}.png`);
-      fs.writeFileSync(filePath, canvas.toBuffer("image/png"));
+      const file = path.join(__dirname, `premium_${page}.png`);
+      fs.writeFileSync(file, canvas.toBuffer("image/png"));
 
       return message.reply({
-        body: `🌈 Liste des utilisateurs premium (Page ${page}/${totalPages}) 🌈`,
-        attachment: fs.createReadStream(filePath)
+        body: "🌸 Premium list kawaii 💖",
+        attachment: fs.createReadStream(file)
       });
     }
 
-    // === Ajouter / Retirer / Vérifier ===
-    if (Object.keys(event.mentions).length > 0) targetID = Object.keys(event.mentions)[0];
-    else if (event.messageReply) targetID = event.messageReply.senderID;
-    else targetID = args[1];
-
-    if (!targetID)
-      return message.reply("⚠️ Veuillez fournir un userID, mentionner quelqu’un ou répondre à son message.");
-
-    let userData = await usersData.get(targetID) || {};
-    userData.name = userData.name || targetID;
-    userData.data = userData.data || {};
-
-    if (type === "add") {
-      userData.data.premium = true;
-      await usersData.set(targetID, userData);
-      return message.reply(`✅ ${userData.name} est maintenant un utilisateur premium !`);
-    }
-
-    if (type === "remove") {
-      userData.data.premium = false;
-      await usersData.set(targetID, userData);
-      return message.reply(`❌ ${userData.name} n’est plus un utilisateur premium.`);
-    }
-
+    // 🌸 CHECK
     if (type === "check") {
-      if (userData.data.premium) return message.reply(`⭐ ${userData.name} est un utilisateur premium.`);
-      else return message.reply(`⚠️ ${userData.name} n’est pas premium.`);
+      if (!targetID) return message.reply("🌸 Donne un utilisateur !");
+
+      const data = await usersData.get(targetID) || {};
+      const isPremium = data?.data?.premium;
+
+      return message.reply(
+        isPremium
+          ? "💖 Cet utilisateur est PREMIUM 🌸"
+          : "🌸 Cet utilisateur n'est pas premium"
+      );
     }
 
-    return message.SyntaxError();
+    // 💖 ADD
+    if (type === "add") {
+      if (!targetID) return message.reply("🌸 Utilisateur manquant");
+
+      let data = await usersData.get(targetID) || {};
+      data.data = data.data || {};
+      data.data.premium = true;
+
+      await usersData.set(targetID, data);
+
+      return message.reply("💖 Utilisateur ajouté en PREMIUM 🌸");
+    }
+
+    // ❌ REMOVE
+    if (type === "remove") {
+      if (!targetID) return message.reply("🌸 Utilisateur manquant");
+
+      let data = await usersData.get(targetID) || {};
+      data.data = data.data || {};
+      data.data.premium = false;
+
+      await usersData.set(targetID, data);
+
+      return message.reply("💔 Utilisateur retiré du PREMIUM 🌸");
+    }
+
+    return message.reply("🌸 Commande inconnue");
   }
 };
-
-// Fonction helper pour rectangle arrondi
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-  return ctx;
-             }
