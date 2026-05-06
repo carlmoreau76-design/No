@@ -10,35 +10,36 @@ module.exports = {
     aliases: ["upscale"],
     version: "1.1",
     role: 0,
-    author: "Christus",
+    author: "Shade",
     countDown: 10,
-    longDescription: "Améliore une image en résolution 4K.",
+    longDescription: "🌸 Améliore une image en qualité 4K magique ✨",
     category: "image",
     guide: {
-      en: "${pn} répondre à une image pour l'améliorer en 4K."
+      en: "${pn} reply to an image ✨"
     }
   },
 
   onStart: async function ({ message, event }) {
+
     if (
       !event.messageReply ||
       !event.messageReply.attachments ||
       !event.messageReply.attachments[0] ||
       event.messageReply.attachments[0].type !== "photo"
     ) {
-      return message.reply("📸 Veuillez répondre à une image pour l'améliorer.");
+      return message.reply("🌸 Oops ! Réponds à une image pour la transformer en 4K ✨📸");
     }
 
     const i = event.messageReply.attachments[0].url;
-    const t = p.join(__dirname, "cache", `upscaled_${Date.now()}.png`);
+    const t = p.join(__dirname, "cache", `angel_4k_${Date.now()}.png`);
     let m;
 
     try {
-      const r = await message.reply("🔄 Traitement de votre image, veuillez patienter...");
+      const r = await message.reply("🌸✨ Transformation magique en cours... patience 💫");
       m = r.messageID;
 
       const d = await a.get(`${u}?imageUrl=${encodeURIComponent(i)}`);
-      if (!d.data.status) throw new Error(d.data.message || "Erreur API");
+      if (!d.data.status) throw new Error(d.data.message || "API error");
 
       const x = await a.get(d.data.enhancedImageUrl, { responseType: "stream" });
       const w = f.createWriteStream(t);
@@ -50,12 +51,13 @@ module.exports = {
       });
 
       await message.reply({
-        body: "✅ Votre image améliorée en 4K est prête !",
+        body: "💖✨ Yay ! Ton image est maintenant en 4K ultra kawaii 🌸",
         attachment: f.createReadStream(t),
       });
+
     } catch (e) {
       console.error("Upscale Error:", e);
-      message.reply("❌ Une erreur est survenue lors de l'amélioration de l'image. Veuillez réessayer plus tard.");
+      message.reply("💔 Oops... la magie a échoué. Réessaie plus tard 🌸");
     } finally {
       if (m) message.unsend(m);
       if (f.existsSync(t)) f.unlinkSync(t);
