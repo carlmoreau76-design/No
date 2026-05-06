@@ -8,7 +8,7 @@ module.exports = {
     author: "Shade",
     countDown: 2,
     role: 0,
-    shortDescription: { en: "Angel auto menu" },
+    shortDescription: { en: "Angel kawaii menu" },
     category: "info",
     guide: { en: "help" }
   },
@@ -27,13 +27,12 @@ module.exports = {
     }
 
     let menu = `
-━━━━━━━━━━━━━━
-Angel 𝙲𝚘𝚖𝚖𝚊𝚗𝚍𝚜 💖:
+🌸 𝐀𝐍𝐆𝐄𝐋 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒 🌸
 ━━━━━━━━━━━━━━
 `;
 
     for (const cat of Object.keys(categories).sort()) {
-      menu += `┍─━〔 ✦ | ${cat.toUpperCase()} 〕\n`;
+      menu += `┍─━〔 🌷 | ${cat.toUpperCase()} 〕\n`;
 
       const cmds = categories[cat]
         .sort()
@@ -46,9 +45,9 @@ Angel 𝙲𝚘𝚖𝚖𝚊𝚗𝚍𝚜 💖:
 
     menu += `
 ╭──────୨ৎ──────╮
-╎ 🔢 Total: ${commands.size}
-╎ ⚡ Prefix: ${config.prefix || "!"}
-╎ 👑 Owner: SHADE
+╎ 🔢 Total : ${commands.size}
+╎ ⚡ Prefix : ${config.prefix || "!"}
+╎ 👑 Owner : SHADE
 ╰──────୨ৎ──────╯
 `;
 
@@ -58,7 +57,6 @@ Angel 𝙲𝚘𝚖𝚖𝚊𝚗𝚍𝚜 💖:
         attachment: await global.utils.getStreamFromURL(imageURL)
       });
     } catch (e) {
-      // fallback si image bug
       return message.reply(menu);
     }
   }
