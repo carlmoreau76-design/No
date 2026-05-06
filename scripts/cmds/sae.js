@@ -1,134 +1,184 @@
 const axios = require("axios");
 const fs = require("fs");
 
-const MEMORY_FILE = "./sae_memory.json";
-const OWNER_ID = "61573867120837";
+const memoryFile = "./sae_memory.json";
 
+// 👑 TON IDENTITÉ
+const CREATOR_UID = "61573867120837";
+const CREATOR_NAME = "Shade";
+
+// 🧠 mémoire
 let memory = {};
-if (fs.existsSync(MEMORY_FILE)) {
-	memory = JSON.parse(fs.readFileSync(MEMORY_FILE, "utf8"));
+if (fs.existsSync(memoryFile)) {
+  try {
+    memory = JSON.parse(fs.readFileSync(memoryFile, "utf8"));
+  } catch {
+    memory = {};
+  }
 }
 
 function saveMemory() {
-	fs.writeFileSync(MEMORY_FILE, JSON.stringify(memory, null, 2));
+  fs.writeFileSync(memoryFile, JSON.stringify(memory, null, 2));
 }
 
-// ✨ police italique
-function italic(text) {
-	const normal = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	const it = "𝘢𝘣𝘤𝘥𝘦𝘧𝘨𝘩𝘪𝘫𝘬𝘭𝘮𝘯𝘰𝘱𝘲𝘳𝘴𝘵𝘶𝘷𝘸𝘹𝘺𝘻𝘈𝘉𝘊𝘋𝘌𝘍𝘎𝘏𝘐𝘑𝘒𝘓𝘔𝘕𝘖𝘗𝘘𝘙𝘚𝘛𝘜𝘝𝘞𝘟𝘠𝘡";
-
-	return text.split("").map(c => {
-		const i = normal.indexOf(c);
-		return i !== -1 ? it[i] : c;
-	}).join("");
+// 💠 police stylée
+function font(text) {
+  const map = {
+    a:"𝘢",b:"𝘣",c:"𝘤",d:"𝘥",e:"𝘦",f:"𝘧",g:"𝘨",h:"𝘩",i:"𝘪",
+    j:"𝘫",k:"𝘬",l:"𝘭",m:"𝘮",n:"𝘯",o:"𝘰",p:"𝘱",q:"𝘲",r:"𝘳",
+    s:"𝘴",t:"𝘵",u:"𝘶",v:"𝘷",w:"𝘸",x:"𝘹",y:"𝘺",z:"𝘻"
+  };
+  return text.split("").map(c => map[c] || c).join("");
 }
 
+// 🧊 cadre Sae
 function frame(msg) {
-	return `╔═══ 🌑 SAE AI ═══╗\n${msg}\n╚══════════════╝`;
+  return `╭━━━ ❄️ 𝗦𝗔𝗘 𝗜𝗧𝗢𝗦𝗛𝗜 ❄️ ━━━╮\n${msg}\n╰━━━━━━━━━━━━━━━━━━╯`;
 }
 
-async function callSae(prompt) {
-	try {
-		const res = await axios.get(
-			`https://api.itsrose.rest/chatgpt?text=${encodeURIComponent(prompt)}`
-		);
-		return res.data.result || "Tch… vide.";
-	} catch {
-		return "…erreur.";
-	}
+// 🤖 IA API
+async function callAI(prompt) {
+  try {
+    const res = await axios.get("https://api.ryzumi.xyz/ai/gpt", {
+      params: { prompt }
+    });
+    return res.data.response || "…";
+  } catch {
+    return "Tch… système instable.";
+  }
 }
 
-function buildPrompt(uid, name, msg) {
-	if (!memory[uid]) memory[uid] = [];
+// 🧠 analyser relation utilisateur
+function getPersonality(userID) {
+  if (userID === CREATOR_UID) {
+    return "respect";
+  }
+  return "arrogant";
+}
 
-	memory[uid].push({ name, msg });
-	if (memory[uid].length > 40) memory[uid].shift();
-	saveMemory();
+// 💬 construire prompt Sae
+function buildPrompt(userID, userName, text, history) {
+  const mood = getPersonality(userID);
 
-	const history = memory[uid]
-		.map(m => `${m.name}: ${m.msg}`)
-		.join("\n");
+  let style = "";
 
-	return `
-Tu es SAE AI ❄️
-Inspiré de Sae Itoshi : froid, intelligent, supérieur.
+  if (mood === "respect") {
+    style = `
+Tu es Sae Itoshi.
+Utilisateur = TON CRÉATEUR (${CREATOR_NAME}).
+Tu es respectueux, calme, loyal.
+Tu réponds avec respect et calme absolu.
+`;
+  } else {
+    style = `
+Tu es Sae Itoshi.
+Tu es froid, arrogant, intelligent.
+Tu méprises légèrement les autres.
+Tu réponds court, précis, dominant.
+Pas d’émotions inutiles.
+`;
+  }
 
-Utilisateur : ${name} (${uid})
+  return `
+${style}
 
-Conversation :
-${history}
+Utilisateur: ${userName}
+Message: ${text}
 
-Utilisateur :
-${msg}
+Historique:
+${history.join("\n")}
 
-Réponds :
-- court
-- froid
-- intelligent
-- pas trop émotionnel
+Réponds naturellement comme Sae Itoshi.
 `;
 }
 
+// 💾 gérer mémoire
+function updateMemory(userID, text, reply) {
+  if (!memory[userID]) memory[userID] = [];
+
+  memory[userID].push(`🧍 ${text}`);
+  memory[userID].push(`❄️ ${reply}`);
+
+  if (memory[userID].length > 30) {
+    memory[userID].splice(0, 2);
+  }
+
+  saveMemory();
+}
+
 module.exports = {
-	config: {
-		name: "sae",
-		version: "2.0",
-		author: "Shade",
-		role: 0,
-		category: "ai"
-	},
+  config: {
+    name: "sae",
+    version: "2.0",
+    author: "Shade",
+    role: 0,
+    category: "ai",
+    shortDescription: "Sae Itoshi IA froide + respect créateur"
+  },
 
-	onStart: async function ({ event, args, message, api }) {
-		const text = args.join(" ");
-		if (!text) return message.reply("Tch… parle.");
+  onStart: async function ({ message, event, args, api }) {
+    const userID = event.senderID;
+    const userName =
+      (await api.getUserInfo(userID))[userID]?.name || "inconnu";
 
-		const uid = event.senderID;
-		const name = (await api.getUserInfo(uid))[uid]?.name || "user";
+    const text = args.join(" ");
+    if (!text) {
+      return message.reply(frame(font("… parle.")));
+    }
 
-		let prompt = buildPrompt(uid, name, text);
-		let reply = await callSae(prompt);
+    if (!memory[userID]) memory[userID] = [];
 
-		// 💙 SPECIAL OWNER (TOI = GOAT)
-		if (uid === OWNER_ID) {
-			reply = `…Shade.\nTu es le GOAT.\n${reply}\nJe t’écoute.`;
-		} else {
-			reply = "Tch… " + reply;
-		}
+    const prompt = buildPrompt(
+      userID,
+      userName,
+      text,
+      memory[userID]
+    );
 
-		// ✨ style italique
-		reply = italic(reply);
+    const reply = await callAI(prompt);
 
-		memory[uid].push({ name: "SAE", msg: reply });
-		saveMemory();
+    updateMemory(userID, text, reply);
 
-		return message.reply(frame(reply));
-	},
+    let finalText = reply;
 
-	onChat: async function ({ event, message, api }) {
-		if (!event.body) return;
+    // 👑 respect spécial pour toi
+    if (userID === CREATOR_UID) {
+      finalText = "… " + reply;
+    }
 
-		const match = event.body.match(/^sae\s+(.*)/i);
-		if (!match) return;
+    return message.reply(frame(font(finalText)));
+  },
 
-		const text = match[1];
-		const uid = event.senderID;
-		const name = (await api.getUserInfo(uid))[uid]?.name || "user";
+  onChat: async function ({ event, message, api }) {
+    if (!event.body) return;
+    if (!event.body.toLowerCase().startsWith("sae ")) return;
 
-		let prompt = buildPrompt(uid, name, text);
-		let reply = await callSae(prompt);
+    const text = event.body.slice(4).trim();
+    if (!text) return;
 
-		if (uid === OWNER_ID) {
-			reply = `…Shade.\nTu es le GOAT.\n${reply}\nJe t’écoute.`;
-		} else {
-			reply = "Tch… " + reply;
-		}
+    const userID = event.senderID;
+    const userName =
+      (await api.getUserInfo(userID))[userID]?.name || "inconnu";
 
-		reply = italic(reply);
+    if (!memory[userID]) memory[userID] = [];
 
-		memory[uid].push({ name: "SAE", msg: reply });
-		saveMemory();
+    const prompt = buildPrompt(
+      userID,
+      userName,
+      text,
+      memory[userID]
+    );
 
-		return message.reply(frame(reply));
-	}
+    const reply = await callAI(prompt);
+
+    updateMemory(userID, text, reply);
+
+    let finalText = reply;
+
+    if (userID === CREATOR_UID) {
+      finalText = "… " + reply;
+    }
+
+    return message.reply(frame(font(finalText)));
+  }
 };
