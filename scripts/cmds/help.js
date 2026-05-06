@@ -1,94 +1,65 @@
 const { commands } = global.GoatBot;
+const config = global.GoatBot.config;
 
 module.exports = {
   config: {
     name: "help",
-    version: "6.0",
+    version: "7.1",
     author: "Shade",
     countDown: 2,
     role: 0,
-    shortDescription: { en: "Show all commands" },
+    shortDescription: { en: "Angel auto menu" },
     category: "info",
-    guide: { en: "help | help angel" }
+    guide: { en: "help" }
   },
 
-  onStart: async function ({ message, args, event }) {
+  onStart: async function ({ message }) {
 
-    // 🔥 HELP ANGEL (IMAGE + MENU)
-    if (args[0]?.toLowerCase() === "angel") {
-
-      // ⚠️ IMPORTANT : mettre un lien DIRECT (.jpg / .png)
-      const imageURL = "https://ibb.co/v6jv1q0H.jpg";
-
-      const menu = `
-━━━━━━━━━━━━━━
-𝙰𝚟𝚊𝚒𝚕𝚊𝚋𝚕𝚎 𝙲𝚘𝚖𝚖𝚊𝚗𝚍𝚜:
-━━━━━━━━━━━━━━
-┍─━〔 🤖 | 𝐀𝐈 〕
-╎ᯓ✧ ai
-╎ᯓ✧ ask
-╎ᯓ✧ gemini
-┕━─────୨ৎ─────━ᥫ᭡
-┍─━〔 💖 | LOVE 〕
-╎ᯓ✧ kiss
-╎ᯓ✧ hug
-╎ᯓ✧ couple
-┕━─────୨ৎ─────━ᥫ᭡
-┍─━〔 🎮 | GAME 〕
-╎ᯓ✧ quiz
-╎ᯓ✧ ttt
-┕━─────୨ৎ─────━ᥫ᭡
-
-╭──────୨ৎ──────╮
-╎ ⚡ Prefix: !
-╎ 👑 Owner: SHADE
-╰──────୨ৎ──────╯
-`;
-
-      const msg = await message.reply({
-        body: "💖 Angel Menu",
-        attachment: await global.utils.getStreamFromURL(imageURL)
-      });
-
-      // ⚠️ sécurité
-      if (!global.GoatBot.onReply) global.GoatBot.onReply = new Map();
-
-      global.GoatBot.onReply.set(msg.messageID, {
-        commandName: "help",
-        type: "angelMenu",
-        author: event.senderID,
-        menu
-      });
-
-      return;
-    }
-
-    // 📚 HELP NORMAL
-    let body = "📚 LISTE DES COMMANDES\n\n";
+    const imageURL = "https://i.imgur.com/7g7Yd8v.png";
 
     const categories = {};
 
     for (let [name, cmd] of commands) {
-      const cat = cmd.config.category || "Autre";
+      const cat = cmd?.config?.category || "other";
+
       if (!categories[cat]) categories[cat] = [];
       categories[cat].push(name);
     }
 
-    for (const cat of Object.keys(categories)) {
-      body += `📂 ${cat}\n`;
-      body += categories[cat].map(c => `• ${c}`).join(" ") + "\n\n";
+    let menu = `
+━━━━━━━━━━━━━━
+Angel 𝙲𝚘𝚖𝚖𝚊𝚗𝚍𝚜 💖:
+━━━━━━━━━━━━━━
+`;
+
+    for (const cat of Object.keys(categories).sort()) {
+      menu += `┍─━〔 ✦ | ${cat.toUpperCase()} 〕\n`;
+
+      const cmds = categories[cat]
+        .sort()
+        .map(c => `╎ᯓ✧ ${c}`)
+        .join("\n");
+
+      menu += cmds + "\n";
+      menu += `┕━─────୨ৎ─────━ᥫ᭡\n`;
     }
 
-    body += `🔢 Total: ${commands.size}\n`;
-    body += `⚡ Prefix: *`;
+    menu += `
+╭──────୨ৎ──────╮
+╎ 🔢 Total: ${commands.size}
+╎ ⚡ Prefix: ${config.prefix || "!"}
+╎ 👑 Owner: SHADE
+╰──────୨ৎ──────╯
+`;
 
-    return message.reply(body);
-  },
-
-  // 🔥 REPLY SUR IMAGE
-  onReply: async function ({ message, Reply }) {
-    if (Reply.type === "angelMenu") {
-      return message.reply(Reply.menu);
+    try {
+      return message.reply({
+        body: menu,
+        attachment: await global.utils.getStreamFromURL(imageURL)
+      });
+    } catch (e) {
+      // fallback si image bug
+      return message.reply(menu);
     }
   }
 };
