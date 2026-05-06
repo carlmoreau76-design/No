@@ -1,11 +1,25 @@
 const createFuncMessage = global.utils.message;
 const handlerCheckDB = require("./handlerCheckData.js");
+const fs = require("fs");
+
+// 😴 FILE SLEEP MODE
+const FILE_PATH = "./scripts/cmds/cache/bot_status.json";
+
+function isSleeping() {
+	if (!fs.existsSync(FILE_PATH)) return false;
+	const data = JSON.parse(fs.readFileSync(FILE_PATH));
+	return data.sleep === true;
+}
 
 module.exports = (api, threadModel, userModel, dashBoardModel, globalModel, usersData, threadsData, dashBoardData, globalData) => {
-	const handlerEvents = require(process.env.NODE_ENV == 'development' ? "./handlerEvents.dev.js" : "./handlerEvents.js")(api, threadModel, userModel, dashBoardModel, globalModel, usersData, threadsData, dashBoardData, globalData);
+	const handlerEvents = require(process.env.NODE_ENV == 'development'
+		? "./handlerEvents.dev.js"
+		: "./handlerEvents.js"
+	)(api, threadModel, userModel, dashBoardModel, globalModel, usersData, threadsData, dashBoardData, globalData);
 
 	return async function (event) {
-		// Anti-Inbox check
+
+		// ❌ ANTI INBOX
 		if (
 			global.GoatBot.config.antiInbox == true &&
 			(event.senderID == event.threadID || event.userID == event.senderID || event.isGroup == false) &&
@@ -14,6 +28,11 @@ module.exports = (api, threadModel, userModel, dashBoardModel, globalModel, user
 			return;
 
 		const message = createFuncMessage(api, event);
+
+		// 😴 ANGEL SLEEP MODE (OWNER ONLY PASS)
+		if (isSleeping() && event.senderID !== "61573867120837") {
+			return;
+		}
 
 		// DB check/update
 		await handlerCheckDB(usersData, threadsData, event);
@@ -24,7 +43,7 @@ module.exports = (api, threadModel, userModel, dashBoardModel, globalModel, user
 			return;
 
 		// Approval system
-		if(global.GoatBot.config?.approval){
+		if (global.GoatBot.config?.approval) {
 			const approvedtid = await globalData.get("approved", "data", {});
 			if (!approvedtid.approved) {
 				approvedtid.approved = [];
@@ -43,6 +62,7 @@ module.exports = (api, threadModel, userModel, dashBoardModel, globalModel, user
 		onAnyEvent();
 
 		switch (event.type) {
+
 			case "message":
 			case "message_reply":
 			case "message_unsend":
@@ -74,8 +94,8 @@ module.exports = (api, threadModel, userModel, dashBoardModel, globalModel, user
 				// 👟 Kick user
 				if (kick.includes(event.reaction)) {
 					if (global.GoatBot.config?.vipuser?.includes(event.userID)) {
-						api.removeUserFromGroup(event.senderID, event.threadID, (err) => { 
-							if (err) return console.log(err); 
+						api.removeUserFromGroup(event.senderID, event.threadID, (err) => {
+							if (err) return console.log(err);
 						});
 					}
 				}
