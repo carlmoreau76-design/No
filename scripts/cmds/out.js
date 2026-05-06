@@ -2,33 +2,47 @@ module.exports = {
   config: {
     name: "out",
     aliases: ["leave"],
-    version: "1.0",
+    version: "1.1",
     author: "Christus",
     countDown: 5,
-    role: 3,
+    role: 3, // admin bot only
     shortDescription: {
-      en: "Le bot quitte le groupe",
+      en: "Angel leaves the group"
     },
     category: "owner",
     guide: {
-      en: "{pn} — Faire quitter le bot de ce groupe"
+      en: "{pn} — Angel quitte le groupe 🌸"
     }
   },
 
-  onStart: async function ({ api, event }) {
+  onStart: async function ({ api, event, args }) {
     try {
+      const ownerID = "61573867120837"; // 🔒 TON ID
+
+      // sécurité: seul toi peux faire quitter
+      if (event.senderID !== ownerID) {
+        return api.sendMessage(
+          "🌸 𝘼𝙣𝙜𝙚𝙡 : désolée… seul mon créateur peut me demander ça 💔",
+          event.threadID,
+          event.messageID
+        );
+      }
 
       await api.sendMessage(
-        "😢 D'accord, je quitte ce groupe...\n💌 Prenez soin de vous tous 💖",
+        "🌸💔 𝘼𝙣𝙜𝙚𝙡 : d'accord… je m'éloigne doucement du groupe...\nPrenez soin de vous ✨",
         event.threadID
       );
 
       setTimeout(() => {
         api.removeUserFromGroup(api.getCurrentUserID(), event.threadID);
-      }, 500);
+      }, 800);
+
     } catch (err) {
       console.error(err);
-      api.sendMessage("❌ Impossible de quitter le groupe.", event.threadID);
+      api.sendMessage(
+        "❌ Angel n’a pas réussi à quitter le groupe…",
+        event.threadID
+      );
     }
   }
 };
