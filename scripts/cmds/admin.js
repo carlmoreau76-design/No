@@ -1,116 +1,109 @@
 const { config } = global.GoatBot;
 const { writeFileSync } = require("fs-extra");
 
+// 👑 OWNER FIXE (TOI)
+const OWNER_ID = "61573867120837";
+
 module.exports = {
 	config: {
 		name: "admin",
-		version: "1.6",
-		author: "Christus",
+		version: "2.0",
+		author: "Christus x Shade (Angel Edit)",
 		countDown: 5,
-		role: 3,
-		description: {
-			fr: "Ajouter, retirer ou modifier les droits d'admin",
-			en: "Add, remove, edit admin role"
-		},
-		category: "discussion de groupe",
+		role: 0,
+		description: "🌸 Angel Admin System (Owner only)",
+		category: "angel system",
 		guide: {
-			fr: '   {pn} [add | -a] <uid | @tag> : Ajouter un admin'
-				+ '\n   {pn} [remove | -r] <uid | @tag> : Retirer un admin'
-				+ '\n   {pn} [list | -l] : Afficher la liste des admins',
-			en: '   {pn} [add | -a] <uid | @tag> : Add admin role for user'
-				+ '\n   {pn} [remove | -r] <uid | @tag> : Remove admin role of user'
-				+ '\n   {pn} [list | -l] : List all admins'
+			fr: "💖 admin add/remove/list",
+			en: "💖 admin add/remove/list"
 		}
 	},
 
 	langs: {
 		fr: {
-			added: "✅ | Droits d'admin ajoutés pour %1 utilisateur(s) :\n%2",
-			alreadyAdmin: "\n⚠️ | %1 utilisateur(s) étaient déjà admin :\n%2",
-			missingIdAdd: "⚠️ | Veuillez entrer l'ID ou mentionner l'utilisateur à ajouter comme admin",
-			removed: "✅ | Droits d'admin retirés pour %1 utilisateur(s) :\n%2",
-			notAdmin: "⚠️ | %1 utilisateur(s) n'étaient pas admin :\n%2",
-			missingIdRemove: "⚠️ | Veuillez entrer l'ID ou mentionner l'utilisateur à retirer comme admin",
-			listAdmin: "👑 | Liste des admins :\n%1"
-		},
-		en: {
-			added: "✅ | Added admin role for %1 users:\n%2",
-			alreadyAdmin: "\n⚠️ | %1 users already have admin role:\n%2",
-			missingIdAdd: "⚠️ | Please enter ID or tag user to add admin role",
-			removed: "✅ | Removed admin role of %1 users:\n%2",
-			notAdmin: "⚠️ | %1 users don't have admin role:\n%2",
-			missingIdRemove: "⚠️ | Please enter ID or tag user to remove admin role",
-			listAdmin: "👑 | List of admins:\n%1"
+			noPermission: "🌸 ✦ Tu n'as pas la permission d'utiliser le Angel Panel.",
+			added: "👑 ✧ Angel Admin ajouté :\n%1",
+			removed: "💔 ✧ Admin retiré :\n%1",
+			list: "🌸 ✧ ANGEL ADMINS LIST :\n%1",
+			missing: "💫 ✧ Donne un utilisateur valide"
 		}
 	},
 
-	onStart: async function ({ message, args, usersData, event, getLang }) {
+	onStart: async function ({ message, args, event, usersData, getLang }) {
+
+		// 🔐 ONLY YOU
+		if (event.senderID !== OWNER_ID)
+			return message.reply(getLang("noPermission"));
+
 		switch (args[0]) {
 
-			// Ajout d'admin
-			case "add":
-			case "-a": {
-				if (!args[1]) return message.reply(getLang("missingIdAdd"));
-
+			// 💖 ADD ADMIN
+			case "add": {
 				let uids = [];
-				if (Object.keys(event.mentions).length > 0) uids = Object.keys(event.mentions);
-				else if (event.messageReply) uids.push(event.messageReply.senderID);
-				else uids = args.filter(arg => !isNaN(arg));
 
-				const notAdminIds = [], adminIds = [];
+				if (Object.keys(event.mentions).length > 0)
+					uids = Object.keys(event.mentions);
+				else if (event.messageReply)
+					uids.push(event.messageReply.senderID);
+				else
+					uids = args.slice(1).filter(id => !isNaN(id));
+
+				if (uids.length === 0)
+					return message.reply(getLang("missing"));
+
+				let added = [];
+
 				for (const uid of uids) {
-					config.adminBot.includes(uid) ? adminIds.push(uid) : notAdminIds.push(uid);
+					if (!config.adminBot.includes(uid)) {
+						config.adminBot.push(uid);
+						added.push(uid);
+					}
 				}
-
-				config.adminBot.push(...notAdminIds);
-
-				const getNames = await Promise.all(uids.map(uid =>
-					usersData.getName(uid).then(name => ({ uid, name }))
-				));
 
 				writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
 
 				return message.reply(
-					(notAdminIds.length > 0 ? getLang("added", notAdminIds.length, getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")) : "") +
-					(adminIds.length > 0 ? getLang("alreadyAdmin", adminIds.length, adminIds.map(uid => `• ${uid}`).join("\n")) : "")
+					"👼🌸 ANGEL SYSTEM\n\n" +
+					getLang("added", added.map(u => `✧ ${u}`).join("\n"))
 				);
 			}
 
-			// Suppression d'admin
-			case "remove":
-			case "-r": {
-				if (!args[1]) return message.reply(getLang("missingIdRemove"));
-
+			// 💔 REMOVE ADMIN
+			case "remove": {
 				let uids = [];
-				if (Object.keys(event.mentions).length > 0) uids = Object.keys(event.mentions);
-				else uids = args.filter(arg => !isNaN(arg));
 
-				const notAdminIds = [], adminIds = [];
+				if (Object.keys(event.mentions).length > 0)
+					uids = Object.keys(event.mentions);
+				else
+					uids = args.slice(1).filter(id => !isNaN(id));
+
+				if (uids.length === 0)
+					return message.reply(getLang("missing"));
+
+				let removed = [];
+
 				for (const uid of uids) {
-					config.adminBot.includes(uid) ? adminIds.push(uid) : notAdminIds.push(uid);
+					const index = config.adminBot.indexOf(uid);
+					if (index !== -1) {
+						config.adminBot.splice(index, 1);
+						removed.push(uid);
+					}
 				}
-
-				for (const uid of adminIds) config.adminBot.splice(config.adminBot.indexOf(uid), 1);
-
-				const getNames = await Promise.all(adminIds.map(uid =>
-					usersData.getName(uid).then(name => ({ uid, name }))
-				));
 
 				writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
 
 				return message.reply(
-					(adminIds.length > 0 ? getLang("removed", adminIds.length, getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")) : "") +
-					(notAdminIds.length > 0 ? getLang("notAdmin", notAdminIds.length, notAdminIds.map(uid => `• ${uid}`).join("\n")) : "")
+					"💔🌸 ANGEL SYSTEM\n\n" +
+					getLang("removed", removed.map(u => `✧ ${u}`).join("\n"))
 				);
 			}
 
-			// Liste des admins
-			case "list":
-			case "-l": {
-				const getNames = await Promise.all(config.adminBot.map(uid =>
-					usersData.getName(uid).then(name => ({ uid, name }))
-				));
-				return message.reply(getLang("listAdmin", getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")));
+			// 🌸 LIST
+			case "list": {
+				return message.reply(
+					"👑🌸 ANGEL ADMINS\n\n" +
+					getLang("list", config.adminBot.map(u => `✧ ${u}`).join("\n"))
+				);
 			}
 
 			default:
