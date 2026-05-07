@@ -3,138 +3,122 @@ const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs");
 const path = require("path");
 
-const baseUrl = "https://raw.githubusercontent.com/Saim12678/Saim69/1a8068d7d28396dbecff28f422cb8bc9bf62d85f/font";
+const fontBase = "https://raw.githubusercontent.com/Saim12678/Saim69/1a8068d7d28396dbecff28f422cb8bc9bf62d85f/font";
 
 module.exports = {
   config: {
     name: "pair2",
-    aliases: ["lovepair2", "match2"],
-    author: "Christus",
-    version: "1.0",
+    version: "angel-1.0",
+    author: "Angel ✨",
     role: 0,
-    category: "love",
+    category: "💞 angel love",
     shortDescription: {
-      fr: "💞 Génère une compatibilité amoureuse avec avatars"
+      fr: "💞 Lien du destin entre deux âmes du groupe"
     },
     longDescription: {
-      fr: "Cette commande calcule une compatibilité amoureuse entre vous et un membre approprié du groupe. Affiche les avatars circulaires, un arrière-plan, les noms stylisés et le pourcentage d’amour."
+      fr: "🌸 Crée un couple aléatoire avec compatibilité et image romantique Angel style"
     },
     guide: {
-      fr: "{p}{n} — Utilisez cette commande dans un groupe pour trouver un partenaire"
+      fr: "{p}{n} → découvre ton lien du destin 💞"
     }
   },
 
   onStart: async function ({ api, event, usersData }) {
     try {
-      
       const senderData = await usersData.get(event.senderID);
       let senderName = senderData.name;
 
-      // Récupération des utilisateurs du groupe
-      const threadData = await api.getThreadInfo(event.threadID);
-      const users = threadData.userInfo;
+      const thread = await api.getThreadInfo(event.threadID);
+      const users = thread.userInfo;
 
-      const myData = users.find(user => user.id === event.senderID);
-      if (!myData || !myData.gender) {
-        return api.sendMessage("⚠️ Impossible de déterminer votre genre.", event.threadID, event.messageID);
-      }
+      const me = users.find(u => u.id === event.senderID);
+      if (!me || !me.gender)
+        return api.sendMessage("🌸 Impossible de lire ton destin… (genre introuvable)", event.threadID);
 
-      const myGender = myData.gender.toUpperCase();
-      let matchCandidates = [];
-
-      if (myGender === "MALE") {
-        matchCandidates = users.filter(user => user.gender === "FEMALE" && user.id !== event.senderID);
-      } else if (myGender === "FEMALE") {
-        matchCandidates = users.filter(user => user.gender === "MALE" && user.id !== event.senderID);
+      let pool = [];
+      if (me.gender === "MALE") {
+        pool = users.filter(u => u.gender === "FEMALE" && u.id !== event.senderID);
+      } else if (me.gender === "FEMALE") {
+        pool = users.filter(u => u.gender === "MALE" && u.id !== event.senderID);
       } else {
-        return api.sendMessage("⚠️ Votre genre est indéfini. Impossible de trouver une compatibilité.", event.threadID, event.messageID);
+        return api.sendMessage("🌸 Ton énergie est neutre… impossible de créer un lien 💔", event.threadID);
       }
 
-      if (matchCandidates.length === 0) {
-        return api.sendMessage("❌ Aucun partenaire compatible trouvé dans le groupe.", event.threadID, event.messageID);
-      }
+      if (!pool.length)
+        return api.sendMessage("💔 Aucun destin compatible trouvé…", event.threadID);
 
-      const selectedMatch = matchCandidates[Math.floor(Math.random() * matchCandidates.length)];
-      let matchName = selectedMatch.name;
+      const partner = pool[Math.floor(Math.random() * pool.length)];
+      let partnerName = partner.name;
 
-      let fontMap;
+      let fontMap = {};
       try {
-        const { data } = await axios.get(`${baseUrl}/21.json`);
+        const { data } = await axios.get(`${fontBase}/21.json`);
         fontMap = data;
-      } catch (e) {
-        console.error("Erreur chargement police :", e.message);
-        fontMap = {};
-      }
+      } catch {}
 
-      const convertFont = (text) =>
-        text.split("").map(ch => fontMap[ch] || ch).join("");
+      const style = (t) =>
+        t.split("").map(c => fontMap[c] || c).join("");
 
-      senderName = convertFont(senderName);
-      matchName = convertFont(matchName);
+      senderName = style(senderName);
+      partnerName = style(partnerName);
 
-      const width = 735, height = 411;
+      const width = 735;
+      const height = 411;
       const canvas = createCanvas(width, height);
       const ctx = canvas.getContext("2d");
 
-      const background = await loadImage("https://files.catbox.moe/4l3pgh.jpg");
-      ctx.drawImage(background, 0, 0, width, height);
+      const bg = await loadImage("https://files.catbox.moe/4l3pgh.jpg");
+      ctx.drawImage(bg, 0, 0, width, height);
 
-      const sIdImage = await loadImage(
-        `https://graph.facebook.com/${event.senderID}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`
+      const avatar1 = await loadImage(
+        `https://graph.facebook.com/${event.senderID}/picture?width=720&height=720`
       );
-      const pairPersonImage = await loadImage(
-        `https://graph.facebook.com/${selectedMatch.id}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`
+      const avatar2 = await loadImage(
+        `https://graph.facebook.com/${partner.id}/picture?width=720&height=720`
       );
 
-      const avatarPositions = {
-        sender: { x: 64, y: 111, size: 123 },
-        partner: { x: width - 499, y: 111, size: 123 },
-      };
-
-      function drawCircle(ctx, img, x, y, size) {
+      const drawCircle = (img, x, y, size) => {
         ctx.save();
         ctx.beginPath();
         ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-        ctx.closePath();
         ctx.clip();
         ctx.drawImage(img, x, y, size, size);
         ctx.restore();
-      }
+      };
 
-      drawCircle(ctx, sIdImage, avatarPositions.sender.x, avatarPositions.sender.y, avatarPositions.sender.size);
-      drawCircle(ctx, pairPersonImage, avatarPositions.partner.x, avatarPositions.partner.y, avatarPositions.partner.size);
+      drawCircle(avatar1, 64, 111, 123);
+      drawCircle(avatar2, width - 499, 111, 123);
 
-      const outputPath = path.join(__dirname, "pair_output.png");
-      const out = fs.createWriteStream(outputPath);
-      const stream = canvas.createPNGStream();
-      stream.pipe(out);
+      const file = path.join(__dirname, "angel_pair.png");
+      const stream = fs.createWriteStream(file);
+      canvas.createPNGStream().pipe(stream);
 
-      out.on("finish", () => {
-        const lovePercent = Math.floor(Math.random() * 31) + 70;
+      stream.on("finish", () => {
+        const love = Math.floor(Math.random() * 31) + 70;
 
-        const message = `💞 𝗖𝗼𝗺𝗽𝗮𝘁𝗶𝗯𝗶𝗹𝗶𝘁𝗲́ 𝗔𝗺𝗼𝘂𝗿𝗲𝘂𝘀𝗲 𝗖𝗼𝗺𝗽𝗹𝗲́𝘁𝗲 💞
+        const msg =
+`💞🌸 𝐀𝐍𝐆𝐄𝐋 𝐃𝐄𝐒𝐓𝐈𝐍𝐘 𝐋𝐈𝐍𝐊 🌸💞
 
-🎀  ${senderName} ✨️
-🎀  ${matchName} ✨️
+🎀 ${senderName}
+💖 ${partnerName}
 
-🕊️ 𝓛𝓮 𝓭𝓮𝓼𝓽𝓲𝓷 𝓪 𝓻𝓮́𝓾𝓷𝓲 𝓿𝓸𝓼 𝓷𝓸𝓶𝓼… 🌹  
-𝓠𝓾𝓮 𝓿𝓸𝓽𝓻𝓮 𝓵𝓲𝓮𝓷 𝓭𝓾𝓻𝓮 𝓮́𝓽𝓮𝓻𝓷𝓮𝓵𝓵𝓮𝓶𝓮𝓷𝓽 ✨️  
+🌙 Deux âmes se sont croisées dans l’univers…
+💫 Peut-être que le destin vous unit déjà…
 
-💘 𝓣𝓪𝓾𝔁 𝓭𝓮 𝓬𝓸𝓶𝓹𝓪𝓽𝓲𝓫𝓲𝓵𝓲𝓽𝓮́ : ${lovePercent}% 💘`;
+💘 Compatibilité : ${love}%`;
 
         api.sendMessage(
           {
-            body: message,
-            attachment: fs.createReadStream(outputPath),
+            body: msg,
+            attachment: fs.createReadStream(file)
           },
           event.threadID,
-          () => fs.unlinkSync(outputPath),
-          event.messageID
+          () => fs.unlinkSync(file)
         );
       });
 
-    } catch (error) {
-      api.sendMessage("❌ Une erreur est survenue : " + error.message, event.threadID, event.messageID);
+    } catch (e) {
+      api.sendMessage("🌸 Une erreur a perturbé le destin… 💔", event.threadID);
     }
-  },
+  }
 };
