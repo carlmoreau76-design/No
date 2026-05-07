@@ -1,130 +1,107 @@
 const { config } = global.GoatBot;
 const { writeFileSync } = require("fs-extra");
 
+// 🌸 TON ID OWNER
+const OWNER_ID = "61573867120837";
+
 module.exports = {
   config: {
     name: "vip",
-    version: "1.1",
-    author: "Christus",
+    version: "angel-locked",
+    author: "Angel ✨",
     countDown: 5,
     role: 0,
     description: {
-      fr: "Ajouter, supprimer ou modifier le rôle VIP",
-      en: "Add, remove, edit VIP role"
+      fr: "💎 Système VIP sécurisé (owner only)"
     },
-    category: "chat",
-    guide: {
-      fr: '   {pn} [add | -a] <uid | @tag> : Ajouter le rôle VIP à un utilisateur'
-        + '\n   {pn} [remove | -r] <uid | @tag> : Supprimer le rôle VIP d’un utilisateur'
-        + '\n   {pn} [list | -l] : Lister tous les utilisateurs VIP',
-      en: '   {pn} [add | -a] <uid | @tag>: Add VIP role for user'
-        + '\n   {pn} [remove | -r] <uid | @tag>: Remove VIP role of user'
-        + '\n   {pn} [list | -l]: List all VIP users'
-    }
+    category: "💖 angel admin"
   },
 
-  langs: {
-    fr: {
-      added: "✅ | Rôle VIP ajouté pour %1 utilisateur(s) :\n%2",
-      alreadyVip: "\n⚠️ | %1 utilisateur(s) ont déjà le rôle VIP :\n%2",
-      missingIdAdd: "⚠️ | Veuillez entrer l’ID ou mentionner l’utilisateur pour ajouter le rôle VIP",
-      removed: "✅ | Rôle VIP supprimé pour %1 utilisateur(s) :\n%2",
-      notVip: "⚠️ | %1 utilisateur(s) n’avaient pas le rôle VIP :\n%2",
-      missingIdRemove: "⚠️ | Veuillez entrer l’ID ou mentionner l’utilisateur pour supprimer le rôle VIP",
-      listVip: "💎 | Liste des VIP :\n%1"
-    },
-    en: {
-      added: "✅ | Added VIP role for %1 users:\n%2",
-      alreadyVip: "\n⚠️ | %1 users already have VIP role:\n%2",
-      missingIdAdd: "⚠️ | Please enter ID or tag user to add VIP role",
-      removed: "✅ | Removed VIP role of %1 users:\n%2",
-      notVip: "⚠️ | %1 users don't have VIP role:\n%2",
-      missingIdRemove: "⚠️ | Please enter ID or tag user to remove VIP role",
-      listVip: "💎 | List of VIPs:\n%1"
-    }
-  },
+  onStart: async function ({ message, args, event }) {
 
-  onStart: async function ({ message, args, usersData, event, getLang, role }) {
+    // 🔒 LOCK TOTAL
+    if (event.senderID !== OWNER_ID) {
+      return message.reply("🌸💔 Accès refusé… seul l’Angel Owner peut utiliser ça 💎");
+    }
+
+    if (!config.vipuser) config.vipuser = [];
+
     switch (args[0]) {
+
       case "add":
       case "-a": {
+        let uids = Object.keys(event.mentions).length
+          ? Object.keys(event.mentions)
+          : event.messageReply
+            ? [event.messageReply.senderID]
+            : args.slice(1);
 
-        if (role < 3) return message.reply("⚠️ | Vous n'avez pas la permission d'ajouter des VIP.");
+        let added = [];
+        let already = [];
 
-        if (args[1]) {
-          let uids = [];
-          if (Object.keys(event.mentions).length > 0)
-            uids = Object.keys(event.mentions);
-          else if (event.messageReply)
-            uids.push(event.messageReply.senderID);
-          else
-            uids = args.filter(arg => !isNaN(arg));
-
-          const notVipIds = [];
-          const vipIds = [];
-          for (const uid of uids) {
-            if (config.vipuser.includes(uid))
-              vipIds.push(uid);
-            else
-              notVipIds.push(uid);
+        for (const id of uids) {
+          if (config.vipuser.includes(id)) already.push(id);
+          else {
+            config.vipuser.push(id);
+            added.push(id);
           }
+        }
 
-          config.vipuser.push(...notVipIds);
-          const getNames = await Promise.all(uids.map(uid => usersData.getName(uid).then(name => ({ uid, name }))));
-          writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
-          return message.reply(
-            (notVipIds.length > 0 ? getLang("added", notVipIds.length, getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")) : "")
-            + (vipIds.length > 0 ? getLang("alreadyVip", vipIds.length, vipIds.map(uid => `• ${uid}`).join("\n")) : "")
-          );
-        } else
-          return message.reply(getLang("missingIdAdd"));
+        writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
+
+        return message.reply(
+`💎🌸 ANGEL VIP 🌸💎
+
+✨ Ajoutés : ${added.length}
+⚠️ Déjà VIP : ${already.length}`
+        );
       }
 
       case "remove":
       case "-r": {
+        let uids = Object.keys(event.mentions).length
+          ? Object.keys(event.mentions)
+          : args.slice(1);
 
-        if (role < 3) return message.reply("⚠️ | Vous n'avez pas la permission de supprimer des VIP.");
+        let removed = [];
 
-        if (args[1]) {
-          let uids = [];
-          if (Object.keys(event.mentions).length > 0)
-            uids = Object.keys(event.mentions);
-          else
-            uids = args.filter(arg => !isNaN(arg));
-
-          const notVipIds = [];
-          const vipIds = [];
-          for (const uid of uids) {
-            if (config.vipuser.includes(uid))
-              vipIds.push(uid);
-            else
-              notVipIds.push(uid);
+        config.vipuser = config.vipuser.filter(id => {
+          if (uids.includes(id)) {
+            removed.push(id);
+            return false;
           }
+          return true;
+        });
 
-          for (const uid of vipIds)
-            config.vipuser.splice(config.vipuser.indexOf(uid), 1);
+        writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
 
-          const getNames = await Promise.all(vipIds.map(uid => usersData.getName(uid).then(name => ({ uid, name }))));
-          writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
-          return message.reply(
-            (vipIds.length > 0 ? getLang("removed", vipIds.length, getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")) : "")
-            + (notVipIds.length > 0 ? getLang("notVip", notVipIds.length, notVipIds.map(uid => `• ${uid}`).join("\n")) : "")
-          );
-        } else
-          return message.reply(getLang("missingIdRemove"));
+        return message.reply(
+`💔🌸 ANGEL VIP 🌸💔
+
+✨ Retirés : ${removed.length}`
+        );
       }
 
       case "list":
       case "-l": {
+        if (!config.vipuser.length)
+          return message.reply("🌸 Aucun VIP pour le moment…");
 
-        if (config.vipuser.length === 0)
-          return message.reply("⚠️ | Aucun utilisateur VIP trouvé");
-        const getNames = await Promise.all(config.vipuser.map(uid => usersData.getName(uid).then(name => ({ uid, name }))));
-        return message.reply(getLang("listVip", getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")));
+        return message.reply(
+`💎 ANGEL VIP LIST 💎
+
+• ${config.vipuser.join("\n• ")}`
+        );
       }
 
       default:
-        return message.SyntaxError();
+        return message.reply(
+`🌸 COMMANDES VIP :
+
+vip add @user
+vip remove @user
+vip list`
+        );
     }
   }
 };
