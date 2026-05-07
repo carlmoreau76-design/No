@@ -836,6 +836,73 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			// Your code here
 		}
 
+		// ==============================
+		// 🎉 WELCOME MESSAGE
+		// ==============================
+		try {
+			const { createCanvas, loadImage } = require("canvas");
+
+			if (event.logMessageType === "log:subscribe") {
+
+				const addedUsers = event.logMessageData.addedParticipants || [];
+				const threadInfo = await api.getThreadInfo(threadID);
+
+				for (const user of addedUsers) {
+
+					const userID = user.userFbId || user.userID;
+
+					if (userID == api.getCurrentUserID())
+						continue;
+
+					const userInfo = await api.getUserInfo(userID);
+					const name = userInfo[userID]?.name || "Member";
+
+					const avatar = `https://graph.facebook.com/${userID}/picture?width=512&height=512`;
+
+					const canvas = createCanvas(800, 400);
+					const ctx = canvas.getContext("2d");
+
+					ctx.fillStyle = "#0f0f1a";
+					ctx.fillRect(0, 0, 800, 400);
+
+					ctx.fillStyle = "#ffffff";
+					ctx.font = "bold 35px Arial";
+					ctx.fillText("WELCOME", 280, 70);
+
+					ctx.font = "22px Arial";
+					ctx.fillText(`Group: ${threadInfo.threadName}`, 220, 140);
+
+					ctx.fillText(`Member: ${name}`, 220, 190);
+
+					const img = await loadImage(avatar);
+					ctx.drawImage(img, 40, 100, 150, 150);
+
+					const path = __dirname + "/cache/welcome.png";
+
+					fs.writeFileSync(path, canvas.toBuffer());
+
+					api.sendMessage({
+						body:
+`ཐི༑ཋྀ 𝑨𝒏𝒈𝒆𝒍 𝑩𝒐𝒕 જ⁀➴ ♡
+
+👋 Bienvenue @${name}
+
+✨ Dans : ${threadInfo.threadName}
+
+🤖 Créé par Shade`,
+						mentions: [{
+							tag: name,
+							id: userID
+						}],
+						attachment: fs.createReadStream(path)
+					}, threadID);
+				}
+			}
+		}
+		catch (e) {
+			console.log("Welcome Error:", e);
+		}
+
 		return {
 			onAnyEvent,
 			onFirstChat,
