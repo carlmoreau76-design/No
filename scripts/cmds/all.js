@@ -1,45 +1,51 @@
 module.exports = {
 	config: {
 		name: "all",
-		version: "1.2",
-		author: "NTKhang",
-		countDown: 5,
-		role: 1,
+		version: "2.0",
+		author: "Christus ✦ Angel Edit",
+		countDown: 10,
+		role: 3, // 🔐 admin only
 		description: {
-			fr: "Tague tous les membres du groupe de discussion",
-			en: "Tag all members in your group chat"
+			fr: "👼 Tag tous les membres avec style Angel",
+			en: "👼 Tag all members with Angel style"
 		},
-		category: "box chat",
+		category: "angel box chat",
 		guide: {
-			fr: "   {pn} [texte à envoyer | laisser vide pour '@all']",
-			en: "   {pn} [content | empty]"
+			fr: "{pn} [message]"
 		}
 	},
 
 	onStart: async function ({ message, event, args }) {
+
+		// 🌸 message à envoyer
+		let texte = args.join(" ") || "👼🌸 𝑨𝑵𝑮𝑬𝑳 𝑩𝑶𝑻 𝑨𝑳𝑳 ✧";
+
 		const { participantIDs } = event;
-		const totalMembres = participantIDs.length;
-		const mentions = [];
-		let texte = args.join(" ") || "@all";
-		let texteLength = texte.length;
+
+		let mentions = [];
 		let i = 0;
 
+		// 💖 construction des mentions
 		for (const uid of participantIDs) {
-			let fromIndex = 0;
-			if (texteLength < totalMembres) {
-				texte += texte[texteLength - 1];
-				texteLength++;
-			}
-			if (texte.slice(0, i).lastIndexOf(texte[i]) != -1)
-				fromIndex = i;
 			mentions.push({
-				tag: texte[i],
-				id: uid, 
-				fromIndex
+				tag: texte[i] || "✧",
+				id: uid,
+				fromIndex: i
 			});
 			i++;
 		}
 
-		message.reply({ body: texte, mentions });
+		// 👼 message final stylé
+		const finalMessage =
+`👼🌸 𝑨𝑵𝑮𝑬𝑳 𝑩𝑶𝑻 𝑺𝒀𝑺𝑻𝑬𝑴 ✧
+
+💖 Message : ${texte}
+
+✨ Tout le groupe est mentionné avec amour 🌸`;
+
+		message.reply({
+			body: finalMessage,
+			mentions
+		});
 	}
 };
