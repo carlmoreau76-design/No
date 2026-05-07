@@ -1,6 +1,7 @@
 const fs = require("fs-extra");
 const nullAndUndefined = [undefined, null];
-const leven = require('leven'); // <--- Levenshtein Distance লাইব্রেরি
+const leven = require("leven");
+const { createCanvas, loadImage } = require("canvas");
 
 // const { config } = global.GoatBot;
 // const { utils } = global;
