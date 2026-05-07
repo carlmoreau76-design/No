@@ -1,168 +1,115 @@
-const axios = require('axios');
+const axios = require("axios");
 
-const piVoiceModels = {
-  1: "Pi 1 ✨",
-  2: "Pi 2 ✨",
-  3: "Pi 3 ✨",
-  4: "Pi 4",
-  5: "Pi 5",
-  6: "Pi 6",
-  7: "Pi 7",
-  8: "Pi 8"
+const models = {
+  1: "Angel Soft ✨",
+  2: "Angel Cute 🌸",
+  3: "Angel Smart 💡",
+  4: "Angel Calm 🌙",
+  5: "Angel Pro 🤖",
+  6: "Angel Anime 💖",
+  7: "Angel Ultra ⚡",
+  8: "Angel Dark 🖤"
 };
 
 module.exports = {
   config: {
     name: "pi",
-    version: "1.0",
-    author: "Christus",
-    countDown: 5,
+    version: "angel-ai-1.0",
+    author: "Angel ✨",
     role: 0,
+    category: "🌸 ai",
     description: {
-      en: "Discute avec l’IA Pi via texte ou voix. Supporte le choix du modèle et l’activation/désactivation de la voix.",
-      vn: "Trò chuyện với Pi AI bằng văn bản hoặc giọng nói. Hỗ trợ chọn mô hình và bật/tắt giọng nói."
+      fr: "🤖 Assistant Angel AI avec voix et styles personnalisés"
     },
-    category: "ai",
     guide: {
-      en:
-        "   {pn} <votre message>" +
-        "\n   {pn} setvoice on|off|<1–8>" +
-        "\n   {pn} list" +
-        "\n\nExemples :" +
-        "\n   {pn} Bonjour Pi !" +
-        "\n   {pn} setvoice on" +
-        "\n   {pn} setvoice 3" +
-        "\n   {pn} list",
-      vn:
-        "   {pn} <tin nhắn của bạn>" +
-        "\n   {pn} setvoice on|off|<1–8>" +
-        "\n   {pn} list" +
-        "\n\nVí dụ:" +
-        "\n   {pn} Xin chào Pi!" +
-        "\n   {pn} setvoice on" +
-        "\n   {pn} setvoice 3" +
-        "\n   {pn} list"
+      fr:
+`🌸 Commandes :
+• angel <message>
+• angel voice on/off
+• angel voice 1-8
+• angel list`
     }
   },
 
   onStart: async function ({ message, args, event, usersData }) {
-    const userId = event.senderID;
+
+    const uid = event.senderID;
     const input = args.join(" ").trim();
 
-    if (!input) return message.reply("❌ Fournissez un message ou utilisez `setvoice [on/off/1–8]` ou `list`.");
+    if (!input)
+      return message.reply("🌸 Écris quelque chose pour parler avec Angel AI ✨");
 
-    let voiceSetting = await usersData.get(userId, "data.pi_voice");
-    if (!voiceSetting) {
-      voiceSetting = { voice: false, model: 1 };
-      await usersData.set(userId, voiceSetting, "data.pi_voice");
+    let data = await usersData.get(uid, "data.angel_ai");
+
+    if (!data) {
+      data = { voice: false, model: 1 };
+      await usersData.set(uid, data, "data.angel_ai");
     }
 
-    if (input.toLowerCase().startsWith("setvoice")) {
-      const cmd = input.split(" ")[1]?.toLowerCase();
+    // 🌸 SETTINGS
+    if (input.toLowerCase().startsWith("voice")) {
+      const cmd = input.split(" ")[1];
 
-      if (!cmd || (!["on", "off"].includes(cmd) && isNaN(cmd))) {
-        return message.reply("⚙️ Utilisation : `setvoice on`, `setvoice off`, ou `setvoice [1–8]`");
-      }
+      if (!cmd)
+        return message.reply("🌸 Utilise: voice on / off / 1-8");
 
-      if (cmd === "on") {
-        voiceSetting.voice = true;
-      } else if (cmd === "off") {
-        voiceSetting.voice = false;
+      if (cmd === "on") data.voice = true;
+      else if (cmd === "off") data.voice = false;
+      else if (models[cmd]) {
+        data.voice = true;
+        data.model = parseInt(cmd);
       } else {
-        const modelNum = parseInt(cmd);
-        if (!piVoiceModels[modelNum]) {
-          return message.reply("⚠️ Numéros de modèles supportés : 1 à 8");
-        }
-        voiceSetting.voice = true;
-        voiceSetting.model = modelNum;
+        return message.reply("🌸 Modèles disponibles: 1 à 8");
       }
 
-      await usersData.set(userId, voiceSetting, "data.pi_voice");
-      return message.reply(`✅ Voix : ${voiceSetting.voice ? "ON" : "OFF"} | Modèle : ${piVoiceModels[voiceSetting.model]}`);
-    }
-
-    if (input.toLowerCase() === "list") {
-      const usage = await usersData.get(userId, "data.pi_usageCount") || 0;
-      const currentModel = piVoiceModels[voiceSetting.model] || `Modèle ${voiceSetting.model}`;
-      const modelList = Object.entries(piVoiceModels)
-        .map(([id, name]) => `🔢 ${id} = ${name}`).join("\n");
+      await usersData.set(uid, data, "data.angel_ai");
 
       return message.reply(
-        `📊 Infos Pi Voix :\n` +
-        `🔊 Voix : ${voiceSetting.voice ? "ON" : "OFF"}\n` +
-        `🎙️ Modèle : ${currentModel}\n` +
-        `📈 Utilisé : ${usage} fois\n\n` +
-        `🗂️ Modèles disponibles :\n${modelList}`
+`🌸 ANGEL AI SETTINGS
+
+🔊 Voice: ${data.voice ? "ON" : "OFF"}
+🎙️ Model: ${models[data.model]}`
       );
     }
 
-    const session = `pi-${userId}`;
+    if (input.toLowerCase() === "list") {
+      return message.reply(
+`🌸 ANGEL AI MODELS
 
-    try {
-      const res = await callPi(input, session, voiceSetting.voice, voiceSetting.model);
-      const currentCount = await usersData.get(userId, "data.pi_usageCount") || 0;
-      await usersData.set(userId, currentCount + 1, "data.pi_usageCount");
-
-      if (!res?.text) return message.reply("❌ Pi n’a pas répondu.");
-
-      const replyPayload = { body: res.text };
-
-      if (voiceSetting.voice && res.audio) replyPayload.attachment = await global.utils.getStreamFromURL(res.audio);
-
-      return message.reply(replyPayload, (err, info) => {
-        global.GoatBot.onReply.set(info.messageID, {
-          commandName: this.config.name,
-          author: userId,
-          messageID: info.messageID,
-          session
-        });
-      });
-
-    } catch (err) {
-      return message.reply("⚠️ Impossible de contacter Pi : " + err.message);
+${Object.entries(models)
+  .map(([k, v]) => `🔢 ${k} → ${v}`)
+  .join("\n")}`
+      );
     }
-  },
 
-  onReply: async function ({ message, args, event, Reply, usersData }) {
-    const userId = event.senderID;
-    if (userId !== Reply.author) return;
-
-    const query = event.body?.trim();
-    if (!query) return;
-
-    const voiceSetting = await usersData.get(userId, "data.pi_voice") || { voice: false, model: 1 };
-    const session = Reply.session || `pi-${userId}`;
+    // 🌸 SESSION
+    const session = `angel-${uid}`;
 
     try {
-      const res = await callPi(query, session, voiceSetting.voice, voiceSetting.model);
-      const currentCount = await usersData.get(userId, "data.pi_usageCount") || 0;
-      await usersData.set(userId, currentCount + 1, "data.pi_usageCount");
+      const res = await callAngelAI(input, session, data.voice, data.model);
 
-      if (!res?.text) return message.reply("❌ Pi n’a pas répondu.");
+      if (!res?.text)
+        return message.reply("🌸 Angel n’a pas répondu…");
 
-      global.GoatBot.onReply.delete(Reply.messageID);
+      const reply = { body: res.text };
 
-      const replyPayload = { body: res.text };
+      if (data.voice && res.audio) {
+        reply.attachment = await global.utils.getStreamFromURL(res.audio);
+      }
 
-      if (voiceSetting.voice && res.audio) replyPayload.attachment = await global.utils.getStreamFromURL(res.audio);
+      return message.reply(reply);
 
-      return message.reply(replyPayload, (err, info) => {
-        global.GoatBot.onReply.set(info.messageID, {
-          commandName: this.config.name,
-          author: userId,
-          messageID: info.messageID,
-          session
-        });
-      });
-
-    } catch (err) {
-      return message.reply("⚠️ Impossible de contacter Pi : " + err.message);
+    } catch (e) {
+      return message.reply("🌸 Erreur Angel AI : " + e.message);
     }
   }
 };
 
-async function callPi(query, session, voice = false, model = 1) {
-  const { data: { public: baseUrl } } = await axios.get("https://raw.githubusercontent.com/Tanvir0999/stuffs/refs/heads/main/raw/addresses.json");
-  const { data } = await axios.get(`${baseUrl}/pi?query=${encodeURIComponent(query)}&session=${encodeURIComponent(session)}&voice=${voice}&model=${model}`);
-  return data.data;
-                           }
+// 🌸 API CALL
+async function callAngelAI(query, session, voice, model) {
+  const { data } = await axios.get(
+    `https://example-ai-api.com/angel?query=${encodeURIComponent(query)}&session=${session}&voice=${voice}&model=${model}`
+  );
+
+  return data.result;
+}
