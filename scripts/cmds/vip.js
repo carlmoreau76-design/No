@@ -1,7 +1,6 @@
 const { config } = global.GoatBot;
 const { writeFileSync } = require("fs-extra");
 
-// 🌸 TON ID OWNER
 const OWNER_ID = "61573867120837";
 
 module.exports = {
@@ -11,30 +10,27 @@ module.exports = {
     author: "Angel ✨",
     countDown: 5,
     role: 0,
-    description: {
-      fr: "💎 Système VIP sécurisé (owner only)"
-    },
     category: "💖 angel admin"
   },
 
   onStart: async function ({ message, args, event }) {
 
-    // 🔒 LOCK TOTAL
+    config.vipuser = config.vipuser || [];
+
     if (event.senderID !== OWNER_ID) {
       return message.reply("🌸💔 Accès refusé… seul l’Angel Owner peut utiliser ça 💎");
     }
-
-    if (!config.vipuser) config.vipuser = [];
 
     switch (args[0]) {
 
       case "add":
       case "-a": {
+
         let uids = Object.keys(event.mentions).length
           ? Object.keys(event.mentions)
           : event.messageReply
             ? [event.messageReply.senderID]
-            : args.slice(1);
+            : args.slice(1).filter(id => /^\d+$/.test(id));
 
         let added = [];
         let already = [];
@@ -59,9 +55,10 @@ module.exports = {
 
       case "remove":
       case "-r": {
+
         let uids = Object.keys(event.mentions).length
           ? Object.keys(event.mentions)
-          : args.slice(1);
+          : args.slice(1).filter(id => /^\d+$/.test(id));
 
         let removed = [];
 
@@ -84,13 +81,14 @@ module.exports = {
 
       case "list":
       case "-l": {
+
         if (!config.vipuser.length)
           return message.reply("🌸 Aucun VIP pour le moment…");
 
         return message.reply(
 `💎 ANGEL VIP LIST 💎
 
-• ${config.vipuser.join("\n• ")}`
+${config.vipuser.map((id, i) => `${i + 1}. ${id}`).join("\n")}`
         );
       }
 
