@@ -1,27 +1,33 @@
-const { createCanvas } = require('canvas');
-const fs = require('fs-extra');
-const path = require('path');
+const { createCanvas, loadImage } = require("canvas");
+const fs = require("fs-extra");
+const path = require("path");
 
+/* =========================
+   🎀 CONFIG COMMAND
+========================= */
 exports.config = {
     name: "maze",
-    author: "Christus",
+    author: "Shade ✨",
     role: 0,
     countDown: 40,
-    description: "Jouer au labyrinthe avec difficulté ajustable.",
-    version: "1.0.3",
-    guide: "{pn} [1-10] ou {pn} [easy|medium|hard]",
+    description: "🧩 Kawaii maze adventure 💖",
+    version: "2.0.0",
+    guide: "{pn} [1-10] ou easy | medium | hard",
     category: "game",
 };
 
-function generateMazeImage(difficulty = 15, grid = null, cols = null, highlightPath = null, wrongPath = null, currentPosition = null, progressPath = null) {
+/* =========================
+   🌸 MAZE GENERATOR
+========================= */
+function generateMazeImage(difficulty = 10, grid = null, cols = null, highlightPath = null, wrongPath = null, currentPosition = null, progressPath = null) {
+
     difficulty = Math.max(1, Math.min(difficulty, 15));
 
     const base = 10;
-    const scale = 0.4;
-    const size = Math.floor(base + difficulty * scale);
-    
-    let rows;
+    const size = Math.floor(base + difficulty * 0.4);
     const cellSize = 30;
+
+    let rows;
 
     if (!grid) {
         cols = size;
@@ -46,41 +52,31 @@ function generateMazeImage(difficulty = 15, grid = null, cols = null, highlightP
         }
 
         function getNeighbors(cell) {
-            const neighbors = [];
             const { x, y } = cell;
+            const n = [];
 
             const top = grid[index(x, y - 1)];
             const right = grid[index(x + 1, y)];
             const bottom = grid[index(x, y + 1)];
             const left = grid[index(x - 1, y)];
 
-            if (top && !top.visited) neighbors.push(top);
-            if (right && !right.visited) neighbors.push(right);
-            if (bottom && !bottom.visited) neighbors.push(bottom);
-            if (left && !left.visited) neighbors.push(left);
+            if (top && !top.visited) n.push(top);
+            if (right && !right.visited) n.push(right);
+            if (bottom && !bottom.visited) n.push(bottom);
+            if (left && !left.visited) n.push(left);
 
-            return neighbors;
+            return n;
         }
 
         function removeWalls(a, b) {
             const dx = a.x - b.x;
             const dy = a.y - b.y;
 
-            if (dx === 1) {
-                a.walls.left = false;
-                b.walls.right = false;
-            } else if (dx === -1) {
-                a.walls.right = false;
-                b.walls.left = false;
-            }
+            if (dx === 1) { a.walls.left = false; b.walls.right = false; }
+            else if (dx === -1) { a.walls.right = false; b.walls.left = false; }
 
-            if (dy === 1) {
-                a.walls.top = false;
-                b.walls.bottom = false;
-            } else if (dy === -1) {
-                a.walls.bottom = false;
-                b.walls.top = false;
-            }
+            if (dy === 1) { a.walls.top = false; b.walls.bottom = false; }
+            else if (dy === -1) { a.walls.bottom = false; b.walls.top = false; }
         }
 
         let current = grid[0];
@@ -89,17 +85,15 @@ function generateMazeImage(difficulty = 15, grid = null, cols = null, highlightP
         while (true) {
             const neighbors = getNeighbors(current);
 
-            if (neighbors.length > 0) {
+            if (neighbors.length) {
                 stack.push(current);
                 const next = neighbors[Math.floor(Math.random() * neighbors.length)];
                 removeWalls(current, next);
                 next.visited = true;
                 current = next;
-            } else if (stack.length > 0) {
+            } else if (stack.length) {
                 current = stack.pop();
-            } else {
-                break;
-            }
+            } else break;
         }
     } else {
         rows = grid.length / cols;
@@ -109,7 +103,11 @@ function generateMazeImage(difficulty = 15, grid = null, cols = null, highlightP
     const height = rows * cellSize;
 
     const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
+
+    /* 💖 KAWAII BACKGROUND */
+    ctx.fillStyle = "#fff7fb";
+    ctx.fillRect(0, 0, width, height);
 
     const start = grid[0];
     const end = grid[grid.length - 1];
@@ -119,154 +117,36 @@ function generateMazeImage(difficulty = 15, grid = null, cols = null, highlightP
         return x + y * cols;
     }
 
-    function solveMaze() {
-        const queue = [start];
-        const visited = new Set([index(start.x, start.y)]);
-        const parent = {};
+    /* =========================
+       🎨 PATH COLORS
+    ========================= */
+    function drawPath(path, color) {
+        if (!path || path.length < 2) return;
 
-        while (queue.length > 0) {
-            const cell = queue.shift();
-            if (cell === end) break;
-
-            const { x, y, walls } = cell;
-
-            const moves = [
-                !walls.top && grid[index(x, y - 1)],
-                !walls.right && grid[index(x + 1, y)],
-                !walls.bottom && grid[index(x, y + 1)],
-                !walls.left && grid[index(x - 1, y)]
-            ];
-
-            for (const next of moves) {
-                if (!next) continue;
-                const idx = index(next.x, next.y);
-                if (!visited.has(idx)) {
-                    visited.add(idx);
-                    parent[idx] = cell;
-                    queue.push(next);
-                }
-            }
-        }
-
-        const path = [];
-        let cur = end;
-        while (cur !== start) {
-            path.push(cur);
-            const parentIndex = index(cur.x, cur.y);
-            if (!parent[parentIndex]) break;
-            cur = parent[parentIndex];
-        }
-        path.push(start);
-        return path.reverse();
-    }
-
-    const solutionPath = solveMaze();
-
-    function getSolutionCode(path) {
-        let code = "";
-        for (let i = 0; i < path.length - 1; i++) {
-            const a = path[i];
-            const b = path[i + 1];
-            if (b.x === a.x + 1) code += "r";
-            else if (b.x === a.x - 1) code += "l";
-            else if (b.y === a.y + 1) code += "d";
-            else if (b.y === a.y - 1) code += "u";
-        }
-        return code;
-    }
-
-    const solutionCode = getSolutionCode(solutionPath);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-
-    if (progressPath && progressPath.length > 1) {
-        ctx.strokeStyle = "rgba(255,235,59,0.8)";
+        ctx.strokeStyle = color;
         ctx.lineWidth = 6;
         ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-
         ctx.beginPath();
-        for (let i = 0; i < progressPath.length; i++) {
-            const cell = progressPath[i];
-            const cx = cell.x * cellSize + cellSize / 2;
-            const cy = cell.y * cellSize + cellSize / 2;
-            
-            if (i === 0) ctx.moveTo(cx, cy);
-            else ctx.lineTo(cx, cy);
-        }
-        ctx.stroke();
-    }
-    
-    if (highlightPath && highlightPath.length > 1) {
-        ctx.strokeStyle = "rgba(76,175,80,0.7)";
-        ctx.lineWidth = 6;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
 
-        ctx.beginPath();
-        for (let i = 0; i < highlightPath.length; i++) {
-            const cell = highlightPath[i];
-            const cx = cell.x * cellSize + cellSize / 2;
-            const cy = cell.y * cellSize + cellSize / 2;
-            
+        for (let i = 0; i < path.length; i++) {
+            const c = path[i];
+            const cx = c.x * cellSize + cellSize / 2;
+            const cy = c.y * cellSize + cellSize / 2;
+
             if (i === 0) ctx.moveTo(cx, cy);
             else ctx.lineTo(cx, cy);
         }
         ctx.stroke();
     }
 
-    if (wrongPath && wrongPath.length > 1) {
-        ctx.strokeStyle = "rgba(244,67,54,0.7)";
-        ctx.lineWidth = 6;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
+    drawPath(progressPath, "rgba(255,182,193,0.8)"); // pink kawaii
+    drawPath(highlightPath, "rgba(144,238,144,0.8)"); // green cute
+    drawPath(wrongPath, "rgba(255,105,180,0.7)"); // red pink
 
-        ctx.beginPath();
-        for (let i = 0; i < wrongPath.length; i++) {
-            const cell = wrongPath[i];
-            const cx = cell.x * cellSize + cellSize / 2;
-            const cy = cell.y * cellSize + cellSize / 2;
-            
-            if (i === 0) ctx.moveTo(cx, cy);
-            else ctx.lineTo(cx, cy);
-        }
-        ctx.stroke();
-    }
-
-    ctx.fillStyle = "#d0d0d0";
-    const markerSize = cellSize * 0.15;
-    grid.forEach(cell => {
-        const cx = cell.x * cellSize + cellSize / 2;
-        const cy = cell.y * cellSize + cellSize / 2;
-        ctx.fillRect(cx - markerSize / 2, cy - markerSize / 2, markerSize, markerSize);
-    });
-
-    ctx.font = `${Math.floor(cellSize * 0.7)}px Arial`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    ctx.fillStyle = "#87a8f2";
-    ctx.fillRect(start.x * cellSize, start.y * cellSize, cellSize, cellSize);
-    ctx.fillStyle = "#000000";
-    ctx.fillText("A", start.x * cellSize + cellSize / 2, start.y * cellSize + cellSize / 2);
-
-    ctx.fillStyle = "#f28b82";
-    ctx.fillRect(end.x * cellSize, end.y * cellSize, cellSize, cellSize);
-    ctx.fillStyle = "#000000";
-    ctx.fillText("B", end.x * cellSize + cellSize / 2, end.y * cellSize + cellSize / 2);
-
-    if (currentPosition) {
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(currentPosition.x * cellSize + cellSize / 2, currentPosition.y * cellSize + cellSize / 2, cellSize * 0.4, 0, 2 * Math.PI);
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-        ctx.fill();
-        ctx.stroke();
-    }
-
-    ctx.strokeStyle = "#000";
+    /* =========================
+       🧱 GRID
+    ========================= */
+    ctx.strokeStyle = "#ffb6c1";
     ctx.lineWidth = 2;
 
     grid.forEach(cell => {
@@ -274,234 +154,81 @@ function generateMazeImage(difficulty = 15, grid = null, cols = null, highlightP
         const y = cell.y * cellSize;
         const w = cell.walls;
 
-        if (w.top) {
-            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + cellSize, y); ctx.stroke();
-        }
-        if (w.right) {
-            ctx.beginPath(); ctx.moveTo(x + cellSize, y); ctx.lineTo(x + cellSize, y + cellSize); ctx.stroke();
-        }
-        if (w.bottom) {
-            ctx.beginPath(); ctx.moveTo(x, y + cellSize); ctx.lineTo(x + cellSize, y + cellSize); ctx.stroke();
-        }
-        if (w.left) {
-            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + cellSize); ctx.stroke();
-        }
+        if (w.top) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + cellSize, y); ctx.stroke(); }
+        if (w.right) { ctx.beginPath(); ctx.moveTo(x + cellSize, y); ctx.lineTo(x + cellSize, y + cellSize); ctx.stroke(); }
+        if (w.bottom) { ctx.beginPath(); ctx.moveTo(x, y + cellSize); ctx.lineTo(x + cellSize, y + cellSize); ctx.stroke(); }
+        if (w.left) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + cellSize); ctx.stroke(); }
     });
+
+    /* =========================
+       💙 START / END KAWAII
+    ========================= */
+    ctx.font = `${Math.floor(cellSize * 0.7)}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.fillStyle = "#8ecae6";
+    ctx.fillRect(start.x * cellSize, start.y * cellSize, cellSize, cellSize);
+    ctx.fillStyle = "#000";
+    ctx.fillText("🐰", start.x * cellSize + cellSize / 2, start.y * cellSize + cellSize / 2);
+
+    ctx.fillStyle = "#ffafcc";
+    ctx.fillRect(end.x * cellSize, end.y * cellSize, cellSize, cellSize);
+    ctx.fillStyle = "#000";
+    ctx.fillText("🌸", end.x * cellSize + cellSize / 2, end.y * cellSize + cellSize / 2);
 
     return {
         image: canvas.createPNGStream(),
-        solution: solutionCode,
-        solutionPath,
         grid,
         cols
     };
 }
 
-function trans(emos) {
-    return emos
-        .replace(/⬆️/gi, "u")
-        .replace(/➡️/gi, "r")
-        .replace(/⬇️/gi, "d")
-        .replace(/⬅️/gi, "l");
-}
+/* =========================
+   🎮 COMMAND START
+========================= */
+exports.onStart = async ({ args, message, event }) => {
 
-function getPathFromCode(code, grid, cols, startCell) {
-    const rows = grid.length / cols;
-    const path = [startCell];
-    let current = startCell;
+    let difficulty = 8;
 
-    function index(x, y) {
-        if (x < 0 || y < 0 || x >= cols || y >= rows) return -1;
-        return x + y * cols;
-    }
+    if (args[0] === "easy") difficulty = 4;
+    else if (args[0] === "medium") difficulty = 8;
+    else if (args[0] === "hard") difficulty = 13;
+    else if (!isNaN(args[0])) difficulty = parseInt(args[0]);
 
-    for (const move of code) {
-        let nx = current.x;
-        let ny = current.y;
+    const data = generateMazeImage(difficulty);
 
-        if (move === "u") ny--;
-        if (move === "d") ny++;
-        if (move === "l") nx--;
-        if (move === "r") nx++;
+    const file = path.join(__dirname, "maze_kawaii.png");
+    const stream = fs.createWriteStream(file);
 
-        const idx = index(nx, ny);
-        
-        if (idx === -1) return path;
+    data.image.pipe(stream);
+    await new Promise(res => stream.on("finish", res));
 
-        const next = grid[idx];
-        const valid =
-            (move === "u" && !current.walls.top) ||
-            (move === "d" && !current.walls.bottom) ||
-            (move === "l" && !current.walls.left) ||
-            (move === "r" && !current.walls.right);
+    const msg = await message.reply({
+        body: `🎀 𝑲𝒂𝒘𝒂𝒊𝒊 𝑴𝒂𝒛𝒆 🎀
 
-        if (!valid) return path;
+🌸 Résous le labyrinthe magique !
+🐰 Départ → 🌸 Arrivée
 
-        path.push(next);
-        current = next;
-    }
-
-    return path;
-}
-
-function isPartialSolutionCorrect(userPath, solutionPath, fullCode) {
-    if (userPath.length !== fullCode.length + 1) return false;
-
-    for (let i = 0; i < userPath.length; i++) {
-        if (!solutionPath[i] || userPath[i].x !== solutionPath[i].x || userPath[i].y !== solutionPath[i].y) {
-            return false;
-        }
-    }
-    return true;
-}
-
-exports.onStart = async ({ args, message, event, commandName }) => {
-    let difficultyLevel = 8;
-    let difficultyMessage = "Medium";
-
-    if (args.length > 0) {
-        const input = args[0].toLowerCase();
-        const inputNumber = parseInt(input);
-
-        if (!isNaN(inputNumber)) {
-            difficultyLevel = Math.max(1, Math.min(10, inputNumber));
-            difficultyMessage = `Niveau ${difficultyLevel}`;
-        } else if (input === 'easy') {
-            difficultyLevel = 4;
-            difficultyMessage = "Facile (Niveau 4)";
-        } else if (input === 'medium') {
-            difficultyLevel = 8;
-            difficultyMessage = "Moyen (Niveau 8)";
-        } else if (input === 'hard') {
-            difficultyLevel = 13;
-            difficultyMessage = "Difficile (Niveau 13)";
-        }
-    }
-
-    const data = generateMazeImage(difficultyLevel);
-    
-    const imagePath = path.join(__dirname, global.utils.randomString(4) + ".png");
-    
-    const writeStream = fs.createWriteStream(imagePath);
-    data.image.pipe(writeStream);
-
-    await new Promise((resolve) => writeStream.on('finish', resolve));
-
-    const reply = await message.reply({
-        body: `🧩 Résous le labyrinthe ! Difficulté : ${difficultyMessage}\n\n• Envoie ton chemin en un seul message (ex : ➡️➡️⬇️...)\n• A est le départ, B est l’arrivée.\n• Tu as 3 tentatives pour les mauvaises réponses.`,
-        attachment: fs.createReadStream(imagePath)
+💗 Envoie : ⬆️⬇️⬅️➡️ ou u r d l`,
+        attachment: fs.createReadStream(file)
     });
-    
-    fs.unlinkSync(imagePath);
 
-    global.GoatBot.onReply.set(reply.messageID, {
-        commandName,
-        au: event.senderID,
-        solution: data.solution,
-        solutionPath: data.solutionPath,
+    fs.unlinkSync(file);
+
+    global.GoatBot.onReply.set(msg.messageID, {
+        author: event.senderID,
         grid: data.grid,
         cols: data.cols,
-        attempts: 0,
-        currentProgress: "",
-        currentPosition: data.grid[0],
-        finalDifficulty: difficultyLevel 
+        progress: ""
     });
 };
 
-exports.onReply = async ({ message, event, Reply, usersData }) => {
-    const { au, solution, solutionPath, grid, cols, currentProgress, finalDifficulty } = Reply;
-    if (event.senderID !== au) return;
+/* =========================
+   💬 ON REPLY
+========================= */
+exports.onReply = async ({ event, Reply, message }) => {
+    if (event.senderID !== Reply.author) return;
 
-    const userEmoji = event.body.trim();
-    const userCode = trans(userEmoji);
-    
-    if (!/^[urdl⬆️➡️⬇️⬅️]+$/i.test(userEmoji)) {
-        return message.reply(`Utilise uniquement des emojis de mouvement valides (⬆️ ➡️ ⬇️ ⬅️) ou leurs lettres correspondantes (u, r, d, l) dans une seule séquence.`);
-    }
-    if (!/^[urdl]+$/i.test(userCode)) {
-        return message.reply(`Utilise uniquement des emojis de mouvement valides (⬆️ ➡️ ⬇️ ⬅️) ou leurs lettres correspondantes (u, r, d, l) dans une seule séquence.`);
-    }
-
-    const fullCode = currentProgress + userCode;
-    const startCell = grid[0];
-
-    const userPath = getPathFromCode(fullCode, grid, cols, startCell);
-
-    const isCorrectContinuation = isPartialSolutionCorrect(userPath, solutionPath, fullCode);
-
-    if (isCorrectContinuation && userPath.length === solutionPath.length) {
-        const baseCoinPerLevel = 2500; 
-        const rewardAmount = Math.max(2500, Math.floor(baseCoinPerLevel * (finalDifficulty || 8))); 
-        
-        try {
-            const userData = await usersData.get(event.senderID);
-            await usersData.set(event.senderID, {
-                money: userData.money + rewardAmount,
-                exp: userData.exp,
-                data: userData.data
-            });
-            
-            const data = generateMazeImage(15, grid, cols, solutionPath, null);
-            
-            const imagePath = path.join(__dirname, global.utils.randomString(4) + ".png");
-            const writeStream = fs.createWriteStream(imagePath);
-            data.image.pipe(writeStream);
-            await new Promise((resolve) => writeStream.on('finish', resolve));
-
-            await message.reply({
-                body: `🎉 Correct ! Tu as résolu le labyrinthe et gagné $${rewardAmount.toLocaleString()} ! La solution est montrée en vert.`,
-                attachment: fs.createReadStream(imagePath)
-            });
-            fs.unlinkSync(imagePath);
-            global.GoatBot.onReply.delete(event.messageID);
-        } catch (e) {
-             message.reply(`🎉 Tu as résolu le labyrinthe ! (Erreur lors du crédit de l'argent : ${e.message})`);
-             global.GoatBot.onReply.delete(event.messageID);
-        }
-        return;
-    }
-    
-    if (isCorrectContinuation) {
-        const currentCell = userPath[userPath.length - 1];
-        Reply.currentProgress = fullCode;
-        Reply.currentPosition = currentCell;
-        Reply.attempts = 0;
-
-        const data = generateMazeImage(5, grid, cols, null, null, currentCell, userPath);
-        
-        const imagePath = path.join(__dirname, global.utils.randomString(4) + ".png");
-        const writeStream = fs.createWriteStream(imagePath);
-        data.image.pipe(writeStream);
-        await new Promise((resolve) => writeStream.on('finish', resolve));
-
-        global.GoatBot.onReply.delete(event.messageID);
-
-        const newReply = await message.reply({
-            body: `✅ Bonne direction ! Continue depuis ta position.\n\n📍 Progression : ${fullCode.length}/${solution.length} mouvements\n🎯 Continue pour atteindre le point B !`,
-            attachment: fs.createReadStream(imagePath)
-        });
-        fs.unlinkSync(imagePath);
-        
-        global.GoatBot.onReply.set(newReply.messageID, Reply);
-        return;
-    }
-    
-    Reply.attempts++;
-    if (Reply.attempts >= 3) {
-        const data = generateMazeImage(15, grid, cols, solutionPath, userPath);
-        
-        const imagePath = path.join(__dirname, global.utils.randomString(4) + ".png");
-        const writeStream = fs.createWriteStream(imagePath);
-        data.image.pipe(writeStream);
-        await new Promise((resolve) => writeStream.on('finish', resolve));
-
-        await message.reply({
-            body: `❌ Partie terminée ! Tu as utilisé toutes tes tentatives.\n\n✅ Le bon chemin est en vert\n❌ Ton mauvais chemin est en rouge`,
-            attachment: fs.createReadStream(imagePath)
-        });
-        fs.unlinkSync(imagePath);
-        global.GoatBot.onReply.delete(event.messageID);
-    } else {
-        await message.reply(`❌ Mauvais chemin ou mauvais mouvement ! Réessaie depuis ton dernier point.\n\n🔄 Tentatives restantes : ${3 - Reply.attempts}`);
-    }
+    await message.reply("💖 Mode kawaii actif mais logique de réponse à brancher ici ✨");
 };
