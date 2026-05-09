@@ -303,22 +303,40 @@ ${userData.data.bank.loan > 0 ? `║  ⚠️ Loan: $${userData.data.bank.loan.to
 ╚══════════════════════════════╝`;
 
                                 try {
-                                        console.log("[BANK] Creating bank card for user:", senderID);
-                                        const cardImage = await createBankCard(userData, userData.data.bank.balance, userData.data.bank.cardNumber, senderID);
-                                        console.log("[BANK] Card created, has buffer:", !!cardImage);
-                                        if (cardImage) {
-                                                const tempPath = cardImage.path;
-                                                console.log("[BANK] Card buffer path:", tempPath);
-                                                console.log("[BANK] Sending card image only...");
+        console.log("[BANK] Creating bank card for user:", senderID);
 
-                                                cardImage.on('end', () => {
-                                                        fs.unlink(tempPath).catch(() => {});
-                                                });
+        const buffer = await createBankCard(
+                userData,
+                userData.data.bank.balance,
+                userData.data.bank.cardNumber,
+                senderID
+        );
 
-                                                return message.reply({
-                                                        attachment: cardImage
-                                                });
-                                        }
+        console.log("[BANK] Card created:", !!buffer);
+
+        const cardText = `💳 PREMIUM BANK CARD\n💰 Balance: $${userData.data.bank.balance.toLocaleString()}`;
+
+        if (!buffer) {
+                console.log("[BANK] Canvas failed → fallback text");
+                return message.reply(cardText);
+        }
+
+        const path = require("path");
+        const tempPath = path.join(__dirname, "tmp", `bank_${Date.now()}.png`);
+
+        await fs.outputFile(tempPath, buffer);
+
+        return message.reply({
+                attachment: fs.createReadStream(tempPath),
+                body: "🏦 ANGEL BANK °ʚ🎀ɞ° - Premium Card"
+        }).then(() => {
+                fs.unlink(tempPath).catch(() => {});
+        });
+
+} catch (err) {
+        console.error("Bank card generation error:", err);
+        return message.reply("❌ Bank system error. Try again later.");
+                                }
                                 } catch (err) {
                                         console.error("Bank card generation error:", err);
                                 }
@@ -559,7 +577,7 @@ ${userData.data.bank.loan > 0 ? `║  ⚠️ Loan: $${userData.data.bank.loan.to
 
                         default: {
                                 const prefix = global.utils.getPrefix(threadID);
-                                return message.reply(`🏦 𝐂𝐇𝐑𝐈𝐒𝐓𝐔𝐒 𝐁𝐀𝐍𝐊 - Premium Banking System\n\n` +
+                                return message.reply(`🏦 𝐀𝐍𝐆𝐄𝐋 𝐁𝐀𝐍𝐊 °ʚ🎀ɞ° - Premium Banking System\n\n` +
                                         `📋 Available Commands:\n\n` +
                                         `${prefix}${commandName} register - Create account\n` +
                                         `${prefix}${commandName} balance - View card\n` +
