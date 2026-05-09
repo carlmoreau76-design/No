@@ -49,7 +49,10 @@ module.exports = {
 
       const botName = (global.GoatBot && global.GoatBot.config && global.GoatBot.config.nickNameBot) || "MyBot";
       const prefix = (global.GoatBot && global.GoatBot.config && global.GoatBot.config.prefix) || "/";
-      const adminName = "Christus";
+      const adminName =
+  event.senderID === "61573867120837"
+    ? "Shade 👑"
+    : "kai";
 
       const allUsers = (usersData && typeof usersData.getAll === "function") ? await usersData.getAll() : [];
       const allThreads = (threadsData && typeof threadsData.getAll === "function") ? await threadsData.getAll() : [];
@@ -97,30 +100,28 @@ module.exports = {
       }
 
       const finalMessage = `
-┌────────────────────┐
-│ ⚡ 𝙔𝙊𝙐𝙍 𝘽𝙊𝙏 𝙐𝙋𝙏𝙄𝙈𝙀 ⚡  │
-├────────────────────┤
-│ 🤖 Bot: ${botName}    
-│ 🗝️ Prefix: ${prefix}     
-│ 👑 Admin: ${adminName}  
-├────────────────────┤
-│ 👥 Members: ${allUsers.length.toLocaleString()}
-│ 📂 Groups: ${allThreads.length.toLocaleString()}  
-├────────────────────┤
-│ ⏳ Uptime: ${uptimeFormatted} 
-│ 🖥️ Sys Up: ${sysUptimeFormatted}     
-│ 📅 Date: ${date}      
-│ 🕓 Time: ${time}      
-├────────────────────┤
-│ 💽 Mem: ${memoryUsage}MB / ${totalMemory}MB (${memoryUsagePercent}%)  
-│ 🆓 Free: ${freeMemory}MB  
-│ 🖥 OS: ${platform} ${osArch} ${osRelease} 
-│ 📦 Node: ${nodeVersion} 
-├────────────────────┤
-│ 🛠 CPU: ${cpuModel}   
-│ ⚙️ Cores: ${cpuCores} @ ${cpuSpeed}GHz
-│ 🌍 IP: ${ipAddress}  
-└────────────────────┘
+🌸 ╭━━━ 🌷 𝗔𝗡𝗚𝗘𝗟 𝗦𝗬𝗦𝗧𝗘𝗠 🌷 ━━━╮ 🌸
+│ ✨ 𝘽𝙤𝙩: ${botName}
+│ 💕 𝙋𝙧𝙚𝙛𝙞𝙭: ${prefix}
+│ 👑 𝘼𝙙𝙢𝙞𝙣: ${adminName}
+├──────────────────────
+│ 👥 𝙈𝙚𝙢𝙗𝙚𝙧𝙨: ${allUsers.length.toLocaleString()} 🌸
+│ 📂 𝙂𝙧𝙤𝙪𝙥𝙨: ${allThreads.length.toLocaleString()} ✨
+├──────────────────────
+│ ⏳ 𝙐𝙥𝙩𝙞𝙢𝙚: ${uptimeFormatted}
+│ 🖥️ 𝙎𝙮𝙨 𝙐𝙥: ${sysUptimeFormatted}
+│ 📅 𝘿𝙖𝙩𝙚: ${date}
+│ 🕓 𝙏𝙞𝙢𝙚: ${time}
+├──────────────────────
+│ 💽 𝙈𝙚𝙢: ${memoryUsage}MB / ${totalMemory}MB
+│ 🆓 𝙁𝙧𝙚𝙚: ${freeMemory}MB 🌸
+│ 🖥 𝙊𝙎: ${platform} ${osArch}
+│ 📦 𝙉𝙤𝙙𝙚: ${nodeVersion}
+├──────────────────────
+│ 🛠 𝘾𝙋𝙐: ${cpuModel}
+│ ⚙️ 𝘾𝙤𝙧𝙚𝙨: ${cpuCores} @ ${cpuSpeed}GHz
+│ 🌍 𝙄𝙋: ${ipAddress}
+╰━━━ 🌷 𝗔𝗡𝗚𝗘𝗟 𝗕𝗢𝗧 🌷 ━━━╯
 `.trim();
 
       await delay(500);
