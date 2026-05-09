@@ -1,8 +1,13 @@
 const axios = require("axios");
 const fs = require("fs");
+const path = require("path");
 
-const memoryFile = "./sae_memory.json";
+const memoryFile = path.join(__dirname, "cache", "sae_memory.json");
 
+// créer le fichier si absent
+if (!fs.existsSync(memoryFile)) {
+  fs.writeFileSync(memoryFile, "{}");
+}
 // 👑 TON IDENTITÉ
 const CREATOR_UID = "61573867120837";
 const CREATOR_NAME = "Shade";
