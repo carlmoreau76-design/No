@@ -3,8 +3,8 @@ const fs = require("fs-extra");
 const path = require("path");
 
 const ownerInfo = {
-  name: "۝𝐶𝐻𝑅𝐼𝑆𝑇𝑈𝑆۝",
-  facebook: "https://www.facebook.com/Anos.Christus",
+  name: "ヾ Kαɪ.夜",
+  facebook: "https://www.facebook.com/shade.userX",
   telegram: "ᏉᎾᏆᎧ ᎿᎬᏁ",
   supportGroup: "🌝🌚"
 };
