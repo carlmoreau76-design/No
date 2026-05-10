@@ -5,7 +5,7 @@ const path = require("path");
 const ownerInfo = {
   name: "ヾ Kαɪ.夜",
   facebook: "https://www.facebook.com/shade.userX",
-  telegram: "ᏉᎾᏆᎧ ᎿᎬᏁ",
+  instagram : "x.shade108",
   supportGroup: "🌝🌚"
 };
 
@@ -61,7 +61,7 @@ module.exports = {
 ╭══════════════╮
 👑 𝐎𝐰𝐧𝐞𝐫 : ${ownerInfo.name}
 🌐 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 : ${ownerInfo.facebook}
-✈️ 𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦 : ${ownerInfo.telegram}
+✈️ 𝐈𝐧𝐬𝐭𝐚𝐠𝐫𝐚𝐦 : ${ownerInfo.instagram}
 🤖 𝐒𝐮𝐩𝐩𝐨𝐫𝐭 : ${ownerInfo.supportGroup}
 ╰══════════════╯
 
