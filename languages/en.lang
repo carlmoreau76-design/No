@@ -87,43 +87,66 @@ handlerCheckData.cantCreateUser=Les utilisateurs avec l’ID '%1' ne peuvent pas
 # bot/handler/handlerEvents.js
 handlerEvents.userBanned=🚫 𝐕𝐨𝐮𝐬 𝐚𝐯𝐞𝐳 𝐞́𝐭𝐞́ 𝐛𝐚𝐧𝐧𝐢 𝐝𝐮 𝐛𝐨𝐭\n» 𝐑𝐚𝐢𝐬𝐨𝐧 : %1\n» 𝐇𝐞𝐮𝐫𝐞 : %2\n» 𝐈𝐃 𝐔𝐭𝐢𝐥𝐢𝐬𝐚𝐭𝐞𝐮𝐫 : %3
 handlerEvents.threadBanned=🚫 𝐂𝐞 𝐠𝐫𝐨𝐮𝐩𝐞 𝐚 𝐞́𝐭𝐞́ 𝐛𝐚𝐧𝐧𝐢 𝐝𝐮 𝐛𝐨𝐭\n» 𝐑𝐚𝐢𝐬𝐨𝐧 : %1\n» 𝐇𝐞𝐮𝐫𝐞 : %2\n» 𝐈𝐃 𝐆𝐫𝐨𝐮𝐩𝐞 : %3
-handlerEvents.onlyAdminBox=🔒 𝐂𝐞 𝐠𝐫𝐨𝐮𝐩𝐞 𝐞𝐬𝐭 𝐚𝐜𝐭𝐮𝐞𝐥𝐥𝐞𝐦𝐞𝐧𝐭 𝐫𝐞𝐬𝐞𝐫𝐯𝐞́ 𝐚𝐮𝐱 𝐚𝐝𝐦𝐢𝐧𝐢𝐬𝐭𝐫𝐚𝐭𝐞𝐮𝐫𝐬
-handlerEvents.onlyAdminBot=❌ | 𝐒𝐞𝐮𝐥 𝐥’𝐚𝐝𝐦𝐢𝐧 𝐝𝐮 𝐛𝐨𝐭 𝐩𝐞𝐮𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐞 𝐛𝐨𝐭
-handlerEvents.onlyDeveloperGlobal=⚙️ | 𝐒𝐞𝐮𝐥 𝐥𝐞 𝐝𝐞́𝐯𝐞𝐥𝐨𝐩𝐩𝐞𝐮𝐫 𝐝𝐮 𝐛𝐨𝐭 𝐞𝐭 𝐩𝐥𝐮𝐬 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐞 𝐛𝐨𝐭
-handlerEvents.onlyVipUserGlobal=💎 | 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐮𝐬𝐞𝐫𝐬 𝐕𝐈𝐏 𝐞𝐭 𝐩𝐥𝐮𝐬 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐞 𝐛𝐨𝐭
-handlerEvents.commandNotFound=❌ | 𝐋𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 "%1" 𝐧’𝐞𝐱𝐢𝐬𝐭𝐞 𝐩𝐚𝐬, 𝐭𝐚𝐩𝐞𝐳 %2𝐡𝐞𝐥𝐩 𝐩𝐨𝐮𝐫 𝐯𝐨𝐢𝐫 𝐭𝐨𝐮𝐭𝐞𝐬 𝐥𝐞𝐬 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞𝐬
-handlerEvents.commandNotFound2=❌ | 𝐋𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 𝐪𝐮𝐞 𝐯𝐨𝐮𝐬 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐳 𝐧’𝐞𝐱𝐢𝐬𝐭𝐞 𝐩𝐚𝐬, 𝐭𝐚𝐩𝐞𝐳 %1𝐡𝐞𝐥𝐩 𝐩𝐨𝐮𝐫 𝐯𝐨𝐢𝐫 𝐥𝐞𝐬 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞𝐬
+bot/handler/handlerCheckData.js
 
-# NEW KEY ADDED FOR SUGGESTION
-handlerEvents.commandNotFoundSuggestion=🧐 𝐋𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 𝐪𝐮𝐞 𝐯𝐨𝐮𝐬 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐳 𝐧’𝐞𝐱𝐢𝐬𝐭𝐞 𝐩𝐚𝐬.\n\n𝐕𝐨𝐮𝐥𝐢𝐞𝐳-𝐯𝐨𝐮𝐬 𝐝𝐢𝐫𝐞 %2%1 ?
-# END NEW KEY
+handlerCheckData.cantCreateThread=
+"╭ ◜◝ ͡ ◜◝ ͡ ◜◝ ╮\n♡ ᴀɴɢᴇʟ ᴅᴀᴛᴀʙᴀsᴇ ♡\n╰ ◟◞ ͜ ◟◞ ͜ ◟◞ ╯\n⚠️ 𝐈𝐦𝐩𝐨𝐬𝐬𝐢𝐛𝐥𝐞 𝐝’𝐞́𝐜𝐫𝐢𝐫𝐞 𝐥𝐞 𝐠𝐫𝐨𝐮𝐩𝐞 𝐚𝐯𝐞𝐜 𝐥’𝐈𝐃 '%1' 𝐝𝐚𝐧𝐬 𝐥𝐚 𝐛𝐚𝐬𝐞 𝐝𝐞 𝐝𝐨𝐧𝐧𝐞́𝐞𝐬"
 
-handlerEvents.commandSyntaxError=⚠️ | 𝐋𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 𝐪𝐮𝐞 𝐯𝐨𝐮𝐬 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐳 𝐩𝐨𝐬𝐬𝐞̀𝐝𝐞 𝐮𝐧𝐞 𝐦𝐚𝐮𝐯𝐚𝐢𝐬𝐞 𝐬𝐲𝐧𝐭𝐚𝐱𝐞, 𝐭𝐚𝐩𝐞𝐳 %1𝐡𝐞𝐥𝐩 %2 𝐩𝐨𝐮𝐫 𝐯𝐨𝐢𝐫 𝐜𝐨𝐦𝐦𝐞𝐧𝐭 𝐥’𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫
-handlerEvents.onlyAdmin=❌ | 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐚𝐝𝐦𝐢𝐧𝐬 𝐝𝐮 𝐠𝐫𝐨𝐮𝐩𝐞 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 "%1"
-handlerEvents.onlyAdminToUseOnReply=❌ | 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐚𝐝𝐦𝐢𝐧𝐬 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐫𝐞𝐩𝐨𝐧𝐬𝐞 𝐝𝐞 "%1"
-handlerEvents.onlyAdminToUseOnReaction=❌ | 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐚𝐝𝐦𝐢𝐧𝐬 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐫𝐞𝐚𝐜𝐭𝐢𝐨𝐧 𝐝𝐞 "%1"
-handlerEvents.onlyAdminBot2=💫 | 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐮𝐬𝐞𝐫𝐬 𝐕𝐈𝐏 𝐞𝐭 𝐩𝐥𝐮𝐬 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 "%1"
-handlerEvents.onlyAdminBot2ToUseOnReply=💫 | 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐮𝐬𝐞𝐫𝐬 𝐕𝐈𝐏 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐫𝐞𝐩𝐨𝐧𝐬𝐞 𝐝𝐞 "%1"
-handlerEvents.onlyAdminBot2ToUseOnReaction=💫 | 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐮𝐬𝐞𝐫𝐬 𝐕𝐈𝐏 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐫𝐞𝐚𝐜𝐭𝐢𝐨𝐧 𝐝𝐞 "%1"
-handlerEvents.onlyDeveloper=⚙️ | 𝐒𝐞𝐮𝐥 𝐥𝐞 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐩𝐞𝐮𝐫 𝐝𝐮 𝐛𝐨𝐭 𝐩𝐞𝐮𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 "%1"
-handlerEvents.onlyDeveloperToUseOnReply=⚙️ | 𝐒𝐞𝐮𝐥 𝐥𝐞 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐩𝐞𝐮𝐫 𝐩𝐞𝐮𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐫𝐞𝐩𝐨𝐧𝐬𝐞 𝐝𝐞 "%1"
-handlerEvents.onlyDeveloperToUseOnReaction=⚙️ | 𝐒𝐞𝐮𝐥 𝐥𝐞 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐩𝐞𝐮𝐫 𝐩𝐞𝐮𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐫𝐞𝐚𝐜𝐭𝐢𝐨𝐧 𝐝𝐞 "%1"
-handlerEvents.onlyVipUser=💎 | 𝐒𝐞𝐮𝐥𝐬 𝐥'𝐀𝐝𝐦𝐢𝐧𝐁𝐨𝐭 𝐞𝐭 𝐥𝐞 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐩𝐞𝐮𝐫 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 "%1"
-handlerEvents.onlyVipUserToUseOnReply=💎 | 𝐒𝐞𝐮𝐥𝐬 𝐥'𝐀𝐝𝐦𝐢𝐧𝐁𝐨𝐭 𝐞𝐭 𝐥𝐞 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐩𝐞𝐮𝐫 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐫𝐞𝐩𝐨𝐧𝐬𝐞 𝐝𝐞 "%1"
-handlerEvents.onlyVipUserToUseOnReaction=💎 | 𝐒𝐞𝐮𝐥𝐬 𝐥'𝐀𝐝𝐦𝐢𝐧𝐁𝐨𝐭 𝐞𝐭 𝐥𝐞 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐩𝐞𝐮𝐫 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐚 𝐫𝐞𝐚𝐜𝐭𝐢𝐨𝐧 𝐝𝐞 "%1"
-handlerEvents.waitingForCommand=⏱ 𝐕𝐨𝐮𝐬 𝐞̂𝐭𝐞𝐬 𝐝𝐚𝐧𝐬 𝐥𝐞 𝐭𝐞𝐦𝐩𝐬 𝐝’𝐚𝐭𝐭𝐞𝐧𝐭𝐞 𝐩𝐨𝐮𝐫 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐜𝐞𝐭𝐭𝐞 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞, 𝐫𝐞𝐯𝐞𝐧𝐞𝐳 𝐚̀𝐩𝐫𝐞𝐬 %1𝐬
-handlerEvents.errorOccurred=❌ [ %1 ]\n𝐔𝐧𝐞 𝐞𝐫𝐫𝐞𝐮𝐫 𝐬'𝐞𝐬𝐭 𝐩𝐫𝐨𝐝𝐮𝐢𝐭𝐞 𝐚̀ 𝐥𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 "%2"\n\n%3
-handlerEvents.errorOccurred2=❌ [ %1 ]\n𝐔𝐧𝐞 𝐞𝐫𝐫𝐞𝐮𝐫 𝐬'𝐞𝐬𝐭 𝐩𝐫𝐨𝐝𝐮𝐢𝐭𝐞 𝐥𝐨𝐫𝐬 𝐝𝐞 𝐥’𝐞𝐱𝐞́𝐜𝐮𝐭𝐢𝐨𝐧 𝐝𝐞 onChat 𝐝𝐚𝐧𝐬 "%2"\n\n%3
-handlerEvents.errorOccurred3=❌ [ %1 ]\n𝐄𝐫𝐫𝐞𝐮𝐫 𝐥𝐨𝐫𝐬 𝐝𝐞 𝐥’𝐞𝐱𝐞́𝐜𝐮𝐭𝐢𝐨𝐧 𝐝𝐞 onReply 𝐝𝐚𝐧𝐬 "%2"\n\n%3
-handlerEvents.errorOccurred4=❌ [ %1 ]\n𝐄𝐫𝐫𝐞𝐮𝐫 𝐥𝐨𝐫𝐬 𝐝𝐞 𝐥’𝐞𝐱𝐞́𝐜𝐮𝐭𝐢𝐨𝐧 𝐝𝐞 onReaction 𝐝𝐚𝐧𝐬 "%2"\n\n%3
-handlerEvents.errorOccurred5=❌ [ %1 ]\n𝐄𝐫𝐫𝐞𝐮𝐫 𝐥𝐨𝐫𝐬 𝐝𝐞 𝐥’𝐞𝐱𝐞́𝐜𝐮𝐭𝐢𝐨𝐧 𝐝𝐞 onEvent 𝐝𝐚𝐧𝐬 "%2"\n\n%3
-handlerEvents.errorOccurred6=❌ [ %1 ]\n𝐄𝐫𝐫𝐞𝐮𝐫 𝐥𝐨𝐫𝐬 𝐝𝐞 𝐥’𝐞𝐱𝐞́𝐜𝐮𝐭𝐢𝐨𝐧 𝐝𝐞 onEvent 𝐝𝐚𝐧𝐬 "%2"\n\n%3
-handlerEvents.errorOccurred7=❌ [ %1 ]\n𝐄𝐫𝐫𝐞𝐮𝐫 𝐥𝐨𝐫𝐬 𝐝𝐞 𝐥’𝐞𝐱𝐞́𝐜𝐮𝐭𝐢𝐨𝐧 𝐝𝐞 onAnyEvent 𝐝𝐚𝐧𝐬 "%2"\n\n%3
-handlerEvents.cannotFindCommandName=❌ Impossible de trouver le nom de la commande pour exécuter cette réponse !
-handlerEvents.cannotFindCommand=❌ Impossible de trouver la commande "%1" pour exécuter cette réponse !
+handlerCheckData.cantCreateUser=
+"╭═════════💜═╮\n   ᴀɴɢᴇʟ ᴜsᴇʀ ✨\n╰═💜═════════╯\n૮₍ ˶ᵔ ᵕ ᵔ˶ ₎ა\n⚠️ 𝐈𝐦𝐩𝐨𝐬𝐬𝐢𝐛𝐥𝐞 𝐝’𝐞́𝐜𝐫𝐢𝐫𝐞 𝐥’𝐮𝐭𝐢𝐥𝐢𝐬𝐚𝐭𝐞𝐮𝐫 𝐚𝐯𝐞𝐜 𝐥’𝐈𝐃 '%1' 𝐝𝐚𝐧𝐬 𝐥𝐚 𝐛𝐚𝐬𝐞 𝐝𝐞 𝐝𝐨𝐧𝐧𝐞́𝐞𝐬"
 
-# bot/autoUptime.js
-autoUptime.autoUptimeTurnedOn=Mode AutoUptime activé
+bot/handler/handlerEvents.js
+
+handlerEvents.userBanned=
+"╭═════════🚫═╮\n   ʙᴀɴ ɴᴏᴛɪᴄᴇ\n╰═🚫═════════╯\n૮₍ ˃ ⤙ ˂ ₎ა\n🚫 𝐕𝐨𝐮𝐬 𝐚𝐯𝐞𝐳 𝐞́𝐭𝐞́ 𝐛𝐚𝐧𝐧𝐢 𝐝𝐮 𝐛𝐨𝐭\n» 𝐑𝐚𝐢𝐬𝐨𝐧 : %1\n» 𝐇𝐞𝐮𝐫𝐞 : %2\n» 𝐈𝐃 : %3"
+
+handlerEvents.threadBanned=
+"╭ ◜◝ ͡ ◜◝ ͡ ◜◝ ╮\n♡ ɢʀᴏᴜᴘ ʙᴀɴ ♡\n╰ ◟◞ ͜ ◟◞ ͜ ◟◞ ╯\n🚫 𝐂𝐞 𝐠𝐫𝐨𝐮𝐩𝐞 𝐚 𝐞́𝐭𝐞́ 𝐛𝐚𝐧𝐧𝐢\n» 𝐑𝐚𝐢𝐬𝐨𝐧 : %1\n» 𝐇𝐞𝐮𝐫𝐞 : %2\n» 𝐈𝐃 : %3"
+
+handlerEvents.onlyAdminBox=
+"╭═════════🔒═╮\n   ᴀᴅᴍɪɴ ᴏɴʟʏ\n╰═🔒═════════╯\n💫 𝐂𝐞 𝐠𝐫𝐨𝐮𝐩𝐞 𝐞𝐬𝐭 𝐫𝐞́𝐬𝐞𝐫𝐯𝐞́ 𝐚𝐮𝐱 𝐚𝐝𝐦𝐢𝐧𝐢𝐬𝐭𝐫𝐚𝐭𝐞𝐮𝐫𝐬"
+
+handlerEvents.onlyAdminBot=
+"╭ ◜◝ ͡ ◜◝ ╮\n♡ ᴀɴɢᴇʟ ᴘᴇʀᴍ ♡\n╰ ◟◞ ͜ ◟◞ ╯\n❌ | 𝐒𝐞𝐮𝐥 𝐥’𝐚𝐝𝐦𝐢𝐧 𝐝𝐮 𝐛𝐨𝐭 𝐩𝐞𝐮𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐞 𝐛𝐨𝐭"
+
+handlerEvents.onlyDeveloperGlobal=
+"╭═════════⚙️═╮\n   ᴅᴇᴠᴇʟᴏᴘᴇʀ\n╰═⚙️═════════╯\n💫 𝐒𝐞𝐮𝐥 𝐥𝐞 𝐝𝐞́𝐯𝐞𝐥𝐨𝐩𝐩𝐞𝐮𝐫 𝐩𝐞𝐮𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐞 𝐛𝐨𝐭"
+
+handlerEvents.onlyVipUserGlobal=
+"╭═════════💎═╮\n      ᴠɪᴘ\n╰═💎═════════╯\n✨ 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐮𝐬𝐞𝐫𝐬 𝐕𝐈𝐏 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 𝐥𝐞 𝐛𝐨𝐭"
+
+handlerEvents.commandNotFound=
+"╭ ◜◝ ͡ ◜◝ ͡ ◜◝ ╮\n♡ ᴀɴɢᴇʟ ᴄᴏᴍᴍᴀɴᴅ ♡\n╰ ◟◞ ͜ ◟◞ ͜ ◟◞ ╯\n❌ 𝐋𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞 "%1" 𝐧’𝐞𝐱𝐢𝐬𝐭𝐞 𝐩𝐚𝐬\n💫 𝐓𝐚𝐩𝐞𝐳 %2help"
+
+handlerEvents.commandNotFound2=
+"╭═════════💜═╮\n   ɴᴏᴛ ғᴏᴜɴᴅ\n╰═💜═════════╯\n૮₍ ˶ᵔ ᵕ ᵔ˶ ₎ა\n❌ 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐞 𝐢𝐧𝐜𝐨𝐧𝐧𝐮𝐞\n💫 𝐓𝐚𝐩𝐞𝐳 %1help"
+
+handlerEvents.commandNotFoundSuggestion=
+"╭═════════🧐═╮\n   sᴜɢɢᴇsᴛɪᴏɴ\n╰═🧐═════════╯\n💭 𝐕𝐨𝐮𝐥𝐢𝐞𝐳-𝐯𝐨𝐮𝐬 𝐝𝐢𝐫𝐞 %2%1 ?"
+
+handlerEvents.commandSyntaxError=
+"╭ ◜◝ ͡ ◜◝ ╮\n♡ sʏɴᴛᴀx ᴇʀʀᴏʀ ♡\n╰ ◟◞ ͜ ◟◞ ╯\n⚠️ 𝐌𝐚𝐮𝐯𝐚𝐢𝐬𝐞 𝐬𝐲𝐧𝐭𝐚𝐱𝐞\n💫 𝐓𝐚𝐩𝐞𝐳 %1help %2"
+
+handlerEvents.onlyAdmin=
+"╭═════════👑═╮\n   ᴀᴅᴍɪɴ ᴏɴʟʏ\n╰═👑═════════╯\n❌ 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐚𝐝𝐦𝐢𝐧𝐬 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 "%1""
+
+handlerEvents.onlyDeveloper=
+"╭═════════⚙️═╮\n    ᴅᴇᴠ ᴏɴʟʏ\n╰═⚙️═════════╯\n💫 𝐒𝐞𝐮𝐥 𝐥𝐞 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐩𝐞𝐮𝐫 𝐩𝐞𝐮𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 "%1""
+
+handlerEvents.onlyVipUser=
+"╭═════════💎═╮\n      ᴠɪᴘ\n╰═💎═════════╯\n✨ 𝐒𝐞𝐮𝐥𝐬 𝐥𝐞𝐬 𝐕𝐈𝐏 𝐩𝐞𝐮𝐯𝐞𝐧𝐭 𝐮𝐭𝐢𝐥𝐢𝐬𝐞𝐫 "%1""
+
+handlerEvents.waitingForCommand=
+"╭ ◜◝ ͡ ◜◝ ╮\n♡ ᴄᴏᴏʟᴅᴏᴡɴ ♡\n╰ ◟◞ ͜ ◟◞ ╯\n⏱ 𝐕𝐞𝐮𝐢𝐥𝐥𝐞𝐳 𝐚𝐭𝐭𝐞𝐧𝐝𝐫𝐞 %1𝐬"
+
+handlerEvents.errorOccurred=
+"╭═════════❌═╮\n    ᴇʀʀᴏʀ\n╰═❌═════════╯\n૮₍ ˃ ⤙ ˂ ₎ა\n❌ [ %1 ]\n𝐄𝐫𝐫𝐞𝐮𝐫 𝐝𝐚𝐧𝐬 "%2"\n\n%3"
+
+handlerEvents.cannotFindCommandName=
+"╭═════════💔═╮\n   ɴᴏ ɴᴀᴍᴇ\n╰═💔═════════╯\n❌ 𝐈𝐦𝐩𝐨𝐬𝐬𝐢𝐛𝐥𝐞 𝐝𝐞 𝐭𝐫𝐨𝐮𝐯𝐞𝐫 𝐥𝐞 𝐧𝐨𝐦 𝐝𝐞 𝐥𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞"
+
+handlerEvents.cannotFindCommand=
+"╭═════════💔═╮\n   ɴᴏ ᴄᴏᴍᴍᴀɴᴅ\n╰═💔═════════╯\n❌ 𝐈𝐦𝐩𝐨𝐬𝐬𝐢𝐛𝐥𝐞 𝐝𝐞 𝐭𝐫𝐨𝐮𝐯𝐞𝐫 "%1""toUptimeTurnedOn=Mode AutoUptime activé
 
 # database/controller/index.js
 indexController.connectingMongoDB=Connexion à une base de données MONGODB
