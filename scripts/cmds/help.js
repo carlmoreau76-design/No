@@ -4,7 +4,7 @@ const config = global.GoatBot.config;
 module.exports = {
   config: {
     name: "help",
-    version: "7.1",
+    version: "7.3",
     author: "Shade",
     countDown: 2,
     role: 0,
@@ -21,34 +21,38 @@ module.exports = {
 
     for (let [name, cmd] of commands) {
       const cat = cmd?.config?.category || "other";
-
       if (!categories[cat]) categories[cat] = [];
       categories[cat].push(name);
     }
 
     let menu = `
-🌸 𝐀𝐍𝐆𝐄𝐋 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒 🌸
-━━━━━━━━━━━━━━
+╭─ ⋆｡˚ ♡ 𝗔𝗡𝗚𝗘𝗟 𝗕𝗢𝗧 ♡ ˚｡⋆ ─╮
+🌸 Menu Commands
+⚡ Prefix : ${config.prefix || "!"}
+╰────────────────────╯
 `;
 
     for (const cat of Object.keys(categories).sort()) {
-      menu += `┍─━〔 🌷 | ${cat.toUpperCase()} 〕\n`;
+      menu += `
+┏━〔 🌷 ${cat.toUpperCase()} 〕
+`;
 
-      const cmds = categories[cat]
+      menu += categories[cat]
         .sort()
-        .map(c => `╎ᯓ✧ ${c}`)
+        .map(c => `╎ ✧ ${c}`)
         .join("\n");
 
-      menu += cmds + "\n";
-      menu += `┕━─────୨ৎ─────━ᥫ᭡\n`;
+      menu += `
+┗━━━━━━━━━━━━━━━
+`;
     }
 
     menu += `
-╭──────୨ৎ──────╮
-╎ 🔢 Total : ${commands.size}
-╎ ⚡ Prefix : ${config.prefix || "!"}
-╎ 👑 Owner : SHADE
-╰──────୨ৎ──────╯
+╭──── ♡ ANGEL INFO ♡ ────╮
+🔢 Total : ${commands.size}
+👑 Owner : SHADE
+💫 Stay cute, stay kind
+╰────────────────────╯
 `;
 
     try {
@@ -57,6 +61,7 @@ module.exports = {
         attachment: await global.utils.getStreamFromURL(imageURL)
       });
     } catch (e) {
+      // fallback si image bug
       return message.reply(menu);
     }
   }
