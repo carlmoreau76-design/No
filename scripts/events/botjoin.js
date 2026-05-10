@@ -6,7 +6,7 @@ const ownerInfo = {
   name: "ヾ Kαɪ.夜",
   facebook: "https://www.facebook.com/shade.userX",
   instagram : "x.shade108",
-  supportGroup: "🌝🌚"
+  supportGroup: "꒰ა 𝘚𝘶𝘱𝘱𝘰𝘳𝘵 𝘣𝘪𝘦𝘯𝘵𝘰̂𝘵 𝘥𝘪𝘴𝘱𝘰𝘯𝘪𝘣𝘭𝘦 ໒꒱"
 };
 
 module.exports = {
