@@ -12,12 +12,12 @@ const ownerInfo = {
 module.exports = {
   config: {
     name: "botjoin",
-    version: "2.0",
-    author: "Saimx69x",
+    version: "2.1",
+    author: "Angel System",
     category: "events"
   },
 
-  onStart: async function ({ event, api, message }) {
+  onStart: async function ({ event, api }) {
     if (event.logMessageType !== "log:subscribe") return;
 
     const { threadID, logMessageData } = event;
@@ -27,64 +27,71 @@ module.exports = {
     const isBotAdded = addedUsers.some(u => u.userFbId === botID);
     if (!isBotAdded) return;
 
-    const nickNameBot = global.GoatBot.config.nickNameBot || "Sakura Bot";
     const prefix = global.utils.getPrefix(threadID);
-    const BOT_UID = botID; 
+    const nickNameBot = global.GoatBot.config.nickNameBot || "Angel Bot ✨";
 
     try {
-      
       await api.changeNickname(nickNameBot, threadID, botID);
-    } catch (err) {
-      console.warn("⚠️ Nickname change failed:", err.message);
-    }
+    } catch (e) {}
 
     try {
-      
-      const API_ENDPOINT = "https://xsaim8x-xxx-api.onrender.com/api/botjoin"; 
-      
-      const apiUrl = `${API_ENDPOINT}?botuid=${BOT_UID}&prefix=${encodeURIComponent(prefix)}`;
-      
-      const tmpDir = path.join(__dirname, "..", "cache");
-      await fs.ensureDir(tmpDir);
-      const imagePath = path.join(tmpDir, `botjoin_image_${threadID}.png`);
+      const API = "https://xsaim8x-xxx-api.onrender.com/api/botjoin";
+      const url = `${API}?botuid=${botID}&prefix=${encodeURIComponent(prefix)}`;
 
-      const response = await axios.get(apiUrl, { responseType: "arraybuffer" });
-      fs.writeFileSync(imagePath, response.data);
+      const cacheDir = path.join(__dirname, "..", "cache");
+      await fs.ensureDir(cacheDir);
 
-      const textMsg = [
-        "🎀 𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐟𝐨𝐫 𝐢𝐧𝐯𝐢𝐭𝐢𝐧𝐠 𝐦𝐞 🎀",
-        `🔹 𝐁𝐨𝐭 𝐩𝐫𝐞𝐟𝐢𝐱: ${prefix}`,
-        `🔸 𝐓𝐲𝐩𝐞: ${prefix}help 𝐭𝐨 𝐬𝐞𝐞 𝐚𝐥𝐥 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐬`,
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        `👑 𝐎𝐰𝐧𝐞𝐫: ${ownerInfo.name}`,
-        `🌐 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤: ${ownerInfo.facebook}`,
-        `✈️ 𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦: ${ownerInfo.telegram}`,
-        `🤖 𝐉𝐨𝐢𝐧 𝐒𝐮𝐩𝐩𝐨𝐫𝐭 𝐆𝐂: ${ownerInfo.supportGroup}`
-      ].join("\n");
+      const imgPath = path.join(cacheDir, `join_${threadID}.png`);
 
+      const res = await axios.get(url, { responseType: "arraybuffer" });
+      fs.writeFileSync(imgPath, res.data);
+
+      const msg = `
+╭ ◜◝ ͡ ◜◝ ͡ ◝╮
+♡ 𝘼𝙣𝙜𝙚𝙡 𝘽𝙤𝙩 ♡
+╰ ◟◞ ͜ ◟◞ ╯
+
+🎀 𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐟𝐨𝐫 𝐢𝐧𝐯𝐢𝐭𝐢𝐧𝐠 𝐦𝐞
+
+🔹 𝐏𝐫𝐞𝐟𝐢𝐱 : ${prefix}
+🔸 𝐔𝐬𝐞 : ${prefix}help
+
+💫 𝐈’𝐦 𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭
+
+╭══════════════╮
+👑 𝐎𝐰𝐧𝐞𝐫 : ${ownerInfo.name}
+🌐 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 : ${ownerInfo.facebook}
+✈️ 𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦 : ${ownerInfo.telegram}
+🤖 𝐒𝐮𝐩𝐩𝐨𝐫𝐭 : ${ownerInfo.supportGroup}
+╰══════════════╯
+
+✨ 𝐀𝐥𝐰𝐚𝐲𝐬 𝐚𝐜𝐭𝐢𝐯𝐞 • 𝐒𝐭𝐚𝐲 𝐜𝐮𝐭𝐞 ✨
+`;
 
       await api.sendMessage({
-        body: textMsg,
-        attachment: fs.createReadStream(imagePath)
+        body: msg,
+        attachment: fs.createReadStream(imgPath)
       }, threadID);
 
-      fs.unlinkSync(imagePath);
+      fs.unlinkSync(imgPath);
 
     } catch (err) {
-      console.error("⚠️ Error sending botjoin message:", err);
-      
-      const fallbackMsg = [
-        "❌ 𝐈𝐦𝐚𝐠𝐞 𝐠𝐞𝐧𝐞𝐫𝐚𝐭𝐢𝐨𝐧 𝐟𝐚𝐢𝐥𝐞𝐝. 𝐇𝐞𝐫𝐞 𝐢𝐬 𝐭𝐡𝐞 𝐢𝐧𝐟𝐨𝐫𝐦𝐚𝐭𝐢𝐨𝐧:",
-        "🎀 𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐟𝐨𝐫 𝐢𝐧𝐯𝐢𝐭𝐢𝐧𝐠 𝐦𝐞 🎀",
-        `🔹 𝐁𝐨𝐭 𝐩𝐫𝐞𝐟𝐢𝐱: ${prefix}`,
-        `🔸 𝐓𝐲𝐩𝐞: ${prefix}help 𝐭𝐨 𝐬𝐞𝐞 𝐚𝐥𝐥 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐬`,
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        `👑 𝐎𝐰𝐧𝐞𝐫: ${ownerInfo.name}`,
-        `🌐 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤: ${ownerInfo.facebook}`,
-        `✈️ 𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦: ${ownerInfo.telegram}`,
-        `🤖 𝐉𝐨𝐢𝐧 𝐒𝐮𝐩𝐩𝐨𝐫𝐭 𝐆𝐂: ${ownerInfo.supportGroup}`
-      ].join("\n");
-      api.sendMessage(fallbackMsg, threadID);
+      const fallback = `
+╭ ◜◝ ͡ ◜◝ ͡ ◝╮
+♡ 𝘼𝙣𝙜𝙚𝙡 𝘽𝙤𝙩 ♡
+╰ ◟◞ ͜ ◟◞ ╯
+
+❌ 𝐈𝐦𝐚𝐠𝐞 𝐮𝐧𝐚𝐯𝐚𝐢𝐥𝐚𝐛𝐥𝐞
+
+🎀 𝐓𝐫𝐲 𝐚𝐠𝐚𝐢𝐧 𝐥𝐚𝐭𝐞𝐫
+
+╭══════════════╮
+👑 𝐎𝐰𝐧𝐞𝐫 : ${ownerInfo.name}
+🌐 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 : ${ownerInfo.facebook}
+✈️ 𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦 : ${ownerInfo.telegram}
+╰══════════════╯
+`;
+      api.sendMessage(fallback, threadID);
     }
   }
 };
