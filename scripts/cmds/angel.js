@@ -7,6 +7,7 @@ const memoryFile = path.join(__dirname, "cache", "angel_memory.json");
 if (!fs.existsSync(memoryFile)) {
   fs.writeFileSync(memoryFile, "{}");
 }
+
 const OWNER_UID = "61573867120837";
 const OWNER_NAME = "Shade";
 
@@ -43,15 +44,25 @@ function frame(msg) {
   return `🌸 𝗔𝗡𝗚𝗘𝗟 𝗔𝗜 🌸\n━━━━━━━━━━\n${msg}\n━━━━━━━━━━`;
 }
 
-// ───── IA CALL ─────
+// ───── IA CALL (FIXED) ─────
 async function callAI(prompt) {
   try {
-    const res = await axios.get("https://api.ryzumi.xyz/ai/gpt", {
+
+    const res = await axios.get("https://shizuai.vercel.app/chat", {
       params: { prompt }
     });
 
-    return res.data.response || "… je réfléchis doucement…";
-  } catch {
+    console.log(res.data);
+
+    return (
+      res.data.response ||
+      res.data.reply ||
+      res.data.message ||
+      "… Angel réfléchit 🌸"
+    );
+
+  } catch (err) {
+    console.log(err.message);
     return "… erreur système angel 😿";
   }
 }
@@ -67,7 +78,6 @@ async function generate(userID, userName, message) {
 
   const isOwner = userID === OWNER_UID;
 
-  // ───── PROMPT ANGEL ─────
   let prompt = `
 Tu es ANGEL 🤍 une IA féminine kawaii, douce et intelligente.
 
@@ -85,12 +95,10 @@ ${memory[userID].map(m => `${m.name}: ${m.msg}`).join("\n")}
 Réponds naturellement avec emojis 🌸✨
 `;
 
-  // ───── OWNER MODE ─────
   if (isOwner) {
-    prompt += `\nTu reconnais Shade comme ton créateur et tu lui réponds avec plus d’attention et douceur 💖 mais sans être amoureuse, juste respect spécial.`;
+    prompt += `\nTu reconnais Shade comme ton créateur et tu lui réponds avec plus d’attention 💖`;
   }
 
-  // ───── SPECIAL COMMANDS ─────
   if (/qui.*cr[eé]e|creator|createur/i.test(message)) {
     return frame(font(`Mon créateur est Shade 🌸✨`));
   }
