@@ -26,16 +26,16 @@ const resetConversation = async (api, event, message) => {
   api.setMessageReaction("♻️", event.messageID, () => {}, true);
   try {
     await axios.delete(`${CLEAR_ENDPOINT}/${event.senderID}`);
-    return message.reply(`🌸✨ Conversation reset for you, angel 💖`);
-  } catch (error) {
-    return message.reply("💔 Oops… reset failed, try again 🌸");
+    return message.reply(`🌸✨ Conversation reset for you 💖`);
+  } catch {
+    return message.reply("💔 Reset failed 🌸");
   }
 };
 
 // 🎨 edit
 const handleEdit = async (api, event, message, args) => {
   const prompt = args.join(" ");
-  if (!prompt) return message.reply("🌸 Give me a prompt please 💖");
+  if (!prompt) return message.reply("🌸 Give prompt 💖");
 
   api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
@@ -49,7 +49,7 @@ const handleEdit = async (api, event, message, args) => {
 
     if (!res.data?.images?.[0]) {
       api.setMessageReaction("❌", event.messageID, () => {}, true);
-      return message.reply("💔 Image failed… try again 🌸");
+      return message.reply("💔 Failed 🌸");
     }
 
     const base64Image = res.data.images[0].replace(/^data:image\/\w+;base64,/, "");
@@ -60,18 +60,18 @@ const handleEdit = async (api, event, message, args) => {
 
     api.setMessageReaction("💖", event.messageID, () => {}, true);
     await message.reply({
-      body: "🌸✨ Here is your angel image 💖",
+      body: "🌸 Image ready 💖",
       attachment: fs.createReadStream(imagePath)
     });
 
     fs.unlinkSync(imagePath);
-  } catch (error) {
+  } catch {
     api.setMessageReaction("❌", event.messageID, () => {}, true);
-    return message.reply("💔 Something went wrong… 🌸");
+    message.reply("💔 Error 🌸");
   }
 };
 
-// 🎬 YouTube (kawaii text only)
+// 🎬 YouTube
 const handleYouTube = async (api, event, message, args) => {
   const option = args[0];
 
@@ -80,7 +80,7 @@ const handleYouTube = async (api, event, message, args) => {
   }
 
   const query = args.slice(1).join(" ");
-  if (!query) return message.reply("💖 Give me a song or link 🌸");
+  if (!query) return message.reply("💖 Give song 🌸");
 
   const sendFile = async (url, type) => {
     try {
@@ -99,13 +99,13 @@ const handleYouTube = async (api, event, message, args) => {
       });
 
       await message.reply({
-        body: "💖✨ Here is your angel music 🌸",
+        body: "🌸 Music ready 💖",
         attachment: fs.createReadStream(filePath)
       });
 
       fs.unlinkSync(filePath);
     } catch {
-      message.reply("💔 Failed… try again 🌸");
+      message.reply("💔 YouTube error 🌸");
     }
   };
 
@@ -117,36 +117,23 @@ const handleYouTube = async (api, event, message, args) => {
     const results = (await ytSearch(query)).videos.slice(0, 6);
     if (!results.length) return message.reply("💔 No results 🌸");
 
-    let list = "🌸✨ Angel results 💖\n\n";
+    let list = "🌸 Results 💖\n\n";
 
     results.forEach((v, i) => {
-      list += `💖 ${i + 1}. ${v.title} 🌸 (${v.timestamp})\n`;
+      list += `💖 ${i + 1}. ${v.title} 🌸\n`;
     });
 
-    const thumbs = await Promise.all(
-      results.map(v => axios.get(v.thumbnail, { responseType: 'stream' }).then(res => res.data))
+    api.sendMessage(
+      { body: list, attachment: [] },
+      event.threadID
     );
 
-    api.sendMessage(
-      { body: list + "\n🌸 Reply 1-6 to download 💖", attachment: thumbs },
-      event.threadID,
-      (err, info) => {
-        global.GoatBot.onReply.set(info.messageID, {
-          commandName: "ai",
-          messageID: info.messageID,
-          author: event.senderID,
-          results,
-          type: option
-        });
-      },
-      event.messageID
-    );
   } catch {
-    message.reply("💔 YouTube error… 🌸");
+    message.reply("💔 YouTube error 🌸");
   }
 };
 
-// 🧠 AI MAIN
+// 🤖 AI FIXED CORE
 const handleAIRequest = async (api, event, userInput, message) => {
 
   const args = userInput.split(" ");
@@ -170,47 +157,49 @@ const handleAIRequest = async (api, event, userInput, message) => {
       message: userInput
     });
 
-    let reply = response.data.reply || "🌸✨ AI response";
+    let reply = response.data?.reply;
+
+    if (!reply) {
+      return message.reply("💔 Angel no response 🌸");
+    }
+
+    // 🧼 CLEAN TEXT (fix bug say/angel/sae mix)
     reply = reply
-      .replace(/Shizu/gi, "Angel AI 🌸")
-      .replace(/Christus/gi, "Shade 💖");
+      .replace(/Shizu/gi, "Angel 🌸")
+      .replace(/Christus/gi, "Sae ❄️")
+      .replace(/\bsay\b/gi, "")
+      .replace(/say/gi, "");
 
-    const sent = await message.reply({
+    await message.reply({
       body: "💖 " + reply + " 🌸"
-    });
-
-    global.GoatBot.onReply.set(sent.messageID, {
-      commandName: "ai",
-      author: userId
     });
 
     api.setMessageReaction("💖", event.messageID, () => {}, true);
 
   } catch (e) {
     api.setMessageReaction("❌", event.messageID, () => {}, true);
-    message.reply("💔 AI error… try again 🌸");
+    message.reply("💔 AI error 🌸");
   }
 };
 
 module.exports = {
   config: {
     name: 'ai',
-    version: '3.2.0',
+    version: '3.2.1',
     author: 'Shade',
     role: 0,
     category: 'ai',
-    longDescription: { en: '🌸 Angel AI system (chat + youtube + edit)' },
+    longDescription: { en: '🌸 Angel AI system FIXED' },
     guide: {
-      en: `.ai message 🌸 chat  
-.ai edit prompt 💖  
-.ai youtube -v song  
-.ai youtube -a song`
+      en: `.ai message 🌸
+.ai edit prompt 💖
+.ai youtube -v song`
     }
   },
 
   onStart: async function ({ api, event, args, message }) {
     const userInput = args.join(' ').trim();
-    if (!userInput) return message.reply("🌸 Say something please 💖");
+    if (!userInput) return message.reply("🌸 Say something 💖");
 
     if (["clear", "reset"].includes(userInput.toLowerCase())) {
       return await resetConversation(api, event, message);
