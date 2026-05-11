@@ -8,6 +8,7 @@ const memoryFile = path.join(__dirname, "cache", "sae_memory.json");
 if (!fs.existsSync(memoryFile)) {
   fs.writeFileSync(memoryFile, "{}");
 }
+
 // 👑 TON IDENTITÉ
 const CREATOR_UID = "61573867120837";
 const CREATOR_NAME = "Shade";
@@ -41,14 +42,25 @@ function frame(msg) {
   return `╭━━━ ❄️ 𝗦𝗔𝗘 𝗜𝗧𝗢𝗦𝗛𝗜 ❄️ ━━━╮\n${msg}\n╰━━━━━━━━━━━━━━━━━━╯`;
 }
 
-// 🤖 IA API
+// 🤖 IA CALL (FIXED API)
 async function callAI(prompt) {
   try {
-    const res = await axios.get("https://api.ryzumi.xyz/ai/gpt", {
+
+    const res = await axios.get("https://shizuai.vercel.app/chat", {
       params: { prompt }
     });
-    return res.data.response || "…";
-  } catch {
+
+    console.log(res.data);
+
+    return (
+      res.data.response ||
+      res.data.reply ||
+      res.data.message ||
+      "…"
+    );
+
+  } catch (err) {
+    console.log(err.message);
     return "Tch… système instable.";
   }
 }
@@ -97,7 +109,7 @@ Réponds naturellement comme Sae Itoshi.
 `;
 }
 
-// 💾 gérer mémoire
+// 💾 mémoire
 function updateMemory(userID, text, reply) {
   if (!memory[userID]) memory[userID] = [];
 
@@ -146,7 +158,6 @@ module.exports = {
 
     let finalText = reply;
 
-    // 👑 respect spécial pour toi
     if (userID === CREATOR_UID) {
       finalText = "… " + reply;
     }
