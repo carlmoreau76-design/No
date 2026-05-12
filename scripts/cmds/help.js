@@ -1,19 +1,15 @@
 const { commands } = global.GoatBot;
 const config = global.GoatBot.config;
+const axios = require("axios");
 
-// petit convertisseur italic
+// 💠 italic font
 function toItalic(text) {
   const map = {
-    a: "𝘢", b: "𝘣", c: "𝘤", d: "𝘥", e: "𝘦",
-    f: "𝘧", g: "𝘨", h: "𝘩", i: "𝘪", j: "𝘫",
-    k: "𝘬", l: "𝘭", m: "𝘮", n: "𝘯", o: "𝘰",
-    p: "𝘱", q: "𝘲", r: "𝘳", s: "𝘴", t: "𝘵",
-    u: "𝘶", v: "𝘷", w: "𝘸", x: "𝘹", y: "𝘺", z: "𝘻",
-    A: "𝘈", B: "𝘉", C: "𝘊", D: "𝘋", E: "𝘌",
-    F: "𝘍", G: "𝘎", H: "𝘏", I: "𝘐", J: "𝘑",
-    K: "𝘒", L: "𝘓", M: "𝘔", N: "𝘕", O: "𝘖",
-    P: "𝘗", Q: "𝘘", R: "𝘙", S: "𝘚", T: "𝘛",
-    U: "𝘜", V: "𝘝", W: "𝘞", X: "𝘟", Y: "𝘠", Z: "𝘡"
+    a:"𝘢", b:"𝘣", c:"𝘤", d:"𝘥", e:"𝘦",
+    f:"𝘧", g:"𝘨", h:"𝘩", i:"𝘪", j:"𝘫",
+    k:"𝘬", l:"𝘭", m:"𝘮", n:"𝘯", o:"𝘰",
+    p:"𝘱", q:"𝘲", r:"𝘳", s:"𝘴", t:"𝘵",
+    u:"𝘶", v:"𝘷", w:"𝘸", x:"𝘹", y:"𝘺", z:"𝘻"
   };
 
   return text.split("").map(c => map[c] || c).join("");
@@ -22,11 +18,11 @@ function toItalic(text) {
 module.exports = {
   config: {
     name: "help",
-    version: "7.4",
+    version: "7.5",
     author: "Shade",
     countDown: 2,
     role: 0,
-    shortDescription: { en: "Angel kawaii menu" },
+    shortDescription: { en: "Kawaii help menu" },
     category: "info",
     guide: { en: "help" }
   },
@@ -51,18 +47,15 @@ module.exports = {
 `;
 
     for (const cat of Object.keys(categories).sort()) {
-      menu += `
-┏━〔 🌷 ${cat.toUpperCase()} 〕
-`;
+
+      menu += `\n┏━〔 🌷 ${cat.toUpperCase()} 〕\n`;
 
       menu += categories[cat]
         .sort()
-        .map(c => `╎ ✧ ${toItalic(c)}`) // 👈 ICI MODIF
+        .map(c => `╎ ✧ ${toItalic(c)}`)
         .join("\n");
 
-      menu += `
-┗━━━━━━━━━━━━━━━
-`;
+      menu += `\n┗━━━━━━━━━━━━━━━\n`;
     }
 
     menu += `
@@ -74,10 +67,13 @@ module.exports = {
 `;
 
     try {
+      const stream = await axios.get(imageURL, { responseType: "stream" });
+
       return message.reply({
         body: menu,
-        attachment: await global.utils.getStreamFromURL(imageURL)
+        attachment: stream.data
       });
+
     } catch (e) {
       return message.reply(menu);
     }
