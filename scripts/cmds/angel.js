@@ -11,8 +11,12 @@ if (!fs.existsSync(memoryFile)) {
 const OWNER_UID = "61573867120837";
 const OWNER_NAME = "Shade";
 
+// ───── GEMINI API ─────
+const API_KEY = "AIzaSyBTILUPF0fUlt_686C8tWX3HomBjQ44qxA";
+
 // ───── MEMORY ─────
 let memory = {};
+
 if (fs.existsSync(memoryFile)) {
   try {
     memory = JSON.parse(fs.readFileSync(memoryFile, "utf8"));
@@ -25,7 +29,7 @@ function saveMemory() {
   fs.writeFileSync(memoryFile, JSON.stringify(memory, null, 2));
 }
 
-// ───── STYLE KAWAII 𝘧𝘰𝘯𝘵 ─────
+// ───── STYLE KAWAII ─────
 function font(text) {
   return text
     .replace(/a/g, "𝘢").replace(/b/g, "𝘣").replace(/c/g, "𝘤")
@@ -44,25 +48,32 @@ function frame(msg) {
   return `🌸 𝗔𝗡𝗚𝗘𝗟 𝗔𝗜 🌸\n━━━━━━━━━━\n${msg}\n━━━━━━━━━━`;
 }
 
-// ───── IA CALL (FIXED) ─────
+// ───── IA CALL GEMINI ─────
 async function callAI(prompt) {
   try {
 
-    const res = await axios.get("https://shizuai.vercel.app/chat", {
-      params: { prompt }
-    });
-
-    console.log(res.data);
+    const res = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+      {
+        contents: [
+          {
+            parts: [
+              { text: prompt }
+            ]
+          }
+        ]
+      }
+    );
 
     return (
-      res.data.response ||
-      res.data.reply ||
-      res.data.message ||
-      "… Angel réfléchit 🌸"
+      res.data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "… Angel réfléchit doucement 🌸"
     );
 
   } catch (err) {
-    console.log(err.message);
+
+    console.log(err.response?.data || err.message);
+
     return "… erreur système angel 😿";
   }
 }
@@ -72,8 +83,15 @@ async function generate(userID, userName, message) {
 
   if (!memory[userID]) memory[userID] = [];
 
-  memory[userID].push({ name: userName, msg: message });
-  if (memory[userID].length > 30) memory[userID].shift();
+  memory[userID].push({
+    name: userName,
+    msg: message
+  });
+
+  if (memory[userID].length > 30) {
+    memory[userID].shift();
+  }
+
   saveMemory();
 
   const isOwner = userID === OWNER_UID;
@@ -82,30 +100,41 @@ async function generate(userID, userName, message) {
 Tu es ANGEL 🤍 une IA féminine kawaii, douce et intelligente.
 
 Règles:
-- Tu es polie, douce, stylée
-- Tu peux être un peu taquine
+- Tu es polie
+- Tu es douce
+- Tu es stylée
+- Tu peux être légèrement taquine
 - Tu respectes tout le monde
-- Tu es légèrement plus attentive avec ton créateur (Shade)
+- Tu réponds naturellement
+- Tu utilises parfois des emojis 🌸✨💖
 
-Créateur: ${OWNER_NAME} (${OWNER_UID})
+Créateur:
+${OWNER_NAME} (${OWNER_UID})
 
 Conversation:
-${memory[userID].map(m => `${m.name}: ${m.msg}`).join("\n")}
-
-Réponds naturellement avec emojis 🌸✨
+${memory[userID]
+  .map(m => `${m.name}: ${m.msg}`)
+  .join("\n")}
 `;
 
   if (isOwner) {
-    prompt += `\nTu reconnais Shade comme ton créateur et tu lui réponds avec plus d’attention 💖`;
+    prompt += `
+Tu reconnais Shade comme ton créateur.
+Tu lui réponds avec plus d’attention et de douceur 💖
+`;
   }
 
   if (/qui.*cr[eé]e|creator|createur/i.test(message)) {
-    return frame(font(`Mon créateur est Shade 🌸✨`));
+    return frame(font("Mon créateur est Shade 🌸✨"));
   }
 
   const reply = await callAI(prompt);
 
-  memory[userID].push({ name: "ANGEL", msg: reply });
+  memory[userID].push({
+    name: "ANGEL",
+    msg: reply
+  });
+
   saveMemory();
 
   return frame(font(reply));
@@ -115,38 +144,82 @@ Réponds naturellement avec emojis 🌸✨
 module.exports = {
   config: {
     name: "angel",
-    version: "1.0",
+    version: "2.1",
     author: "Shade",
     role: 0,
     category: "ai",
-    shortDescription: "Angel AI kawaii + mémoire + owner mode"
+    shortDescription: "Angel AI kawaii Gemini"
   },
 
+  // commande !angel
   onStart: async function ({ message, event, args, api }) {
-    const input = args.join(" ").trim();
-    const userID = event.senderID;
-    const userName = (await api.getUserInfo(userID))[userID]?.name || "toi";
 
+    const input = args.join(" ").trim();
+
+    const userID = event.senderID;
+
+    const userName =
+      (await api.getUserInfo(userID))[userID]?.name || "toi";
+
+    // juste !angel
     if (!input) {
-      return message.reply(frame(font("bonjour 🌸 je suis Angel… parle-moi doucement")));
+
+      await message.reply({
+        sticker: "125881936546154"
+      });
+
+      return message.reply(
+        frame(font("bonjour 🌸 je suis Angel… parle-moi doucement 💖"))
+      );
     }
 
-    const reply = await generate(userID, userName, input);
-    message.reply(reply);
+    const reply = await generate(
+      userID,
+      userName,
+      input
+    );
+
+    return message.reply(reply);
   },
 
+  // message direct : angel salut
   onChat: async function ({ event, message, api }) {
+
     if (!event.body) return;
 
     const body = event.body.trim();
-    const match = body.match(/^angel\s+(.*)/i);
-    if (!match) return;
 
-    const input = match[1];
+    // activation sans !
+    if (!body.toLowerCase().startsWith("angel")) return;
+
     const userID = event.senderID;
-    const userName = (await api.getUserInfo(userID))[userID]?.name || "toi";
 
-    const reply = await generate(userID, userName, input);
-    message.reply(reply);
+    const userName =
+      (await api.getUserInfo(userID))[userID]?.name || "toi";
+
+    // juste "angel"
+    if (body.toLowerCase() === "angel") {
+
+      await message.reply({
+        sticker: "125881936546154"
+      });
+
+      return message.reply(
+        frame(font("bonjour 🌸 je suis Angel… parle-moi doucement 💖"))
+      );
+    }
+
+    // angel + message
+    const input = body.slice(5).trim();
+
+    if (!input) return;
+
+    const reply = await generate(
+      userID,
+      userName,
+      input
+    );
+
+    return message.reply(reply);
   }
 };
