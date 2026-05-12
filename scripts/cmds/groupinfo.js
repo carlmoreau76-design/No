@@ -6,18 +6,19 @@ module.exports = {
   config: {
     name: "groupinfo",
     aliases: ["boxinfo"],
-    version: "1.0",
+    version: "1.1",
     author: "Christus",
     countDown: 5,
     role: 0,
-    shortDescription: "Voir toutes les informations sur ce groupe",
-    longDescription: "Obtenez tous les détails de votre groupe tels que le nom, l'ID, le nombre de membres, les statistiques de genre et la liste des admins.",
+    shortDescription: "🌸 infos du groupe kawaii",
+    longDescription: "Affiche les informations du groupe avec un style kawaii ✨",
     category: "groupe",
   },
 
   onStart: async function ({ api, event }) {
     try {
       const threadInfo = await api.getThreadInfo(event.threadID);
+
       const memCount = threadInfo.participantIDs.length;
       const genderMale = [];
       const genderFemale = [];
@@ -36,27 +37,32 @@ module.exports = {
         adminList.push(info[admin.id].name);
       }
 
-      const approvalMode = threadInfo.approvalMode ? "✅ Activé" : "❌ Désactivé";
-      const emoji = threadInfo.emoji || "👍";
+      const approvalMode = threadInfo.approvalMode ? "💖 Activé" : "💔 Désactivé";
+      const emoji = threadInfo.emoji || "🌸";
+
       const imageURL = threadInfo.imageSrc || null;
-      const msg = 
-`✨ 𝐈𝐍𝐅𝐎 𝐆𝐑𝐎𝐔𝐏𝐄 ✨
-━━━━━━━━━━━━━━━
-🏷️ Nom: ${threadInfo.threadName || "Groupe sans nom"}
-🆔 ID: ${threadInfo.threadID}
-💬 Emoji: ${emoji}
-💭 Messages: ${threadInfo.messageCount.toLocaleString()}
-👥 Membres: ${memCount}
-👨 Hommes: ${genderMale.length}
-👩 Femmes: ${genderFemale.length}
-❔ Inconnu: ${genderUnknown.length}
-🛡️ Nombre d'admins: ${threadInfo.adminIDs.length}
-🔒 Mode d'approbation: ${approvalMode}
-━━━━━━━━━━━━━━━
-👑 Admins:
+
+      const msg =
+`╭─🌸 𝗚𝗥𝗢𝗨𝗣 𝗜𝗡𝗙𝗢 🌸─╮
+✨ Nom : ${threadInfo.threadName || "Groupe sans nom"}
+🆔 ID : ${threadInfo.threadID}
+💬 Emoji : ${emoji}
+📨 Messages : ${threadInfo.messageCount.toLocaleString()}
+👥 Membres : ${memCount}
+
+╭─💖 Statistiques 💖─╮
+👨 Hommes : ${genderMale.length}
+👩 Femmes : ${genderFemale.length}
+❔ Inconnu : ${genderUnknown.length}
+🛡️ Admins : ${threadInfo.adminIDs.length}
+🔒 Mode : ${approvalMode}
+╰────────────────╯
+
+╭─👑 Admins 👑─╮
 ${adminList.map(name => `• ${name}`).join("\n")}
-━━━━━━━━━━━━━━━
-🧠 Créé par Christus 💙`;
+╰────────────────╯
+
+🌸 Bot : Angel System`;
 
       const cachePath = path.join(__dirname, "cache", "groupinfo.jpg");
       fs.ensureDirSync(path.join(__dirname, "cache"));
@@ -80,7 +86,11 @@ ${adminList.map(name => `• ${name}`).join("\n")}
 
     } catch (err) {
       console.error(err);
-      api.sendMessage("❌ Une erreur est survenue lors de la récupération des informations du groupe.", event.threadID, event.messageID);
+      api.sendMessage(
+        "💔 erreur groupe info 🌸",
+        event.threadID,
+        event.messageID
+      );
     }
   },
 };
