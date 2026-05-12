@@ -4,17 +4,20 @@ const path = require("path");
 
 const memoryFile = path.join(__dirname, "cache", "sae_memory.json");
 
-// créer le fichier si absent
 if (!fs.existsSync(memoryFile)) {
   fs.writeFileSync(memoryFile, "{}");
 }
 
-// 👑 TON IDENTITÉ
+// 👑 IDENTITÉ
 const CREATOR_UID = "61573867120837";
 const CREATOR_NAME = "Shade";
 
+// 🔑 GEMINI API
+const API_KEY = "AIzaSyBTILUPF0fUlt_686C8tWX3HomBjQ44qxA";
+
 // 🧠 mémoire
 let memory = {};
+
 if (fs.existsSync(memoryFile)) {
   try {
     memory = JSON.parse(fs.readFileSync(memoryFile, "utf8"));
@@ -27,54 +30,53 @@ function saveMemory() {
   fs.writeFileSync(memoryFile, JSON.stringify(memory, null, 2));
 }
 
-// 💠 police stylée
+// 💠 style
 function font(text) {
   const map = {
     a:"𝘢",b:"𝘣",c:"𝘤",d:"𝘥",e:"𝘦",f:"𝘧",g:"𝘨",h:"𝘩",i:"𝘪",
     j:"𝘫",k:"𝘬",l:"𝘭",m:"𝘮",n:"𝘯",o:"𝘰",p:"𝘱",q:"𝘲",r:"𝘳",
     s:"𝘴",t:"𝘵",u:"𝘶",v:"𝘷",w:"𝘸",x:"𝘹",y:"𝘺",z:"𝘻"
   };
-  return text.split("").map(c => map[c] || c).join("");
+  return text.split("").map(c => map[c.toLowerCase()] || c).join("");
 }
 
-// 🧊 cadre Sae
+// ❄️ frame
 function frame(msg) {
   return `╭━━━ ❄️ 𝗦𝗔𝗘 𝗜𝗧𝗢𝗦𝗛𝗜 ❄️ ━━━╮\n${msg}\n╰━━━━━━━━━━━━━━━━━━╯`;
 }
 
-// 🤖 IA CALL (FIXED API)
+// 🤖 GEMINI CALL
 async function callAI(prompt) {
   try {
-
-    const res = await axios.get("https://shizuai.vercel.app/chat", {
-      params: { prompt }
-    });
-
-    console.log(res.data);
+    const res = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+      {
+        contents: [
+          {
+            parts: [{ text: prompt }]
+          }
+        ]
+      }
+    );
 
     return (
-      res.data.response ||
-      res.data.reply ||
-      res.data.message ||
+      res.data.candidates?.[0]?.content?.parts?.[0]?.text ||
       "…"
     );
 
   } catch (err) {
-    console.log(err.message);
     return "Tch… système instable.";
   }
 }
 
-// 🧠 analyser relation utilisateur
+// 🧠 personnalité
 function getPersonality(userID) {
-  if (userID === CREATOR_UID) {
-    return "respect";
-  }
-  return "arrogant";
+  return userID === CREATOR_UID ? "respect" : "arrogant";
 }
 
-// 💬 construire prompt Sae
+// 💬 prompt
 function buildPrompt(userID, userName, text, history) {
+
   const mood = getPersonality(userID);
 
   let style = "";
@@ -84,15 +86,12 @@ function buildPrompt(userID, userName, text, history) {
 Tu es Sae Itoshi.
 Utilisateur = TON CRÉATEUR (${CREATOR_NAME}).
 Tu es respectueux, calme, loyal.
-Tu réponds avec respect et calme absolu.
 `;
   } else {
     style = `
 Tu es Sae Itoshi.
 Tu es froid, arrogant, intelligent.
-Tu méprises légèrement les autres.
-Tu réponds court, précis, dominant.
-Pas d’émotions inutiles.
+Réponses courtes.
 `;
   }
 
@@ -105,11 +104,11 @@ Message: ${text}
 Historique:
 ${history.join("\n")}
 
-Réponds naturellement comme Sae Itoshi.
+Réponds naturellement.
 `;
 }
 
-// 💾 mémoire
+// 💾 mémoire update
 function updateMemory(userID, text, reply) {
   if (!memory[userID]) memory[userID] = [];
 
@@ -123,78 +122,43 @@ function updateMemory(userID, text, reply) {
   saveMemory();
 }
 
+// ───── BOT ─────
 module.exports = {
   config: {
     name: "sae",
-    version: "2.0",
+    version: "2.2",
     author: "Shade",
     role: 0,
-    category: "ai",
-    shortDescription: "Sae Itoshi IA froide + respect créateur"
-  },
-
-  onStart: async function ({ message, event, args, api }) {
-    const userID = event.senderID;
-    const userName =
-      (await api.getUserInfo(userID))[userID]?.name || "inconnu";
-
-    const text = args.join(" ");
-    if (!text) {
-      return message.reply(frame(font("… parle.")));
-    }
-
-    if (!memory[userID]) memory[userID] = [];
-
-    const prompt = buildPrompt(
-      userID,
-      userName,
-      text,
-      memory[userID]
-    );
-
-    const reply = await callAI(prompt);
-
-    updateMemory(userID, text, reply);
-
-    let finalText = reply;
-
-    if (userID === CREATOR_UID) {
-      finalText = "… " + reply;
-    }
-
-    return message.reply(frame(font(finalText)));
+    category: "ai"
   },
 
   onChat: async function ({ event, message, api }) {
-    if (!event.body) return;
-    if (!event.body.toLowerCase().startsWith("sae ")) return;
 
-    const text = event.body.slice(4).trim();
-    if (!text) return;
+    if (!event.body) return;
+
+    const body = event.body.trim().toLowerCase();
+
+    // ✅ déclenchement naturel : "sae" OU "sae message"
+    if (!body.startsWith("sae")) return;
+
+    const text = event.body.slice(3).trim();
+    if (!text) {
+      return message.reply(frame(font("…")));
+    }
 
     const userID = event.senderID;
+
     const userName =
       (await api.getUserInfo(userID))[userID]?.name || "inconnu";
 
     if (!memory[userID]) memory[userID] = [];
 
-    const prompt = buildPrompt(
-      userID,
-      userName,
-      text,
-      memory[userID]
-    );
+    const prompt = buildPrompt(userID, userName, text, memory[userID]);
 
     const reply = await callAI(prompt);
 
     updateMemory(userID, text, reply);
 
-    let finalText = reply;
-
-    if (userID === CREATOR_UID) {
-      finalText = "… " + reply;
-    }
-
-    return message.reply(frame(font(finalText)));
+    return message.reply(frame(font(reply)));
   }
 };
