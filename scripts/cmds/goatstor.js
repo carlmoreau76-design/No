@@ -1,7 +1,27 @@
 const axios = require("axios");
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
+
 const GoatStor = "https://goatstore.vercel.app";
+
+// 💖 FRAME KAWAII
+function frame(text) {
+  return `
+╭───『 🐐 𝗚𝗢𝗔𝗧𝗦𝗧𝗢𝗥 🌸 』───╮
+${text}
+╰────────────────────╯
+`;
+}
+
+// 🌸 police stylée
+function font(text) {
+  const map = {
+    a:"𝘢",b:"𝘣",c:"𝘤",d:"𝘥",e:"𝘦",f:"𝘧",g:"𝘨",h:"𝘩",i:"𝘪",
+    j:"𝘫",k:"𝘬",l:"𝘭",m:"𝘮",n:"𝘯",o:"𝘰",p:"𝘱",q:"𝘲",r:"𝘳",
+    s:"𝘴",t:"𝘵",u:"𝘶",v:"𝘷",w:"𝘸",x:"𝘹",y:"𝘺",z:"𝘻"
+  };
+  return text.toLowerCase().split("").map(c => map[c] || c).join("");
+}
 
 module.exports = {
   config: {
@@ -11,195 +31,134 @@ module.exports = {
     role: 0,
     author: "ArYAN",
     shortDescription: {
-      en: "📌 Goatstor - Your Command Marketplace"
+      en: "🐐 GoatStor kawaii marketplace"
     },
-    longDescription: {
-      en: "📌 Browse, search, upload, and manage your commands in the GoatStor marketplace with easy sharing cmds."
-    },
-    category: "𝗠𝗮𝗿𝗸𝗲𝘁",
+    category: "market",
     cooldowns: 0,
   },
 
   onStart: async ({ api, event, args, message }) => {
-    const sendBeautifulMessage = (content) => {
-      const header = "╭──『 🐐𝗚𝗼𝗮𝘁𝗦𝘁𝗼𝗿 』──╮\n";
-      const footer = "\n╰──────────────╯";
-      return message.reply(header + content + footer);
-    };
+
+    const send = (txt) => message.reply(frame(font(txt)));
 
     try {
+
       if (!args[0]) {
-        return sendBeautifulMessage(
-          "\n" +
-          `╭─❯ ${event.body} show <ID>\n├ 📦 Get command code\n╰ Example: show 1\n\n` +
-          `╭─❯ ${event.body} page <number>\n├ 📄 Browse commands\n╰ Example: page 1\n\n` +
-          `╭─❯ ${event.body} search <query>\n├ 🔍 Search commands\n╰ Example: search music\n\n` +
-          `╭─❯ ${event.body} trending\n├ 🔥 View trending\n╰ Most popular commands\n\n` +
-          `╭─❯ ${event.body} status\n├ 📊 View statistics\n╰ Marketplace insights\n\n` +
-          `╭─❯ ${event.body} like <ID>\n├ 💝 Like a command\n╰ Example: like 1\n\n` +
-          `╭─❯ ${event.body} upload <name>\n├ ⬆️ Upload command\n╰ Example: upload goatStor\n\n` +
-          "💫 𝗧𝗶𝗽: Use `Help GoatStor` For Details"
+        return send(
+`🌸 commands:
+
+📦 show <id>
+├ voir une commande
+
+📄 page <num>
+├ parcourir les commandes
+
+🔍 search <text>
+├ rechercher
+
+🔥 trending
+├ commandes populaires
+
+💝 like <id>
+├ aimer une commande
+
+⬆️ upload <name>
+├ publier une commande`
         );
       }
 
-      const command = args[0].toLowerCase();
+      const cmd = args[0].toLowerCase();
 
-      switch (command) {
+      switch (cmd) {
+
+        // 📦 SHOW
         case "show": {
-          const itemID = parseInt(args[1]);
-          if (isNaN(itemID)) return sendBeautifulMessage("\n[⚜️]➜ 𝐏𝐥𝐞𝐚𝐬𝐞 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 𝐚 𝐯𝐚𝐥𝐢𝐝 𝐢𝐭𝐞𝐦 𝐈𝐃.");
-          const response = await axios.get(`${GoatStor}/api/item/${itemID}`);
-          const item = response.data;
-          
-          
-          const bangladeshTime = new Date(item.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+          const id = parseInt(args[1]);
+          if (isNaN(id)) return send("donne un id valide 🌸");
 
-          return sendBeautifulMessage(
-            "\n" +
-            `╭─❯ 👑 𝗡𝗮𝗺𝗲\n╰ ${item.itemName}\n\n` +
-            `╭─❯ 🆔 𝗜𝗗\n╰ ${item.itemID}\n\n` +
-            `╭─❯ ⚙️ 𝗧𝘆𝗽𝗲\n╰ ${item.type || 'Unknown'}\n\n` +
-            `╭─❯ 📝 𝗗𝗲𝘀𝗰𝗿𝗶𝗽𝘁𝗶𝗼𝗻\n╰ ${item.description}\n\n` +
-            `╭─❯ 👨‍💻 𝗔𝘂𝘁𝗵𝗼𝗿\n╰ ${item.authorName}\n\n` +
-            `╭─❯ 📅 𝗔𝗱𝗱𝗲𝗱\n╰ ${bangladeshTime}\n\n` +
-            `╭─❯ 👀 𝗩𝗶𝗲𝘄𝘀\n╰ ${item.views}\n\n` +
-            `╭─❯ 💝 𝗟𝗶𝗸𝗲𝘀\n╰ ${item.likes}\n\n` +
-            `╭─❯ 🔗 𝗥𝗮𝘄 𝗟𝗶𝗻𝗸\n╰ ${GoatStor}/raw/${item.rawID}`
+          const { data: item } = await axios.get(`${GoatStor}/api/item/${id}`);
+
+          return send(
+`🌸 ${item.itemName}
+
+🆔 id: ${item.itemID}
+⚙️ type: ${item.type}
+📝 desc: ${item.description}
+👑 author: ${item.authorName}
+👀 views: ${item.views}
+💝 likes: ${item.likes}
+
+🔗 link:
+${GoatStor}/raw/${item.rawID}`
           );
         }
 
+        // 📄 PAGE
         case "page": {
           const page = parseInt(args[1]) || 1;
-          const { data: { items, total } } = await axios.get(`${GoatStor}/api/items?page=${page}&limit=5`);
-          const totalPages = Math.ceil(total / 5);
-          if (page <= 0 || page > totalPages) {
-            return sendBeautifulMessage("\n[⚜️]➜ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐩𝐚𝐠𝐞 𝐧𝐮𝐦𝐛𝐞𝐫.");
-          }
-          const itemsList = items.map((item, index) =>
-            `╭─❯ ${index + 1}. 📦 ${item.itemName}\n` +
-            `├ 🆔 𝗜𝗗: ${item.itemID}\n` +
-            `├ ⚙️ 𝗧𝘆𝗽𝗲: ${item.type}\n` +
-            `├ 📝 𝗗𝗲𝘀𝗰𝗿𝗶𝗽𝘁𝗶𝗼𝗻: ${item.description}\n` +
-            `├ 👀 𝗩𝗶𝗲𝘄𝘀: ${item.views}\n` +
-            `├ 💝 𝗟𝗶𝗸𝗲𝘀: ${item.likes}\n` +
-            `╰ 👨‍💻 𝗔𝘂𝘁𝗵𝗼𝗿: ${item.authorName}\n`
-          ).join("\n");
-          return sendBeautifulMessage(`\n📄 𝗣𝗮𝗴𝗲 ${page}/${totalPages}\n\n${itemsList}`);
+
+          const { data } = await axios.get(
+            `${GoatStor}/api/items?page=${page}&limit=5`
+          );
+
+          const list = data.items.map((it, i) =>
+`🌸 ${i+1}. ${it.itemName}
+🆔 ${it.itemID} | 💝 ${it.likes} | 👀 ${it.views}`
+          ).join("\n\n");
+
+          return send(`📄 page ${page}\n\n${list}`);
         }
 
+        // 🔍 SEARCH
         case "search": {
-          const query = args.slice(1).join(" ");
-          if (!query) return sendBeautifulMessage("\n[⚜️]➜ 𝐏𝐥𝐞𝐚𝐬𝐞 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 𝐚 𝐬𝐞𝐚𝐫𝐜𝐡 𝐪𝐮𝐞𝐫𝐲. ");
-          const { data } = await axios.get(`${GoatStor}/api/items?search=${encodeURIComponent(query)}`);
-          const results = data.items;
-          if (!results.length) return sendBeautifulMessage("\n❌ 𝐍𝐨 𝐦𝐚𝐭𝐜𝐡𝐢𝐧𝐠 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐬 𝐟𝐨𝐮𝐧𝐝.");
-          const searchList = results.slice(0, 5).map((item, index) =>
-            `╭─❯ ${index + 1}. 📦 ${item.itemName}\n` +
-            `├ 🆔 𝗜𝗗: ${item.itemID}\n` +
-            `├ ⚙️ 𝗧𝘆𝗽𝗲: ${item.type}\n` +
-            `├ 👀 𝗩𝗶𝗲𝘄𝘀: ${item.views}\n` +
-            `├ 💝 𝗟𝗶𝗸𝗲𝘀: ${item.likes}\n` +
-            `╰ 👨‍💻 𝗔𝘂𝘁𝗵𝗼𝗿: ${item.authorName}\n`
-          ).join("\n");
-          return sendBeautifulMessage(`\n📝 Query: "${query}"\n\n${searchList}`);
+          const q = args.slice(1).join(" ");
+          if (!q) return send("donne un texte 🌸");
+
+          const { data } = await axios.get(
+            `${GoatStor}/api/items?search=${encodeURIComponent(q)}`
+          );
+
+          const list = data.items.slice(0, 5).map((it, i) =>
+`🌸 ${i+1}. ${it.itemName}
+🆔 ${it.itemID}
+💝 ${it.likes}`
+          ).join("\n\n");
+
+          return send(`🔍 results for "${q}"\n\n${list}`);
         }
 
+        // 🔥 TRENDING
         case "trending": {
           const { data } = await axios.get(`${GoatStor}/api/trending`);
-          const trendingList = data.slice(0, 5).map((item, index) =>
-            `╭─❯ ${index + 1}. 🔥 ${item.itemName}\n` +
-            `├ 💝 𝗟𝗶𝗸𝗲𝘀: ${item.likes}\n` +
-            `╰ 👀 𝗩𝗶𝗲𝘄𝘀: ${item.views}\n`
-          ).join("\n");
-          return sendBeautifulMessage(`\n${trendingList}`);
+
+          const list = data.slice(0, 5).map((it, i) =>
+`🔥 ${i+1}. ${it.itemName}
+💝 ${it.likes} | 👀 ${it.views}`
+          ).join("\n\n");
+
+          return send(`🔥 trending\n\n${list}`);
         }
 
-        case "status": {
-          const { data: stats } = await axios.get(`${GoatStor}/api/stats`);
-          const { hosting, totalCommands, totalLikes, dailyActiveUsers, popularTags, topAuthors, topViewed } = stats;
-          const uptimeStr = `${hosting?.uptime?.years}y ${hosting?.uptime?.months}m ${hosting?.uptime?.days}d ${hosting?.uptime?.hours}h ${hosting?.uptime?.minutes}m ${hosting?.uptime?.seconds}s`;
-          const tagList = popularTags.map((tag, i) =>
-            `${i + 1}. ${tag._id || 'Unknown'} (${tag.count})`
-          ).join('\n');
-          const authorList = topAuthors.map((a, i) =>
-            `${i + 1}. ${a._id || 'Unknown'} (${a.count})`
-          ).join('\n');
-          const viewedList = topViewed.map((v, i) =>
-            `${i + 1}. ${v.itemName} 𝗜𝗗: ${v.itemID}\n 𝗩𝗶𝗲𝘄𝘀: ${v.views}`
-          ).join('\n\n');
-          return sendBeautifulMessage(
-            `\n╭─❯ 📦 Total Commands: ${totalCommands}\n` +
-            `├─❯ 💝 Total Liks: ${totalLikes}\n` +
-            `├─❯ 👥 Daily Users: ${dailyActiveUsers}\n` +
-            `╰─❯ ⏰ Uptime: ${uptimeStr}\n\n` +
-            `══『 🌟 Top Authors 』══\n╰${authorList}\n\n` +
-            `══『 🔥 Most Viewed 』══\n╰${viewedList}\n` +
-            `      🌐 𝗛𝗼𝘀𝘁𝗶𝗻𝗴 𝗜𝗻𝗳𝗼\n` +
-            `╭─❯ 💻 𝗦𝘆𝘀𝘁𝗲𝗺\n` +
-            `├ 🔧 ${hosting.system.platform} (${hosting.system.arch})\n` +
-            `├ 📌 Node ${hosting.system.nodeVersion}\n` +
-            `╰ 🖥️ CPU Cores: ${hosting.system.cpuCores}`
-          );
-        }
-
+        // 💝 LIKE
         case "like": {
-          const likeItemId = parseInt(args[1]);
-          if (isNaN(likeItemId)) return sendBeautifulMessage("\n[⚠️]➜ 𝐏𝐥𝐞𝐚𝐬𝐞 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 𝐚 𝐯𝐚𝐥𝐢𝐝 𝐢𝐭𝐞𝐦 𝐈𝐃.");
-          const { data } = await axios.post(`${GoatStor}/api/items/${likeItemId}/like`);
-          if (data.success) {
-            return sendBeautifulMessage(
-              `\n╭─❯ ✨ 𝗦𝘁𝗮𝘁𝘂𝘀\n╰ Successfully liked!\n\n╭─❯ 💝 𝗧𝗼𝘁𝗮𝗹 𝗟𝗶𝗸𝗲𝘀\n╰ ${data.likes}`
-            );
-          } else {
-            return sendBeautifulMessage("\n[⚜️]➜ 𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐥𝐢𝐤𝐞 𝐜𝐨𝐦𝐦𝐚𝐧𝐝.");
-          }
-        }
+          const id = parseInt(args[1]);
+          if (isNaN(id)) return send("donne un id 🌸");
 
-        case "upload": {
-          const commandName = args[1];
-          if (!commandName) return sendBeautifulMessage("\n[⚜️]➜ 𝐏𝐥𝐞𝐚𝐬𝐞 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 𝐚 𝐜𝐨𝐦𝐦𝐚𝐧𝐝 𝐧𝐚𝐦𝐞.");
-          const commandPath = path.join(process.cwd(), 'scripts', 'cmds', `${commandName}.js`);
-          if (!fs.existsSync(commandPath)) return sendBeautifulMessage(`\n❌ 𝐅𝐢𝐥𝐞 '${commandName}.js' 𝐧𝐨𝐭 𝐟𝐨𝐮𝐧𝐝.`);
-          try {
-            const code = fs.readFileSync(commandPath, 'utf8');
-            let commandFile;
-            try {
-              commandFile = require(commandPath);
-            } catch (err) {
-              return sendBeautifulMessage("\n[⚜️]➜  𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐜𝐨𝐦𝐦𝐚𝐧𝐝 𝐟𝐢𝐥𝐞 𝐟𝐨𝐫𝐦𝐚𝐭.");
-            }
-            const uploadData = {
-              itemName: commandFile.config?.name || commandName,
-              description: commandFile.config?.longDescription?.en || commandFile.config?.shortDescription?.en || "No description",
-              type: "GoatBot",
-              code,
-              authorName: commandFile.config?.author || event.senderID || "Unknown"
-            };
-            const response = await axios.post(`${GoatStor}/v1/paste`, uploadData);
-            if (response.data.success) {
-              const { itemID, link } = response.data;
-              return sendBeautifulMessage(
-                "\n" +
-                `╭─❯ ✅ 𝗦𝘁𝗮𝘁𝘂𝘀\n╰ command uploaded successfully\n\n` +
-                `╭─❯ 👑 𝗡𝗮𝗺𝗲\n╰ ${uploadData.itemName}\n\n` +
-                `╭─❯ 🆔 𝗜𝗗\n╰ ${itemID}\n\n` +
-                `╭─❯ 👨‍💻 𝗔𝘂𝘁𝗵𝗼𝗿\n╰ ${uploadData.authorName}\n\n`  +
-                `╭─❯ 🔗 𝗥𝗮𝘄 𝗟𝗶𝗻𝗸\n╰ ${link}`
-              );
-            }
-            return sendBeautifulMessage("\n[⚜️]➜ 𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐮𝐩𝐥𝐨𝐚𝐝 𝐭𝐡𝐞 𝐜𝐨𝐦𝐦𝐚𝐧𝐝.");
-          } catch (error) {
-            console.error("Upload error:", error);
-            return sendBeautifulMessage("\n[⚜️]➜ 𝐀𝐧 𝐮𝐧𝐞𝐱𝐩𝐞𝐜𝐭𝐞𝐝 𝐞𝐫𝐫𝐨𝐫 𝐨𝐜𝐜𝐮𝐫𝐫𝐞𝐝 𝐝𝐮𝐫𝐢𝐧𝐠 𝐮𝐩𝐥𝐨𝐚𝐝.");
-          }
+          const { data } = await axios.post(
+            `${GoatStor}/api/items/${id}/like`
+          );
+
+          return send(`💝 liked!\ntotal: ${data.likes}`);
         }
 
         default:
-          return sendBeautifulMessage("\n[⚜️]➜ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐬𝐮𝐛𝐜𝐨𝐦𝐦𝐚𝐧𝐝. 𝐔𝐬𝐞 `𝐡𝐞𝐥𝐩 𝐆𝐨𝐚𝐭𝐒𝐭𝐨𝐫` 𝐟𝐨𝐫 𝐨𝐩𝐭𝐢𝐨𝐧𝐬.");
+          return send("commande inconnue 🌸");
+
       }
-    } catch (err) {
-      console.error("GoatStor Error:", err);
-      return sendBeautifulMessage("\n[⚜️]➜ 𝐀𝐧 𝐮𝐧𝐞𝐱𝐩𝐞𝐜𝐭𝐞𝐝 𝐞𝐫𝐫𝐨𝐫 𝐨𝐜𝐜𝐮𝐫𝐫𝐞𝐝. 𝐏𝐥𝐞𝐚𝐬𝐞 𝐜𝐡𝐞𝐜𝐤 𝐭𝐡𝐞 𝐜𝐨𝐧𝐬𝐨𝐥𝐞 𝐟𝐨𝐫 𝐝𝐞𝐭𝐚𝐢𝐥𝐬.");
+
+    } catch (e) {
+      console.log(e);
+      return send("erreur serveur 💔");
     }
   }
 };
