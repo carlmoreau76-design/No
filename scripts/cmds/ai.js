@@ -13,6 +13,16 @@ const EDIT_API = "https://gemini-edit-omega.vercel.app/edit";
 const TMP_DIR = path.join(__dirname, 'tmp');
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
 
+// ───── ITALIC FONT ─────
+function font(text) {
+  const map = {
+    a:"𝘢",b:"𝘣",c:"𝘤",d:"𝘥",e:"𝘦",f:"𝘧",g:"𝘨",h:"𝘩",i:"𝘪",
+    j:"𝘫",k:"𝘬",l:"𝘭",m:"𝘮",n:"𝘯",o:"𝘰",p:"𝘱",q:"𝘲",r:"𝘳",
+    s:"𝘴",t:"𝘵",u:"𝘶",v:"𝘷",w:"𝘸",x:"𝘹",y:"𝘺",z:"𝘻"
+  };
+  return text.split("").map(c => map[c.toLowerCase()] || c).join("");
+}
+
 // 📥 download
 const downloadFile = async (url, ext) => {
   const filePath = path.join(TMP_DIR, `${uuidv4()}.${ext}`);
@@ -26,21 +36,22 @@ const resetConversation = async (api, event, message) => {
   api.setMessageReaction("♻️", event.messageID, () => {}, true);
   try {
     await axios.delete(`${CLEAR_ENDPOINT}/${event.senderID}`);
-    return message.reply(`🌸✨ Conversation reset for you 💖`);
+    return message.reply("KAI: conversation reset.");
   } catch {
-    return message.reply("💔 Reset failed 🌸");
+    return message.reply("KAI: reset failed.");
   }
 };
 
 // 🎨 edit
 const handleEdit = async (api, event, message, args) => {
   const prompt = args.join(" ");
-  if (!prompt) return message.reply("🌸 Give prompt 💖");
+  if (!prompt) return message.reply("KAI: give prompt.");
 
   api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
   try {
     const params = { prompt };
+
     if (event.messageReply?.attachments?.[0]?.url) {
       params.imgurl = event.messageReply.attachments[0].url;
     }
@@ -49,7 +60,7 @@ const handleEdit = async (api, event, message, args) => {
 
     if (!res.data?.images?.[0]) {
       api.setMessageReaction("❌", event.messageID, () => {}, true);
-      return message.reply("💔 Failed 🌸");
+      return message.reply("KAI: edit failed.");
     }
 
     const base64Image = res.data.images[0].replace(/^data:image\/\w+;base64,/, "");
@@ -58,16 +69,18 @@ const handleEdit = async (api, event, message, args) => {
     const imagePath = path.join(TMP_DIR, `${Date.now()}.png`);
     fs.writeFileSync(imagePath, buffer);
 
-    api.setMessageReaction("💖", event.messageID, () => {}, true);
+    api.setMessageReaction("✔", event.messageID, () => {}, true);
+
     await message.reply({
-      body: "🌸 Image ready 💖",
+      body: "KAI image generated.",
       attachment: fs.createReadStream(imagePath)
     });
 
     fs.unlinkSync(imagePath);
+
   } catch {
     api.setMessageReaction("❌", event.messageID, () => {}, true);
-    message.reply("💔 Error 🌸");
+    message.reply("KAI: error edit.");
   }
 };
 
@@ -76,15 +89,18 @@ const handleYouTube = async (api, event, message, args) => {
   const option = args[0];
 
   if (!["-v", "-a"].includes(option)) {
-    return message.reply("🌸 Use: youtube -v / -a ✨");
+    return message.reply("KAI: use -v or -a");
   }
 
   const query = args.slice(1).join(" ");
-  if (!query) return message.reply("💖 Give song 🌸");
+  if (!query) return message.reply("KAI: give song.");
 
   const sendFile = async (url, type) => {
     try {
-      const { data } = await axios.get(`${YT_API}?url=${encodeURIComponent(url)}&type=${type}`);
+      const { data } = await axios.get(
+        `${YT_API}?url=${encodeURIComponent(url)}&type=${type}`
+      );
+
       const downloadUrl = data.download_url;
 
       const filePath = path.join(TMP_DIR, `yt_${Date.now()}.${type}`);
@@ -99,13 +115,14 @@ const handleYouTube = async (api, event, message, args) => {
       });
 
       await message.reply({
-        body: "🌸 Music ready 💖",
+        body: "KAI music ready.",
         attachment: fs.createReadStream(filePath)
       });
 
       fs.unlinkSync(filePath);
+
     } catch {
-      message.reply("💔 YouTube error 🌸");
+      message.reply("KAI: youtube error.");
     }
   };
 
@@ -114,38 +131,24 @@ const handleYouTube = async (api, event, message, args) => {
   }
 
   try {
-    const results = (await ytSearch(query)).videos.slice(0, 6);
-    if (!results.length) return message.reply("💔 No results 🌸");
+    const results = (await ytSearch(query)).videos.slice(0, 5);
+    if (!results.length) return message.reply("KAI: no results.");
 
-    let list = "🌸 Results 💖\n\n";
+    let list = "KAI results:\n\n";
 
     results.forEach((v, i) => {
-      list += `💖 ${i + 1}. ${v.title} 🌸\n`;
+      list += `${i + 1}. ${v.title}\n`;
     });
 
-    api.sendMessage(
-      { body: list, attachment: [] },
-      event.threadID
-    );
+    message.reply(list);
 
   } catch {
-    message.reply("💔 YouTube error 🌸");
+    message.reply("KAI: youtube error.");
   }
 };
 
-// 🤖 AI FIXED CORE
+// 🤖 AI CORE CLEAN
 const handleAIRequest = async (api, event, userInput, message) => {
-
-  const args = userInput.split(" ");
-  const first = args[0]?.toLowerCase();
-
-  if (["edit", "-e"].includes(first)) {
-    return await handleEdit(api, event, message, args.slice(1));
-  }
-
-  if (["youtube", "yt", "ytb"].includes(first)) {
-    return await handleYouTube(api, event, message, args.slice(1));
-  }
 
   const userId = event.senderID;
 
@@ -159,52 +162,52 @@ const handleAIRequest = async (api, event, userInput, message) => {
 
     let reply = response.data?.reply;
 
-    if (!reply) {
-      return message.reply("💔 Angel no response 🌸");
-    }
+    if (!reply) return message.reply("KAI: no response.");
 
-    // 🧼 CLEAN TEXT (fix bug say/angel/sae mix)
+    // 🧼 CLEAN
     reply = reply
-      .replace(/Shizu/gi, "Angel 🌸")
-      .replace(/Christus/gi, "Sae ❄️")
-      .replace(/\bsay\b/gi, "")
-      .replace(/say/gi, "");
+      .replace(/Shizu/gi, "KAI")
+      .replace(/Angel/gi, "KAI")
+      .replace(/Sae/gi, "KAI")
+      .replace(/Christus/gi, "KAI")
+      .replace(/[💖🌸🎀]/g, "");
 
     await message.reply({
-      body: "💖 " + reply + " 🌸"
+      body: font("AI KAI") + "\n\n" + reply
     });
 
-    api.setMessageReaction("💖", event.messageID, () => {}, true);
+    api.setMessageReaction("✔", event.messageID, () => {}, true);
 
   } catch (e) {
     api.setMessageReaction("❌", event.messageID, () => {}, true);
-    message.reply("💔 AI error 🌸");
+    message.reply("KAI: error system.");
   }
 };
 
+// ───── EXPORT ─────
 module.exports = {
   config: {
     name: 'ai',
-    version: '3.2.1',
+    version: '4.2',
     author: 'Shade',
     role: 0,
     category: 'ai',
-    longDescription: { en: '🌸 Angel AI system FIXED' },
-    guide: {
-      en: `.ai message 🌸
-.ai edit prompt 💖
-.ai youtube -v song`
-    }
+    description: 'KAI AI assistant'
   },
 
-  onStart: async function ({ api, event, args, message }) {
-    const userInput = args.join(' ').trim();
-    if (!userInput) return message.reply("🌸 Say something 💖");
+  onChat: async function ({ api, event, message }) {
 
-    if (["clear", "reset"].includes(userInput.toLowerCase())) {
-      return await resetConversation(api, event, message);
+    const body = event.body?.trim();
+    if (!body) return;
+
+    if (!body.toLowerCase().startsWith("ai")) return;
+
+    const input = body.slice(2).trim();
+
+    if (!input) {
+      return message.reply("KAI: oui ?");
     }
 
-    return await handleAIRequest(api, event, userInput, message);
+    return handleAIRequest(api, event, input, message);
   }
 };
