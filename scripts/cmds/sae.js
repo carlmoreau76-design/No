@@ -13,7 +13,7 @@ const CREATOR_UID = "61573867120837";
 const CREATOR_NAME = "Shade";
 
 // 🔑 OPENAI API 👇👇👇
-const OPENAI_API_KEY = "COLLE_TA_CLE_OPENAI_ICI";
+const OPENAI_API_KEY = "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";
 
 // 🧠 mémoire
 let memory = {};
