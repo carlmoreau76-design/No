@@ -223,41 +223,57 @@ module.exports = {
     return message.reply(reply);
   },
 
-  // ───── CHAT MODE ─────
-  onChat: async function ({ event, message, api }) {
+  // ───── CHAT AUTO + REPLY SYSTEM ─────
+onChat: async function ({ event, message, api }) {
 
-    if (!event.body) return;
+  if (!event.body) return;
 
-    const body = event.body.trim();
+  const body = event.body.trim();
+  const userID = event.senderID;
 
-    if (!body.toLowerCase().startsWith("angel")) return;
+  const userName =
+    (await api.getUserInfo(userID))[userID]?.name || "toi";
 
-    const userID = event.senderID;
-
-    const userName =
-      (await api.getUserInfo(userID))[userID]?.name || "toi";
-
-    if (body.toLowerCase() === "angel") {
-
-      await message.reply({
-        sticker: "125881936546154"
-      });
-
-      return message.reply(
-        frame(font("bonjour 🌸 je suis Angel… parle-moi doucement 💖"))
-      );
-    }
-
-    const input = body.slice(5).trim();
-
-    if (!input) return;
+  // ───── SI LA PERSONNE REPOND A ANGEL ─────
+  if (
+    event.messageReply &&
+    event.messageReply.senderID == api.getCurrentUserID()
+  ) {
 
     const reply = await generate(
       userID,
       userName,
-      input
+      body
     );
 
     return message.reply(reply);
   }
-};
+
+  // ───── ACTIVATION AVEC "angel" ─────
+  if (!body.toLowerCase().startsWith("angel")) return;
+
+  // juste "angel"
+  if (body.toLowerCase() === "angel") {
+
+    await message.reply({
+      sticker: "125881936546154"
+    });
+
+    return message.reply(
+      frame(font("bonjour 🌸 je suis Angel… parle-moi doucement 💖"))
+    );
+  }
+
+  // angel + message
+  const input = body.slice(5).trim();
+
+  if (!input) return;
+
+  const reply = await generate(
+    userID,
+    userName,
+    input
+  );
+
+  return message.reply(reply);
+}
