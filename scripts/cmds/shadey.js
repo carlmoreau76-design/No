@@ -11,13 +11,14 @@ ${msg}
 module.exports = {
   config: {
     name: "shadey",
-    version: "1.0",
+    version: "2.0",
     author: "Shade",
     role: 0,
     category: "music",
     shortDescription: "Mes musiques Shadey 🎧"
   },
 
+  // 🎧 COMMAND
   onStart: async function ({ message, event }) {
 
     const songs = [
@@ -36,29 +37,47 @@ module.exports = {
     ];
 
     let menu = "Choisis une chanson 🎧\n\n";
-    songs.forEach((s, i) => {
-      menu += `${i + 1}. ${s.name}\n`;
+
+    songs.forEach((song, index) => {
+      menu += `${index + 1}. ${song.name}\n`;
     });
 
-    return message.reply(frame(menu), (err, info) => {
-      global.GoatBot.onReply.push({
-        name: this.config.name,
-        messageID: info.messageID,
-        author: event.senderID,
-        songs
-      });
-    });
+    return message.reply(
+      frame(menu),
+      (err, info) => {
+
+        global.GoatBot.onReply.set(info.messageID, {
+          commandName: this.config.name,
+          author: event.senderID,
+          songs
+        });
+
+      }
+    );
   },
 
+  // 🎵 REPLY SYSTEM
   onReply: async function ({ message, event, Reply }) {
+
+    // sécurité utilisateur
+    if (event.senderID !== Reply.author) return;
+
     const choice = parseInt(event.body);
 
-    if (!choice || choice < 1 || choice > Reply.songs.length) {
-      return message.reply(frame("❌ Choix invalide nya~"));
+    // mauvais choix
+    if (
+      isNaN(choice) ||
+      choice < 1 ||
+      choice > Reply.songs.length
+    ) {
+      return message.reply(
+        frame("❌ Choix invalide nya~")
+      );
     }
 
     const song = Reply.songs[choice - 1];
 
+    // envoie musique
     return message.reply({
       body: frame(`🎶 Lecture : ${song.name}`),
       attachment: await global.utils.getStreamFromURL(song.url)
