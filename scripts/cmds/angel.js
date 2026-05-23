@@ -101,24 +101,51 @@ async function callAngelAPI(prompt) {
       }
 
       // ───── FREE APIs ─────
-      else {
+else {
 
-        const res = await axios.get(
-          s.url,
-          {
-            params: s.params,
-            timeout: 15000
-          }
-        );
+  const res = await axios.get(
+    s.url,
+    {
+      params: {
+        ...s.params,
 
-        const reply =
-          res.data?.reply ||
-          res.data?.response ||
-          res.data?.result ||
-          res.data?.gpt4;
+        question: `
+Tu es ANGEL 🌸
+IA féminine kawaii.
+Tu réponds en français.
+Réponses courtes et naturelles.
+Pas de réponses techniques.
+Pas de longs paragraphes bizarres.
 
-        if (reply) return reply.trim();
-      }
+Utilisateur:
+${prompt}
+`
+      },
+
+      timeout: 15000
+    }
+  );
+
+  let reply =
+    res.data?.reply ||
+    res.data?.response ||
+    res.data?.result ||
+    res.data?.gpt4;
+
+  if (reply) {
+
+    // 🧼 nettoyage
+    reply = reply
+      .replace(/Based on the information provided/gi, "")
+      .replace(/technical question/gi, "")
+      .replace(/analysis/gi, "")
+      .replace(/complex/gi, "")
+      .replace(/however/gi, "")
+      .trim();
+
+    return reply;
+  }
+}
 
     } catch {}
   }
