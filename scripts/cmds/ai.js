@@ -5,248 +5,155 @@ const path = require('path');
 const ytSearch = require('yt-search');
 const { v4: uuidv4 } = require('uuid');
 
-
-// ───── OPENAI API ─────
-// 🔥 MET TON API OPENAI ICI
-const OPENAI_API_KEY = "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";
-
-
-// ───── FREE API BACKUP ─────
-const FREE_APIS = [
-  {
-    url: "https://arychauhann.onrender.com/api/gemini-proxy2",
-    type: "prompt"
-  },
-  {
-    url: "https://ai-chat-gpt-4-lite.onrender.com/api/hercai",
-    type: "question"
-  }
-];
-
-
-// ───── OTHER APIs ─────
+const API_ENDPOINT = "https://shizuai.vercel.app/chat";
 const CLEAR_ENDPOINT = "https://shizuai.vercel.app/chat/clear";
 const YT_API = "http://65.109.80.126:20409/aryan/yx";
 const EDIT_API = "https://gemini-edit-omega.vercel.app/edit";
 
 const TMP_DIR = path.join(__dirname, 'tmp');
+if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
 
-if (!fs.existsSync(TMP_DIR)) {
-  fs.mkdirSync(TMP_DIR);
+// 🌸 FRAME
+function frame(msg) {
+  return `╭━━━〔 SNIMORI 🌸 〕━━━╮
+
+${msg}
+
+╰━━━〔 AI GIRL 💖 〕━━━╯`;
 }
 
-
-// ───── ITALIC FONT ─────
+// 💖 FONT
 function font(text) {
-
   const map = {
-    a:"𝘢",b:"𝘣",c:"𝘤",d:"𝘥",e:"𝘦",f:"𝘧",g:"𝘨",h:"𝘩",i:"𝘪",
-    j:"𝘫",k:"𝘬",l:"𝘭",m:"𝘮",n:"𝘯",o:"𝘰",p:"𝘱",q:"𝘲",r:"𝘳",
-    s:"𝘴",t:"𝘵",u:"𝘶",v:"𝘷",w:"𝘸",x:"𝘹",y:"𝘺",z:"𝘻"
+    a:"𝘢", b:"𝘣", c:"𝘤", d:"𝘥", e:"𝘦",
+    f:"𝘧", g:"𝘨", h:"𝘩", i:"𝘪", j:"𝘫",
+    k:"𝘬", l:"𝘭", m:"𝘮", n:"𝘯", o:"𝘰",
+    p:"𝘱", q:"𝘲", r:"𝘳", s:"𝘴", t:"𝘵",
+    u:"𝘶", v:"𝘷", w:"𝘸", x:"𝘹", y:"𝘺",
+    z:"𝘻"
   };
 
-  return text
+  return String(text)
     .split("")
     .map(c => map[c.toLowerCase()] || c)
     .join("");
 }
 
-
-// 📥 download
+// 📥 DOWNLOAD
 const downloadFile = async (url, ext) => {
+  const filePath = path.join(TMP_DIR, `${uuidv4()}.${ext}`);
 
-  const filePath = path.join(
-    TMP_DIR,
-    `${uuidv4()}.${ext}`
-  );
+  const response = await axios.get(url, {
+    responseType: 'arraybuffer'
+  });
 
-  const response = await axios.get(
-    url,
-    {
-      responseType: 'arraybuffer'
-    }
-  );
-
-  fs.writeFileSync(
-    filePath,
-    Buffer.from(response.data)
-  );
+  fs.writeFileSync(filePath, Buffer.from(response.data));
 
   return filePath;
 };
 
-
-// ♻️ reset
-const resetConversation = async (
-  api,
-  event,
-  message
-) => {
-
-  api.setMessageReaction(
-    "♻️",
-    event.messageID,
-    () => {},
-    true
-  );
+// ♻️ RESET
+const resetConversation = async (api, event, message) => {
+  api.setMessageReaction("♻️", event.messageID, () => {}, true);
 
   try {
 
-    await axios.delete(
-      `${CLEAR_ENDPOINT}/${event.senderID}`
-    );
+    await axios.delete(`${CLEAR_ENDPOINT}/${event.senderID}`);
 
     return message.reply(
-      "KAI: conversation reset."
+      frame(font("memoire reset 🌸"))
     );
 
-  } catch {
+  } catch (error) {
+
+    console.error(error.message);
 
     return message.reply(
-      "KAI: reset failed."
+      frame(font("reset failed ❌"))
     );
   }
 };
 
-
-// 🎨 edit
-const handleEdit = async (
-  api,
-  event,
-  message,
-  args
-) => {
+// 🎨 EDIT
+const handleEdit = async (api, event, message, args) => {
 
   const prompt = args.join(" ");
 
   if (!prompt) {
     return message.reply(
-      "KAI: give prompt."
+      frame(font("donne un prompt 🌸"))
     );
   }
 
-  api.setMessageReaction(
-    "⏳",
-    event.messageID,
-    () => {},
-    true
-  );
+  api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
   try {
 
     const params = { prompt };
 
-    if (
-      event.messageReply?.attachments?.[0]?.url
-    ) {
-
-      params.imgurl =
-        event.messageReply.attachments[0].url;
+    if (event.messageReply?.attachments?.[0]?.url) {
+      params.imgurl = event.messageReply.attachments[0].url;
     }
 
-    const res = await axios.get(
-      EDIT_API,
-      { params }
-    );
+    const res = await axios.get(EDIT_API, { params });
 
     if (!res.data?.images?.[0]) {
-
-      api.setMessageReaction(
-        "❌",
-        event.messageID,
-        () => {},
-        true
-      );
-
       return message.reply(
-        "KAI: edit failed."
+        frame(font("image failed ❌"))
       );
     }
 
-    const base64Image =
-      res.data.images[0]
-      .replace(
-        /^data:image\/\w+;base64,/,
-        ""
-      );
+    const base64Image = res.data.images[0]
+      .replace(/^data:image\/\w+;base64,/, "");
 
-    const buffer = Buffer.from(
-      base64Image,
-      "base64"
-    );
+    const buffer = Buffer.from(base64Image, "base64");
 
     const imagePath = path.join(
       TMP_DIR,
       `${Date.now()}.png`
     );
 
-    fs.writeFileSync(
-      imagePath,
-      buffer
-    );
+    fs.writeFileSync(imagePath, buffer);
 
-    api.setMessageReaction(
-      "✔",
-      event.messageID,
-      () => {},
-      true
-    );
+    api.setMessageReaction("✅", event.messageID, () => {}, true);
 
-    await message.reply({
-      body: "KAI image generated.",
-      attachment:
-        fs.createReadStream(imagePath)
+    return message.reply({
+      body: frame(font("image generated ✨")),
+      attachment: fs.createReadStream(imagePath)
     });
 
-    fs.unlinkSync(imagePath);
+  } catch (error) {
 
-  } catch {
+    console.error(error.message);
 
-    api.setMessageReaction(
-      "❌",
-      event.messageID,
-      () => {},
-      true
-    );
+    api.setMessageReaction("❌", event.messageID, () => {}, true);
 
-    message.reply(
-      "KAI: error edit."
+    return message.reply(
+      frame(font("edit error 😿"))
     );
   }
 };
 
-
-// 🎬 YouTube
-const handleYouTube = async (
-  api,
-  event,
-  message,
-  args
-) => {
+// 🎬 YOUTUBE
+const handleYouTube = async (api, event, message, args) => {
 
   const option = args[0];
 
   if (!["-v", "-a"].includes(option)) {
-
     return message.reply(
-      "KAI: use -v or -a"
+      frame(font("youtube -v/-a seulement 🌸"))
     );
   }
 
-  const query =
-    args.slice(1).join(" ");
+  const query = args.slice(1).join(" ");
 
   if (!query) {
-
     return message.reply(
-      "KAI: give song."
+      frame(font("donne une recherche 🌸"))
     );
   }
 
-  const sendFile = async (
-    url,
-    type
-  ) => {
+  const sendFile = async (url, type) => {
 
     try {
 
@@ -254,175 +161,73 @@ const handleYouTube = async (
         `${YT_API}?url=${encodeURIComponent(url)}&type=${type}`
       );
 
-      const downloadUrl =
-        data.download_url;
+      const downloadUrl = data.download_url;
 
-      const filePath = path.join(
-        TMP_DIR,
-        `yt_${Date.now()}.${type}`
-      );
-
-      const writer =
-        fs.createWriteStream(filePath);
-
-      const stream = await axios({
-        url: downloadUrl,
-        responseType: "stream"
-      });
-
-      stream.data.pipe(writer);
-
-      await new Promise(
-        (resolve, reject) => {
-
-          writer.on(
-            "finish",
-            resolve
-          );
-
-          writer.on(
-            "error",
-            reject
-          );
-        }
-      );
+      const filePath = await downloadFile(downloadUrl, type);
 
       await message.reply({
-        body: "KAI music ready.",
-        attachment:
-          fs.createReadStream(filePath)
+        attachment: fs.createReadStream(filePath)
       });
 
       fs.unlinkSync(filePath);
 
-    } catch {
+    } catch (error) {
+
+      console.error(error.message);
 
       message.reply(
-        "KAI: youtube error."
+        frame(font("download failed ❌"))
       );
     }
   };
 
   if (query.startsWith("http")) {
-
     return await sendFile(
       query,
-      option === "-v"
-        ? "mp4"
-        : "mp3"
+      option === "-v" ? "mp4" : "mp3"
     );
   }
 
   try {
 
-    const results =
-      (
-        await ytSearch(query)
-      ).videos.slice(0, 5);
+    const results = (
+      await ytSearch(query)
+    ).videos.slice(0, 6);
 
-    if (!results.length) {
-
+    if (results.length === 0) {
       return message.reply(
-        "KAI: no results."
+        frame(font("aucun resultat 😿"))
       );
     }
 
-    let list =
-      "KAI results:\n\n";
+    let list = "🎧 choose song 🌸\n\n";
 
     results.forEach((v, i) => {
-
-      list +=
-        `${i + 1}. ${v.title}\n`;
+      list += `${i + 1}. ${v.title}\n`;
     });
 
-    message.reply(list);
+    const sent = await message.reply(
+      frame(font(list))
+    );
 
-  } catch {
+    global.GoatBot.onReply.set(sent.messageID, {
+      commandName: "ai",
+      author: event.senderID,
+      results,
+      type: option
+    });
+
+  } catch (error) {
+
+    console.error(error.message);
 
     message.reply(
-      "KAI: youtube error."
+      frame(font("youtube error ❌"))
     );
   }
 };
 
-
-// 🤖 OPENAI
-async function callOpenAI(prompt) {
-
-  try {
-
-    const res = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are KAI, a cool intelligent AI assistant."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ]
-      },
-      {
-        headers: {
-          "Content-Type":
-            "application/json",
-
-          Authorization:
-            `Bearer ${OPENAI_API_KEY}`
-        }
-      }
-    );
-
-    return res.data
-      ?.choices?.[0]
-      ?.message?.content;
-
-  } catch {
-
-    return null;
-  }
-}
-
-
-// 🤖 FREE API BACKUP
-async function callFreeAPI(prompt) {
-
-  for (const api of FREE_APIS) {
-
-    try {
-
-      const params = {};
-
-      params[api.type] = prompt;
-
-      const res = await axios.get(
-        api.url,
-        { params }
-      );
-
-      const reply =
-        res.data?.reply ||
-        res.data?.message ||
-        res.data?.response;
-
-      if (reply) {
-        return reply;
-      }
-
-    } catch {}
-  }
-
-  return null;
-}
-
-
-// 🤖 AI CORE
+// 🤖 AI
 const handleAIRequest = async (
   api,
   event,
@@ -430,137 +235,299 @@ const handleAIRequest = async (
   message
 ) => {
 
-  api.setMessageReaction(
-    "⏳",
-    event.messageID,
-    () => {},
-    true
-  );
+  const args = userInput.split(" ");
+  const first = args[0]?.toLowerCase();
+
+  // 🎨 edit
+  if (["edit", "-e"].includes(first)) {
+    return await handleEdit(
+      api,
+      event,
+      message,
+      args.slice(1)
+    );
+  }
+
+  // 🎬 youtube
+  if (["youtube", "yt", "ytb"].includes(first)) {
+    return await handleYouTube(
+      api,
+      event,
+      message,
+      args
+    );
+  }
+
+  const userId = event.senderID;
+
+  let messageContent = userInput;
+  let imageUrl = null;
+
+  api.setMessageReaction("⏳", event.messageID, () => {}, true);
+
+  const urlMatch = messageContent.match(
+    /(https?:\/\/[^\s]+)/
+  )?.[0];
+
+  if (urlMatch && validUrl.isWebUri(urlMatch)) {
+
+    imageUrl = urlMatch;
+
+    messageContent = messageContent
+      .replace(urlMatch, '')
+      .trim();
+  }
+
+  if (!messageContent && !imageUrl) {
+    return message.reply(
+      frame(font("envoie un message 🌸"))
+    );
+  }
 
   try {
 
-    let reply = null;
+    const response = await axios.post(
+      API_ENDPOINT,
+      {
+        uid: userId,
 
-    // 🔥 OPENAI PRINCIPAL
-    reply =
-      await callOpenAI(userInput);
+        message: `
+Tu es SNIMORI 🌸
 
-    // 🥈 BACKUP FREE APIs
-    if (!reply) {
+Tu es une IA feminine kawaii,
+douce,
+naturelle,
+humaine,
+stylée.
 
-      reply =
-        await callFreeAPI(userInput);
+Règles :
+- français uniquement
+- réponses naturelles
+- réponses courtes
+- pas de langage technique
+- pas de blabla IA
+- emojis autorisés 🌸💖✨
+
+Utilisateur:
+${messageContent}
+        `,
+
+        image_url: imageUrl
+      }
+    );
+
+    let finalReply =
+      response.data?.reply ||
+      "😿 snimori bug...";
+
+    // 🧼 nettoyage
+    finalReply = finalReply
+      .replace(/shadow/gi, "snimori")
+      .replace(/technical/gi, "")
+      .replace(/analysis/gi, "")
+      .replace(/based on/gi, "")
+      .replace(/AI language model/gi, "")
+      .trim();
+
+    finalReply = font(finalReply);
+
+    const attachments = [];
+
+    if (response.data?.image_url) {
+
+      const imgPath = await downloadFile(
+        response.data.image_url,
+        "jpg"
+      );
+
+      attachments.push(
+        fs.createReadStream(imgPath)
+      );
     }
 
-    // 🥉 FALLBACK
-    if (!reply) {
-
-      reply =
-        "KAI: system temporarily unavailable.";
-    }
-
-    // 🧼 CLEAN
-    reply = reply
-      .replace(/Shizu/gi, "KAI")
-      .replace(/Angel/gi, "KAI")
-      .replace(/Sae/gi, "KAI")
-      .replace(/Christus/gi, "KAI")
-      .replace(/[💖🌸🎀]/g, "");
-
-    await message.reply({
-      body:
-        font("AI KAI") +
-        "\n\n" +
-        reply
+    const sentMessage = await message.reply({
+      body: frame(finalReply),
+      attachment: attachments.length
+        ? attachments
+        : undefined
     });
 
-    api.setMessageReaction(
-      "✔",
-      event.messageID,
-      () => {},
-      true
+    global.GoatBot.onReply.set(
+      sentMessage.messageID,
+      {
+        commandName: "ai",
+        author: userId
+      }
     );
 
-  } catch (e) {
+    api.setMessageReaction("✅", event.messageID, () => {}, true);
 
-    api.setMessageReaction(
-      "❌",
-      event.messageID,
-      () => {},
-      true
-    );
+  } catch (error) {
 
-    message.reply(
-      "KAI: error system."
+    console.error(error.message);
+
+    api.setMessageReaction("❌", event.messageID, () => {}, true);
+
+    return message.reply(
+      frame(font("snimori ne peut pas répondre 😿"))
     );
   }
 };
 
-
-// ───── EXPORT ─────
+// ───── MODULE ─────
 module.exports = {
 
   config: {
     name: 'ai',
-    version: '5.0',
+    aliases: ['snimori'],
+    version: '4.0',
     author: 'Shade',
     role: 0,
     category: 'ai',
-    description: 'KAI AI assistant'
+
+    shortDescription: {
+      en: 'Snimori AI 🌸'
+    },
+
+    guide: {
+      en:
+`.ai hello
+.ai edit cat girl
+.ai youtube -v naruto
+.ai clear`
+    }
   },
 
+  // 🌸 START
+  onStart: async function ({
+    api,
+    event,
+    args,
+    message
+  }) {
 
+    const userInput = args.join(' ').trim();
+
+    if (!userInput) {
+      return message.reply(
+        frame(font("snimori active 🌸"))
+      );
+    }
+
+    if (
+      ['clear', 'reset']
+      .includes(userInput.toLowerCase())
+    ) {
+      return await resetConversation(
+        api,
+        event,
+        message
+      );
+    }
+
+    return await handleAIRequest(
+      api,
+      event,
+      userInput,
+      message
+    );
+  },
+
+  // 💬 REPLY
+  onReply: async function ({
+    api,
+    event,
+    Reply,
+    message
+  }) {
+
+    if (event.senderID !== Reply.author) return;
+
+    const userInput = event.body?.trim();
+
+    if (!userInput) return;
+
+    // 🎬 youtube choix
+    if (Reply.results && Reply.type) {
+
+      const idx = parseInt(userInput);
+
+      const list = Reply.results;
+
+      if (
+        isNaN(idx) ||
+        idx < 1 ||
+        idx > list.length
+      ) {
+        return message.reply(
+          frame(font("choix invalide ❌"))
+        );
+      }
+
+      const selected = list[idx - 1];
+
+      const type =
+        Reply.type === "-v"
+          ? "mp4"
+          : "mp3";
+
+      try {
+
+        const { data } = await axios.get(
+          `${YT_API}?url=${encodeURIComponent(selected.url)}&type=${type}`
+        );
+
+        const filePath = await downloadFile(
+          data.download_url,
+          type
+        );
+
+        await message.reply({
+          attachment: fs.createReadStream(filePath)
+        });
+
+        fs.unlinkSync(filePath);
+
+      } catch {
+
+        return message.reply(
+          frame(font("download failed ❌"))
+        );
+      }
+
+      return;
+    }
+
+    return await handleAIRequest(
+      api,
+      event,
+      userInput,
+      message
+    );
+  },
+
+  // 🌸 CHAT
   onChat: async function ({
     api,
     event,
     message
   }) {
 
-    const body =
-      event.body?.trim();
+    const body = event.body?.trim();
 
-    if (!body) return;
-
-
-    // ───── REPLY TO KAI ─────
     if (
-      event.messageReply &&
-      event.messageReply.senderID ==
-      api.getCurrentUserID()
-    ) {
-
-      return handleAIRequest(
-        api,
-        event,
-        body,
-        message
-      );
-    }
-
-
-    // ───── START WITH "ai" ─────
-    if (
-      !body
-      .toLowerCase()
-      .startsWith("ai")
+      !body?.toLowerCase()
+      .startsWith('ai ')
     ) return;
 
+    const userInput = body.slice(3).trim();
 
-    const input =
-      body.slice(2).trim();
+    if (!userInput) return;
 
-    if (!input) {
-
-      return message.reply(
-        "KAI: oui ?"
-      );
-    }
-
-
-    return handleAIRequest(
+    return await handleAIRequest(
       api,
       event,
-      input,
+      userInput,
       message
     );
   }
