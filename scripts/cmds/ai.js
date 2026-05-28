@@ -52,9 +52,7 @@ const resetConversation = async (api, event, message) => {
 
   try {
     await axios.delete(`${CLEAR_ENDPOINT}/${event.senderID}`);
-
     return message.reply(font("memoire reset 🌸"));
-
   } catch (error) {
     console.error(error.message);
     return message.reply(font("reset failed ❌"));
@@ -73,6 +71,7 @@ const handleEdit = async (api, event, message, args) => {
   api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
   try {
+
     const params = { prompt };
 
     if (event.messageReply?.attachments?.[0]?.url) {
@@ -149,6 +148,7 @@ const handleYouTube = async (api, event, message, args) => {
   }
 
   try {
+
     const results = (await ytSearch(query)).videos.slice(0, 6);
 
     if (results.length === 0) {
@@ -216,9 +216,9 @@ const handleAIRequest = async (api, event, userInput, message) => {
       ownerPrompt = `
 Tu respectes énormément Shade.
 Tu l'appelles parfois :
-- maître
-- boss
-- Shade-sama
+- maître ཐི༑ཋྀ
+- boss ꈍ◡ꈍ 
+- Shade-chan 𐔌՞ ܸ.ˬ.ܸ ՞𐦯
 - mon créateur 💖
 `;
     }
@@ -251,7 +251,7 @@ ${messageContent}
     let finalReply = response.data?.reply || "😿 ai bug...";
 
     finalReply = finalReply
-      .replace(/🎀\s*𝗦𝗵𝗶𝘇𝘂.*?\n/gi, "")
+      .replace(/🎀\s*𝗦𝗻𝗶𝗺𝗼𝗿𝗶.*?\n/gi, "")
       .replace(/shizu/gi, "")
       .replace(/shadow/gi, "")
       .replace(/technical/gi, "")
@@ -358,23 +358,15 @@ module.exports = {
     return await handleAIRequest(api, event, userInput, message);
   },
 
-  // ✅ ONLY FIXED PART
+  // FIX FINAL OK
   onChat: async function ({ api, event, message }) {
 
-  const body = event.body?.trim();
+    const body = event.body?.trim();
+    if (!body?.toLowerCase().startsWith('ai ')) return;
 
-  if (
-    !body?.toLowerCase().startsWith('ai ')
-  ) return;
+    const userInput = body.slice(3).trim();
+    if (!userInput) return;
 
-  const userInput = body.slice(3).trim();
-
-  if (!userInput) return;
-
-  return await handleAIRequest(
-    api,
-    event,
-    userInput,
-    message
-  );
+    return await handleAIRequest(api, event, userInput, message);
   }
+}; // ✅ fermeture ajoutée ici
