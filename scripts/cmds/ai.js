@@ -10,17 +10,10 @@ const CLEAR_ENDPOINT = "https://shizuai.vercel.app/chat/clear";
 const YT_API = "http://65.109.80.126:20409/aryan/yx";
 const EDIT_API = "https://gemini-edit-omega.vercel.app/edit";
 
+const OWNER_UID = "61573867120837";
+
 const TMP_DIR = path.join(__dirname, 'tmp');
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
-
-// 🌸 FRAME
-function frame(msg) {
-  return `╭━━━〔 SNIMORI 🌸 〕━━━╮
-
-${msg}
-
-╰━━━〔 AI GIRL 💖 〕━━━╯`;
-}
 
 // 💖 FONT
 function font(text) {
@@ -54,23 +47,20 @@ const downloadFile = async (url, ext) => {
 
 // ♻️ RESET
 const resetConversation = async (api, event, message) => {
+
   api.setMessageReaction("♻️", event.messageID, () => {}, true);
 
   try {
 
     await axios.delete(`${CLEAR_ENDPOINT}/${event.senderID}`);
 
-    return message.reply(
-      frame(font("memoire reset 🌸"))
-    );
+    return message.reply(font("memoire reset 🌸"));
 
   } catch (error) {
 
     console.error(error.message);
 
-    return message.reply(
-      frame(font("reset failed ❌"))
-    );
+    return message.reply(font("reset failed ❌"));
   }
 };
 
@@ -80,9 +70,7 @@ const handleEdit = async (api, event, message, args) => {
   const prompt = args.join(" ");
 
   if (!prompt) {
-    return message.reply(
-      frame(font("donne un prompt 🌸"))
-    );
+    return message.reply(font("donne un prompt 🌸"));
   }
 
   api.setMessageReaction("⏳", event.messageID, () => {}, true);
@@ -98,9 +86,7 @@ const handleEdit = async (api, event, message, args) => {
     const res = await axios.get(EDIT_API, { params });
 
     if (!res.data?.images?.[0]) {
-      return message.reply(
-        frame(font("image failed ❌"))
-      );
+      return message.reply(font("image failed ❌"));
     }
 
     const base64Image = res.data.images[0]
@@ -118,7 +104,7 @@ const handleEdit = async (api, event, message, args) => {
     api.setMessageReaction("✅", event.messageID, () => {}, true);
 
     return message.reply({
-      body: frame(font("image generated ✨")),
+      body: font("image generated ✨"),
       attachment: fs.createReadStream(imagePath)
     });
 
@@ -128,9 +114,7 @@ const handleEdit = async (api, event, message, args) => {
 
     api.setMessageReaction("❌", event.messageID, () => {}, true);
 
-    return message.reply(
-      frame(font("edit error 😿"))
-    );
+    return message.reply(font("edit error 😿"));
   }
 };
 
@@ -140,17 +124,13 @@ const handleYouTube = async (api, event, message, args) => {
   const option = args[0];
 
   if (!["-v", "-a"].includes(option)) {
-    return message.reply(
-      frame(font("youtube -v/-a seulement 🌸"))
-    );
+    return message.reply(font("youtube -v/-a seulement 🌸"));
   }
 
   const query = args.slice(1).join(" ");
 
   if (!query) {
-    return message.reply(
-      frame(font("donne une recherche 🌸"))
-    );
+    return message.reply(font("donne une recherche 🌸"));
   }
 
   const sendFile = async (url, type) => {
@@ -175,29 +155,20 @@ const handleYouTube = async (api, event, message, args) => {
 
       console.error(error.message);
 
-      message.reply(
-        frame(font("download failed ❌"))
-      );
+      message.reply(font("download failed ❌"));
     }
   };
 
   if (query.startsWith("http")) {
-    return await sendFile(
-      query,
-      option === "-v" ? "mp4" : "mp3"
-    );
+    return await sendFile(query, option === "-v" ? "mp4" : "mp3");
   }
 
   try {
 
-    const results = (
-      await ytSearch(query)
-    ).videos.slice(0, 6);
+    const results = (await ytSearch(query)).videos.slice(0, 6);
 
     if (results.length === 0) {
-      return message.reply(
-        frame(font("aucun resultat 😿"))
-      );
+      return message.reply(font("aucun resultat 😿"));
     }
 
     let list = "🎧 choose song 🌸\n\n";
@@ -206,9 +177,7 @@ const handleYouTube = async (api, event, message, args) => {
       list += `${i + 1}. ${v.title}\n`;
     });
 
-    const sent = await message.reply(
-      frame(font(list))
-    );
+    const sent = await message.reply(font(list));
 
     global.GoatBot.onReply.set(sent.messageID, {
       commandName: "ai",
@@ -221,41 +190,22 @@ const handleYouTube = async (api, event, message, args) => {
 
     console.error(error.message);
 
-    message.reply(
-      frame(font("youtube error ❌"))
-    );
+    message.reply(font("youtube error ❌"));
   }
 };
 
 // 🤖 AI
-const handleAIRequest = async (
-  api,
-  event,
-  userInput,
-  message
-) => {
+const handleAIRequest = async (api, event, userInput, message) => {
 
   const args = userInput.split(" ");
   const first = args[0]?.toLowerCase();
 
-  // 🎨 edit
   if (["edit", "-e"].includes(first)) {
-    return await handleEdit(
-      api,
-      event,
-      message,
-      args.slice(1)
-    );
+    return await handleEdit(api, event, message, args.slice(1));
   }
 
-  // 🎬 youtube
   if (["youtube", "yt", "ytb"].includes(first)) {
-    return await handleYouTube(
-      api,
-      event,
-      message,
-      args
-    );
+    return await handleYouTube(api, event, message, args);
   }
 
   const userId = event.senderID;
@@ -265,40 +215,42 @@ const handleAIRequest = async (
 
   api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
-  const urlMatch = messageContent.match(
-    /(https?:\/\/[^\s]+)/
-  )?.[0];
+  const urlMatch = messageContent.match(/(https?:\/\/[^\s]+)/)?.[0];
 
   if (urlMatch && validUrl.isWebUri(urlMatch)) {
-
     imageUrl = urlMatch;
-
-    messageContent = messageContent
-      .replace(urlMatch, '')
-      .trim();
+    messageContent = messageContent.replace(urlMatch, '').trim();
   }
 
   if (!messageContent && !imageUrl) {
-    return message.reply(
-      frame(font("envoie un message 🌸"))
-    );
+    return message.reply(font("envoie un message 🌸"));
   }
 
   try {
 
-    const response = await axios.post(
-      API_ENDPOINT,
-      {
-        uid: userId,
+    let ownerPrompt = "";
 
-        message: `
-Tu es SNIMORI 🌸
+    if (userId === OWNER_UID) {
+      ownerPrompt = `
+Tu respectes énormément Shade.
+Tu l'appelles parfois :
+- maître
+- boss
+- Shade-sama
+- mon créateur 💖
+`;
+    }
 
+    const response = await axios.post(API_ENDPOINT, {
+      uid: userId,
+      message: `
 Tu es une IA feminine kawaii,
 douce,
 naturelle,
 humaine,
 stylée.
+
+${ownerPrompt}
 
 Règles :
 - français uniquement
@@ -310,19 +262,16 @@ Règles :
 
 Utilisateur:
 ${messageContent}
-        `,
+      `,
+      image_url: imageUrl
+    });
 
-        image_url: imageUrl
-      }
-    );
+    let finalReply = response.data?.reply || "😿 ai bug...";
 
-    let finalReply =
-      response.data?.reply ||
-      "😿 snimori bug...";
-
-    // 🧼 nettoyage
     finalReply = finalReply
-      .replace(/shadow/gi, "snimori")
+      .replace(/🎀\s*𝗦𝗻𝗶𝗺𝗼𝗿𝗶.*?\n/gi, "")
+      .replace(/shizu/gi, "")
+      .replace(/shadow/gi, "")
       .replace(/technical/gi, "")
       .replace(/analysis/gi, "")
       .replace(/based on/gi, "")
@@ -334,31 +283,19 @@ ${messageContent}
     const attachments = [];
 
     if (response.data?.image_url) {
-
-      const imgPath = await downloadFile(
-        response.data.image_url,
-        "jpg"
-      );
-
-      attachments.push(
-        fs.createReadStream(imgPath)
-      );
+      const imgPath = await downloadFile(response.data.image_url, "jpg");
+      attachments.push(fs.createReadStream(imgPath));
     }
 
     const sentMessage = await message.reply({
-      body: frame(finalReply),
-      attachment: attachments.length
-        ? attachments
-        : undefined
+      body: finalReply,
+      attachment: attachments.length ? attachments : undefined
     });
 
-    global.GoatBot.onReply.set(
-      sentMessage.messageID,
-      {
-        commandName: "ai",
-        author: userId
-      }
-    );
+    global.GoatBot.onReply.set(sentMessage.messageID, {
+      commandName: "ai",
+      author: userId
+    });
 
     api.setMessageReaction("✅", event.messageID, () => {}, true);
 
@@ -368,119 +305,59 @@ ${messageContent}
 
     api.setMessageReaction("❌", event.messageID, () => {}, true);
 
-    return message.reply(
-      frame(font("snimori ne peut pas répondre 😿"))
-    );
+    return message.reply(font("ai ne peut pas répondre 😿"));
   }
 };
 
-// ───── MODULE ─────
 module.exports = {
-
   config: {
     name: 'ai',
-    aliases: ['snimori'],
-    version: '4.0',
+    aliases: ['girlai'],
+    version: '5.0',
     author: 'Shade',
     role: 0,
     category: 'ai',
-
-    shortDescription: {
-      en: 'Snimori AI 🌸'
-    },
-
+    shortDescription: { en: 'AI Girl 🌸' },
     guide: {
-      en:
-`.ai hello
-.ai edit cat girl
-.ai youtube -v naruto
-.ai clear`
+      en: `.ai hello\n.ai edit cat girl\n.ai youtube -v naruto\n.ai clear`
     }
   },
 
-  // 🌸 START
-  onStart: async function ({
-    api,
-    event,
-    args,
-    message
-  }) {
-
+  onStart: async function ({ api, event, args, message }) {
     const userInput = args.join(' ').trim();
 
-    if (!userInput) {
-      return message.reply(
-        frame(font("snimori active 🌸"))
-      );
+    if (!userInput) return message.reply(font("ai active 🌸"));
+
+    if (['clear', 'reset'].includes(userInput.toLowerCase())) {
+      return await resetConversation(api, event, message);
     }
 
-    if (
-      ['clear', 'reset']
-      .includes(userInput.toLowerCase())
-    ) {
-      return await resetConversation(
-        api,
-        event,
-        message
-      );
-    }
-
-    return await handleAIRequest(
-      api,
-      event,
-      userInput,
-      message
-    );
+    return await handleAIRequest(api, event, userInput, message);
   },
 
-  // 💬 REPLY
-  onReply: async function ({
-    api,
-    event,
-    Reply,
-    message
-  }) {
-
+  onReply: async function ({ api, event, Reply, message }) {
     if (event.senderID !== Reply.author) return;
 
     const userInput = event.body?.trim();
-
     if (!userInput) return;
 
-    // 🎬 youtube choix
     if (Reply.results && Reply.type) {
-
       const idx = parseInt(userInput);
-
       const list = Reply.results;
 
-      if (
-        isNaN(idx) ||
-        idx < 1 ||
-        idx > list.length
-      ) {
-        return message.reply(
-          frame(font("choix invalide ❌"))
-        );
+      if (isNaN(idx) || idx < 1 || idx > list.length) {
+        return message.reply(font("choix invalide ❌"));
       }
 
       const selected = list[idx - 1];
-
-      const type =
-        Reply.type === "-v"
-          ? "mp4"
-          : "mp3";
+      const type = Reply.type === "-v" ? "mp4" : "mp3";
 
       try {
-
         const { data } = await axios.get(
           `${YT_API}?url=${encodeURIComponent(selected.url)}&type=${type}`
         );
 
-        const filePath = await downloadFile(
-          data.download_url,
-          type
-        );
+        const filePath = await downloadFile(data.download_url, type);
 
         await message.reply({
           attachment: fs.createReadStream(filePath)
@@ -489,46 +366,22 @@ module.exports = {
         fs.unlinkSync(filePath);
 
       } catch {
-
-        return message.reply(
-          frame(font("download failed ❌"))
-        );
+        return message.reply(font("download failed ❌"));
       }
 
       return;
     }
 
-    return await handleAIRequest(
-      api,
-      event,
-      userInput,
-      message
-    );
+    return await handleAIRequest(api, event, userInput, message);
   },
 
-  // 🌸 CHAT
-  onChat: async function ({
-    api,
-    event,
-    message
-  }) {
-
+  onChat: async function ({ api, event, message }) {
     const body = event.body?.trim();
-
-    if (
-      !body?.toLowerCase()
-      .startsWith('ai ')
-    ) return;
+    if (!body?.toLowerCase().startsWith('ai ')) return;
 
     const userInput = body.slice(3).trim();
-
     if (!userInput) return;
 
-    return await handleAIRequest(
-      api,
-      event,
-      userInput,
-      message
-    );
+    return await handleAIRequest(api, event, userInput, message);
   }
 };
