@@ -33,14 +33,20 @@ function frame(msg) {
 
 // 💖 FONT SAFE
 function font(text = "") {
-  return text.toString()
-    .replace(/[a-z]/g, c =>
-      "𝘢𝘣𝘤𝘥𝘦𝘧𝘨𝘩𝘪𝘷𝘬𝘭𝘺𝘮𝘯𝘰𝘱𝘲𝘳𝘴𝘵𝘶𝘷𝘸𝘹𝘺𝘻"[
-        "abcdefghijklmnopqrstuvwxyz".indexOf(c)
-      ] || c
-    );
-}
 
+  const map = {
+    a:"𝘢", b:"𝘣", c:"𝘤", d:"𝘥", e:"𝘦",
+    f:"𝘧", g:"𝘨", h:"𝘩", i:"𝘪", j:"𝘫",
+    k:"𝘬", l:"𝘭", m:"𝘮", n:"𝘯", o:"𝘰",
+    p:"𝘱", q:"𝘲", r:"𝘳", s:"𝘴", t:"𝘵",
+    u:"𝘶", v:"𝘷", w:"𝘸", x:"𝘹", y:"𝘺", z:"𝘻"
+  };
+
+  return String(text)
+    .split("")
+    .map(c => map[c.toLowerCase()] || c)
+    .join("");
+}
 // 🤖 CALL AI
 async function callAI(prompt) {
   try {
