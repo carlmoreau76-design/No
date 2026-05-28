@@ -10,13 +10,10 @@ const CLEAR_ENDPOINT = "https://shizuai.vercel.app/chat/clear";
 const YT_API = "http://65.109.80.126:20409/aryan/yx";
 const EDIT_API = "https://gemini-edit-omega.vercel.app/edit";
 
+const OWNER_UID = "61573867120837";
+
 const TMP_DIR = path.join(__dirname, 'tmp');
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
-
-// 😹 FRAME KAI
-function frame(msg) {
-  return `╭━━━〔 KAI 😹 〕━━━╮\n\n${msg}\n\n╰━━━〔 BOY AI 🔥 〕━━━╯`;
-}
 
 // 💖 FONT
 function font(text) {
@@ -40,102 +37,52 @@ const downloadFile = async (url, ext) => {
   return filePath;
 };
 
-// ♻️ RESET
-const resetConversation = async (api, event, message) => {
-  api.setMessageReaction("♻️", event.messageID, () => {}, true);
-  try {
-    await axios.delete(`${CLEAR_ENDPOINT}/${event.senderID}`);
-    return message.reply(frame(font("conversation reset 😹")));
-  } catch {
-    return message.reply(frame(font("reset failed ❌")));
-  }
-};
-
-// 🎨 EDIT
-const handleEdit = async (api, event, message, args) => {
-  const prompt = args.join(" ");
-  if (!prompt) return message.reply(frame(font("give prompt 😹")));
-
-  try {
-    const res = await axios.get(EDIT_API, { params: { prompt } });
-
-    if (!res.data?.images?.[0]) {
-      return message.reply(frame(font("❌ error image")));
-    }
-
-    const base64 = res.data.images[0].replace(/^data:image\/\w+;base64,/, "");
-    const buffer = Buffer.from(base64, "base64");
-
-    const imagePath = path.join(TMP_DIR, `${Date.now()}.png`);
-    fs.writeFileSync(imagePath, buffer);
-
-    return message.reply({
-      body: frame(font("✨ image generated")),
-      attachment: fs.createReadStream(imagePath)
-    });
-
-  } catch {
-    return message.reply(frame(font("❌ edit error")));
-  }
-};
-
-// 🎬 YOUTUBE
-const handleYouTube = async (api, event, message, args) => {
-  const option = args[0];
-  const query = args.slice(1).join(" ");
-
-  if (!query) return message.reply(frame(font("search missing 😹")));
-
-  if (query.startsWith("http")) {
-    const type = option === "-v" ? "mp4" : "mp3";
-
-    try {
-      const { data } = await axios.get(`${YT_API}?url=${encodeURIComponent(query)}&type=${type}`);
-      const filePath = await downloadFile(data.download_url, type);
-      return message.reply({ attachment: fs.createReadStream(filePath) });
-    } catch {
-      return message.reply(frame(font("download failed ❌")));
-    }
-  }
-
-  try {
-    const results = (await ytSearch(query)).videos.slice(0, 5);
-
-    let list = font("🎧 choose 😹\n\n");
-    results.forEach((v, i) => {
-      list += `${i + 1}. ${v.title}\n`;
-    });
-
-    return message.reply(frame(list));
-
-  } catch {
-    return message.reply(frame(font("youtube error ❌")));
-  }
-};
-
-// 🤖 KAI AI
+// 🤖 KAI AI ULTIMATE
 const handleAIRequest = async (api, event, text, message) => {
   try {
+
+    api.setMessageReaction("⏳", event.messageID, () => {}, true);
+
+    const isOwner = event.senderID === OWNER_UID;
+
+    let personality = "";
+
+    if (isOwner) {
+      personality = `
+IMPORTANT:
+- cet utilisateur est TON CRÉATEUR
+- respect absolu
+- appelle-le : boss / Shade / créateur
+- sois loyal + sérieux avec lui
+- jamais insolent avec lui
+`;
+    } else {
+      personality = `
+Tu es KAI 😹
+
+- garçon
+- troll intelligent
+- gamer
+- drôle
+- un peu arrogant
+- esprit compétition
+`;
+    }
 
     const res = await axios.post(API_ENDPOINT, {
       uid: event.senderID,
       message: `
-Tu es KAI 😹
+${personality}
 
-Tu es :
-- garçon
-- drôle
-- gamer
-- taquin
-- naturel
-
-Règles :
+Style :
 - français simple
 - réponses courtes
-- pas de style IA bizarre
-- emojis 😹🛐👀
-- tu donne de l'humour 
-- faire rire les gens avec tes réponses 
+- naturel comme un pote
+- humour 😹🔥👀
+
+IMPORTANT :
+- fais rire
+- sois vivant, pas IA
 
 Utilisateur:
 ${text}
@@ -149,22 +96,43 @@ ${text}
         .replace(/based/gi, "")
         .replace(/analysis/gi, "")
         .replace(/technical/gi, "")
+        .replace(/AI language model/gi, "")
         .trim()
     );
 
-    return message.reply(frame(reply));
+    const vibes = [" 😹", " 🔥", " 👀", " 🛐", ""];
+    const extra = vibes[Math.floor(Math.random() * vibes.length)];
 
-  } catch {
-    return message.reply(frame(font("kai error 😹")));
+    let finalMsg = reply + extra + "\n\n𝗞𝗮𝗶 😹";
+
+    // OWNER BONUS BOOST
+    if (isOwner) {
+      finalMsg = "🛡️ Boss detected...\n\n" + finalMsg;
+    }
+
+    const sent = await message.reply(finalMsg);
+
+    api.setMessageReaction("🛐", event.messageID, () => {}, true);
+
+    global.GoatBot.onReply.set(sent.messageID, {
+      commandName: "kai",
+      author: event.senderID
+    });
+
+    return sent;
+
+  } catch (error) {
+    console.error(error);
+    api.setMessageReaction("❌", event.messageID, () => {}, true);
+    return message.reply(font("kai crash 😹"));
   }
 };
 
-// ───── MODULE ─────
 module.exports = {
 
   config: {
     name: 'kai',
-    version: 'KAI-1.0',
+    version: 'KAI-2.0',
     author: 'Shade',
     role: 0,
     category: 'ai'
@@ -172,10 +140,12 @@ module.exports = {
 
   onStart: async function ({ api, event, args, message }) {
     const input = args.join(" ").trim();
-    if (!input) return message.reply(frame(font("kai ready 😹")));
+    if (!input) return message.reply(font("kai ready 😹"));
 
     if (input === "clear") {
-      return resetConversation(api, event, message);
+      return axios.delete(`${CLEAR_ENDPOINT}/${event.senderID}`)
+        .then(() => message.reply(font("reset ok 😹")))
+        .catch(() => message.reply(font("reset failed ❌")));
     }
 
     return handleAIRequest(api, event, input, message);
@@ -190,9 +160,16 @@ module.exports = {
     return handleAIRequest(api, event, text, message);
   },
 
-  onChat: async function ({ event, message }) {
+  onChat: async function ({ api, event, message }) {
     const body = event.body?.trim();
-    if (!body?.toLowerCase().startsWith("kai ")) return;
-    return handleAIRequest(null, event, body.slice(3), message);
+    if (!body) return;
+
+    if (
+      body.startsWith(".") ||
+      body.startsWith("!") ||
+      body.startsWith("/")
+    ) return;
+
+    return handleAIRequest(api, event, body, message);
   }
 };
