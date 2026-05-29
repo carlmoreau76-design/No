@@ -2,152 +2,148 @@ const DAILY_LIMIT = 20;
 const MAX_BET = 6000000;
 
 module.exports = {
-  config: {
-    name: "slots",
-    aliases: ["slot"],
-    version: "1.4",
-    author: "Christus",
-    countDown: 8,
-    role: 0,
-    description: "🎰 Ultra-stylish slot machine with balanced odds and limits",
-    category: "game",
-    guide: {
-      en: "Use: {pn} [bet amount]"
-    }
-  },
+	config: {
+		name: "slots",
+		aliases: ["slot"],
+		version: "2.0",
+		author: "Christus × Shade Angel edit",
+		countDown: 8,
+		role: 0,
+		description: "🎰 Angel Slot Machine (BANK LINKED)",
+		category: "game"
+	},
 
-  onStart: async function ({ message, event, args, usersData }) {
-    const { senderID } = event;
-    const bet = parseInt(args[0]);
+	onStart: async function ({ message, event, args, usersData }) {
+		const { senderID } = event;
+		const bet = parseInt(args[0]);
 
-    const formatMoney = (amount) => {
-      if (isNaN(amount)) return "💲0";
-      amount = Number(amount);
-      const scales = [
-        { value: 1e15, suffix: 'Q', color: '🌈' },
-        { value: 1e12, suffix: 'T', color: '✨' },
-        { value: 1e9, suffix: 'B', color: '💎' },
-        { value: 1e6, suffix: 'M', color: '💰' },
-        { value: 1e3, suffix: 'k', color: '💵' }
-      ];
-      const scale = scales.find(s => amount >= s.value);
-      if (scale) {
-        const scaledValue = amount / scale.value;
-        return `${scale.color}${scaledValue.toFixed(2)}${scale.suffix}`;
-      }
-      return `💲${amount.toLocaleString()}`;
-    };
+		const user = await usersData.get(senderID);
 
-    if (isNaN(bet) || bet <= 0)
-      return message.reply("🔴 ERROR: Please enter a valid bet amount!");
+		// 🏦 BANK INIT SAFE
+		if (!user.data.bank) {
+			user.data.bank = {
+				wallet: 0,
+				balance: 0,
+				cardNumber: null,
+				transactions: [],
+				loan: 0
+			};
+		}
 
-    if (bet > MAX_BET)
-      return message.reply(`🚫 MAX BET LIMIT: You can bet up to ${formatMoney(MAX_BET)} only.`);
+		const formatMoney = (amount) => {
+			if (isNaN(amount)) return "💲0";
+			const scales = [
+				{ value: 1e12, suffix: 'T', color: '✨' },
+				{ value: 1e9, suffix: 'B', color: '💎' },
+				{ value: 1e6, suffix: 'M', color: '💰' },
+				{ value: 1e3, suffix: 'k', color: '💵' }
+			];
+			const scale = scales.find(s => amount >= s.value);
+			if (scale) {
+				return `${scale.color}${(amount / scale.value).toFixed(2)}${scale.suffix}`;
+			}
+			return `💲${amount.toLocaleString()}`;
+		};
 
-    const user = await usersData.get(senderID);
+		if (isNaN(bet) || bet <= 0)
+			return message.reply("❌ Invalid bet amount!");
 
-    // ✅ Bangladesh date support
-    const getBangladeshDate = () => {
-      return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
-    };
+		if (bet > MAX_BET)
+			return message.reply(`🚫 Max bet is ${formatMoney(MAX_BET)}`);
 
-    const today = getBangladeshDate(); // e.g., 2025-07-21
+		// 🏦 USE BANK WALLET
+		const wallet = user.data.bank.wallet || 0;
 
-    // Tracking daily play count
-    const lastPlayDay = user.data?.slotsDay || "";
-    const playCount = user.data?.slotsCount || 0;
-    const isSameDay = today === lastPlayDay;
-    const currentCount = isSameDay ? playCount : 0;
+		if (wallet < bet)
+			return message.reply(`❌ Not enough money in BANK wallet!`);
 
-    if (currentCount >= DAILY_LIMIT) {
-      return message.reply(`⏳ DAILY LIMIT: You can only play ${DAILY_LIMIT} times per day. Try again tomorrow (Bangladesh time)!`);
-    }
+		// 📅 DAILY LIMIT
+		const today = new Date().toISOString().split("T")[0];
 
-    if (user.money < bet)
-      return message.reply(`🔴 INSUFFICIENT FUNDS: You need ${formatMoney(bet - user.money)} more to play!`);
+		const last = user.data.slotsDay || "";
+		const count = user.data.slotsCount || 0;
 
-    const symbols = [
-      { emoji: "🍒", weight: 30 },
-      { emoji: "🍋", weight: 25 },
-      { emoji: "🍇", weight: 20 },
-      { emoji: "🍉", weight: 15 },
-      { emoji: "⭐", weight: 7 },
-      { emoji: "7️⃣", weight: 3 }
-    ];
+		const sameDay = today === last;
+		const used = sameDay ? count : 0;
 
-    const roll = () => {
-      const totalWeight = symbols.reduce((sum, symbol) => sum + symbol.weight, 0);
-      let random = Math.random() * totalWeight;
-      for (const symbol of symbols) {
-        if (random < symbol.weight) return symbol.emoji;
-        random -= symbol.weight;
-      }
-      return symbols[0].emoji;
-    };
+		if (used >= DAILY_LIMIT)
+			return message.reply(`⏳ Daily limit reached (${DAILY_LIMIT})`);
 
-    const slot1 = roll();
-    const slot2 = roll();
-    const slot3 = roll();
+		// 🎰 SYMBOLS
+		const symbols = [
+			{ emoji: "🍒", weight: 30 },
+			{ emoji: "🍋", weight: 25 },
+			{ emoji: "🍇", weight: 20 },
+			{ emoji: "🍉", weight: 15 },
+			{ emoji: "⭐", weight: 7 },
+			{ emoji: "7️⃣", weight: 3 }
+		];
 
-    let winnings = 0;
-    let outcome;
-    let winType = "";
-    let bonus = "";
+		const roll = () => {
+			let total = symbols.reduce((a, b) => a + b.weight, 0);
+			let r = Math.random() * total;
+			for (const s of symbols) {
+				if (r < s.weight) return s.emoji;
+				r -= s.weight;
+			}
+		};
 
-    if (slot1 === "7️⃣" && slot2 === "7️⃣" && slot3 === "7️⃣") {
-      winnings = bet * 10;
-      outcome = "🔥 MEGA JACKPOT! TRIPLE 7️⃣!";
-      winType = "💎 MAX WIN";
-      bonus = "🎆 BONUS: +3% to your total balance!";
-      await usersData.set(senderID, { money: user.money * 1.03 });
-    } else if (slot1 === slot2 && slot2 === slot3) {
-      winnings = bet * 5;
-      outcome = "💰 JACKPOT! 3 matching symbols!";
-      winType = "💫 BIG WIN";
-    } else if (slot1 === slot2 || slot2 === slot3 || slot1 === slot3) {
-      winnings = bet * 2;
-      outcome = "✨ NICE! 2 matching symbols!";
-      winType = "🌟 WIN";
-    } else if (Math.random() < 0.5) {
-      winnings = bet * 1.5;
-      outcome = "🎯 LUCKY SPIN! Bonus win!";
-      winType = "🍀 SMALL WIN";
-    } else {
-      winnings = -bet;
-      outcome = "💸 BETTER LUCK NEXT TIME!";
-      winType = "☠️ LOSS";
-    }
+		const s1 = roll();
+		const s2 = roll();
+		const s3 = roll();
 
-    const newBalance = user.money + winnings;
+		let win = 0;
+		let result = "";
+		let bonus = "";
 
-    await usersData.set(senderID, {
-      money: newBalance,
-      "data.slotsDay": today,
-      "data.slotsCount": currentCount + 1
-    });
+		// 💎 WIN LOGIC
+		if (s1 === "7️⃣" && s2 === "7️⃣" && s3 === "7️⃣") {
+			win = bet * 10;
+			result = "💎 ANGEL JACKPOT x10!";
+			bonus = "✨ Divine Blessing Activated!";
+			user.data.bank.wallet *= 1.03;
+		} else if (s1 === s2 && s2 === s3) {
+			win = bet * 5;
+			result = "💰 TRIPLE MATCH!";
+		} else if (s1 === s2 || s2 === s3 || s1 === s3) {
+			win = bet * 2;
+			result = "✨ DOUBLE MATCH!";
+		} else if (Math.random() < 0.4) {
+			win = bet * 1.5;
+			result = "🍀 Lucky Spin!";
+		} else {
+			win = -bet;
+			result = "💸 Lost spin...";
+		}
 
-    const slotBox =
-      "╔═════════════════════╗\n" +
-      "║  🎰 SLOT MACHINE 🎰  ║\n" +
-      "╠═════════════════════╣\n" +
-      `║     [ ${slot1} | ${slot2} | ${slot3} ]     ║\n` +
-      "╚═════════════════════╝";
+		// 🏦 APPLY BANK BALANCE
+		user.data.bank.wallet += win;
 
-    const resultColor = winnings >= 0 ? "🟢" : "🔴";
-    const resultText = winnings >= 0
-      ? `🏆 WON: ${formatMoney(winnings)}`
-      : `💸 LOST: ${formatMoney(bet)}`;
+		// 📊 SAVE LIMITS
+		user.data.slotsDay = today;
+		user.data.slotsCount = used + 1;
 
-    const messageContent =
-      `${slotBox}\n\n` +
-      `🎯 RESULT: ${outcome}\n` +
-      `${winType ? `${winType}\n` : ""}` +
-      `${bonus ? `${bonus}\n` : ""}` +
-      `\n${resultColor} ${resultText}` +
-      `\n💰 BALANCE: ${formatMoney(newBalance)}` +
-      `\n🧮 SPINS USED TODAY: ${currentCount + 1}/${DAILY_LIMIT}` +
-      `\n\n💡 TIP: Higher bets increase jackpot chances!`;
+		await usersData.set(senderID, {
+			money: user.data.bank.wallet,
+			data: user.data
+		});
 
-    return message.reply(messageContent);
-  }
+		const ui =
+`🏦 ❲ 𝗔𝗡𝗚𝗘𝗟 𝗦𝗟𝗢𝗧𝗦 ❳ 🏦
+━━━━━━━━━━━━━━━
+
+🎰 [ ${s1} | ${s2} | ${s3} ]
+
+━━━━━━━━━━━━━━━
+🎯 RESULT: ${result}
+${bonus ? `💫 ${bonus}` : ""}
+
+💰 CHANGE: ${win >= 0 ? "+" : ""}${formatMoney(win)}
+🏦 BANK: ${formatMoney(user.data.bank.wallet)}
+
+🎮 SPINS: ${used + 1}/${DAILY_LIMIT}
+━━━━━━━━━━━━━━━`;
+
+		return message.reply(ui);
+	}
 };
