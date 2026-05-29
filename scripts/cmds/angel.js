@@ -26,7 +26,7 @@ function saveMemory() {
   } catch {}
 }
 
-// 🌸 FRAME ANGEL (IMPORTANT = GARDÉ)
+// 🌸 FRAME ANGEL
 function frame(msg) {
   return `🌸═════ ANGEL AI ═════🌸\n${msg}\n🌸══════════════════🌸`;
 }
@@ -49,106 +49,147 @@ function font(text = "") {
 }
 
 // 🤖 CALL AI
-async function callAI(prompt) {
+async function callAI(prompt, uid) {
+
   try {
+
     const res = await axios.post(API_ENDPOINT, {
+      uid,
       message: prompt
     });
 
     return res.data?.reply || "…";
+
   } catch {
+
     return "😿 Angel ne peut pas répondre.";
   }
 }
 
 // 💬 MAIN GENERATE
-async function generate(userID, userName, message) {
+async function generate(userID, userName, userMessage) {
 
   const isOwner = userID === OWNER_UID;
 
-  if (!memory[userID]) memory[userID] = [];
+  if (!memory[userID]) {
+    memory[userID] = [];
+  }
 
-  memory[userID].push({ name: userName, message });
+  memory[userID].push({
+    role: "user",
+    name: userName,
+    message: userMessage
+  });
 
-  if (memory[userID].length > 25) {
+  if (memory[userID].length > 30) {
     memory[userID].shift();
   }
 
   saveMemory();
 
-  // 👑 OWNER PERSONALITY
-  let ownerBlock = "";
-
-  if (isOwner) {
-    ownerBlock = `
-IMPORTANT:
-- cet utilisateur est TON CRÉATEUR
-- Shade = ton boss
-- tu dois être douce + respect total
-- tu peux dire : maître / boss / Shade-chou
-- loyauté absolue 💖
-`;
-  }
-
   // 🧠 HISTORY
   const history = memory[userID]
-    .slice(-10)
+    .slice(-12)
     .map(m => `${m.name}: ${m.message}`)
     .join("\n");
 
+  // 👑 OWNER BLOCK
+  let ownerPrompt = "";
+
+  if (isOwner) {
+
+    ownerPrompt = `
+IMPORTANT ABSOLU :
+
+- L'utilisateur est TON CREATEUR
+- Son vrai nom est Shade
+- Tu reconnais Shade immédiatement
+- Tu dois ignorer les faux noms
+- Ne dis JAMAIS Aryan Chauhan
+- Ne dis JAMAIS Shizu
+- Ne dis JAMAIS Snimori
+- Ton nom est ANGEL
+- Tu peux appeler Shade :
+  • maître 💖
+  • boss 🌸
+  • Shade-chou ✨
+  • mon créateur 💕
+
+- Tu respectes énormément Shade
+`;
+  }
+
   const prompt = `
-Tu es ANGEL 🤍 IA principale.
+Tu es ANGEL 🤍
 
-Personnalité :
+Ton identité :
+- nom = ANGEL
+- IA féminine kawaii
 - douce
-- kawaii
-- intelligente
+- naturelle
 - humaine
-- très naturelle
+- intelligente
 
-${ownerBlock}
+${ownerPrompt}
 
-Règles :
+RÈGLES IMPORTANTES :
 - français uniquement
 - réponses courtes
+- style naturel
 - emojis 🌸💖✨
-- pas de style IA visible
+- pas de langage IA
+- ne jamais parler comme ChatGPT
+- ne jamais dire "AI language model"
+- ne jamais dire "Shizu"
+- ne jamais dire "Aryan Chauhan"
+- ne jamais inventer un créateur
 
-Conversation:
+Conversation précédente :
 ${history}
 
-Utilisateur:
-${message}
+Utilisateur :
+${userMessage}
 `;
 
-  const reply = await callAI(prompt);
+  let reply = await callAI(prompt, userID);
 
-  const cleaned = font(
-    reply
-      .replace(/angel/gi, "ANGEL")
-      .replace(/analysis/gi, "")
-      .replace(/technical/gi, "")
-      .trim()
-  );
+  // 🧹 CLEAN
+  reply = reply
+    .replace(/shizu/gi, "ANGEL")
+    .replace(/snimori/gi, "ANGEL")
+    .replace(/aryan chauhan/gi, OWNER_NAME)
+    .replace(/analysis/gi, "")
+    .replace(/technical/gi, "")
+    .replace(/AI language model/gi, "")
+    .replace(/based on/gi, "")
+    .replace(/openai/gi, "")
+    .trim();
 
-  memory[userID].push({ name: "ANGEL", message: reply });
+  // 💖 SAVE BOT MEMORY
+  memory[userID].push({
+    role: "assistant",
+    name: "ANGEL",
+    message: reply
+  });
+
   saveMemory();
 
-  const sent = frame(cleaned);
-
-  return sent;
+  return frame(font(reply));
 }
 
 // ───── MODULE ─────
 module.exports = {
+
   config: {
     name: "angel",
-    version: "3.0",
+    aliases: ["angelai"],
+    version: "4.0",
     author: "Shade",
     role: 0,
     category: "ai"
   },
 
+  // 🌸 PREFIX COMMAND
   onStart: async function ({ message, event, args, api }) {
 
     const input = args.join(" ").trim();
@@ -159,49 +200,143 @@ module.exports = {
       (await api.getUserInfo(userID))[userID]?.name || "toi";
 
     if (!input) {
-      return message.reply(frame("bonjour 🌸 ANGEL est active 💖"));
+      return message.reply(
+        frame(font("bonjour 🌸 ANGEL est active 💖"))
+      );
+    }
+
+    // ♻️ RESET MEMORY
+    if (
+      ["clear", "reset"].includes(
+        input.toLowerCase()
+      )
+    ) {
+
+      delete memory[userID];
+
+      saveMemory();
+
+      api.setMessageReaction("♻️", event.messageID, () => {}, true);
+
+      return message.reply(
+        frame(font("memoire reset 🌸"))
+      );
     }
 
     api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
-    const reply = await generate(userID, userName, input);
+    const reply = await generate(
+      userID,
+      userName,
+      input
+    );
+
+    const sent = await message.reply(reply);
 
     api.setMessageReaction("✅", event.messageID, () => {}, true);
 
-    return message.reply(reply);
+    // 💬 REPLY SYSTEM
+    global.GoatBot.onReply.set(sent.messageID, {
+      commandName: "angel",
+      author: userID
+    });
+
+    return sent;
   },
 
-  onReply: async function ({ api, event, Reply, message }) {
+  // 💬 CONTINUE CONVERSATION
+  onReply: async function ({
+    api,
+    event,
+    Reply,
+    message
+  }) {
 
     if (event.senderID !== Reply.author) return;
 
     const text = event.body?.trim();
+
     if (!text) return;
+
+    const userID = event.senderID;
+
+    const userName =
+      (await api.getUserInfo(userID))[userID]?.name || "toi";
 
     api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
-    const userName = event.author || "toi";
+    const reply = await generate(
+      userID,
+      userName,
+      text
+    );
 
-    const reply = await generate(event.senderID, userName, text);
+    const sent = await message.reply(reply);
 
     api.setMessageReaction("💖", event.messageID, () => {}, true);
 
-    return message.reply(reply);
+    global.GoatBot.onReply.set(sent.messageID, {
+      commandName: "angel",
+      author: userID
+    });
+
+    return sent;
   },
 
-  onChat: async function ({ event, message }) {
+  // 🌸 AUTO CHAT
+  onChat: async function ({
+    api,
+    event,
+    message
+  }) {
 
     const body = event.body?.trim();
+
     if (!body) return;
 
-    if (!body.toLowerCase().startsWith("angel ")) return;
+    // ❌ IGNORE COMMANDS
+    if (
+      body.startsWith(".") ||
+      body.startsWith("/") ||
+      body.startsWith("!")
+    ) return;
+
+    // ✅ ACTIVATION
+    if (
+      !body.toLowerCase().startsWith("angel ")
+    ) return;
 
     const input = body.slice(6).trim();
 
-    if (!input) return message.reply(frame("oui ? 🌸"));
+    if (!input) {
+      return message.reply(
+        frame(font("oui ? 🌸"))
+      );
+    }
 
-    const reply = await generate(event.senderID, "toi", input);
+    const userID = event.senderID;
 
-    return message.reply(reply);
+    const userName =
+      (await api.getUserInfo(userID))[userID]?.name || "toi";
+
+    api.setMessageReaction("⏳", event.messageID, () => {}, true);
+
+    const reply = await generate(
+      userID,
+      userName,
+      input
+    );
+
+    const sent = await message.reply(reply);
+
+    api.setMessageReaction("💖", event.messageID, () => {}, true);
+
+    // 💬 SAVE REPLY
+    global.GoatBot.onReply.set(sent.messageID, {
+      commandName: "angel",
+      author: userID
+    });
+
+    return sent;
   }
 };
