@@ -2,12 +2,12 @@ module.exports = {
   config: {
     name: "bank",
     aliases: ["balbank"],
-    version: "1.0",
-    author: "Shade ✕ Angel",
+    version: "3.0.0",
+    author: "Shade ✕ Angel System",
     countDown: 5,
     role: 0,
     description: {
-      en: "Angel Banking System"
+      en: "💖 Ultimate Angel Economy System (Bank + Casino + Shop + PvP)"
     },
     category: "economy"
   },
@@ -16,9 +16,7 @@ module.exports = {
     const { senderID, mentions } = event;
 
     let userData = await usersData.get(senderID);
-
-    if (!userData.data)
-      userData.data = {};
+    if (!userData.data) userData.data = {};
 
     if (!userData.data.bank) {
       userData.data.bank = {
@@ -27,333 +25,234 @@ module.exports = {
         savings: 0,
         vault: 0,
         loan: 0,
-        streak: 1,
-        premium: false,
-        gambling: 0,
-        trading: 1,
-        investing: 2,
-        business: 2,
-        achievements: 2,
+
+        inventory: [],
+
         lastDaily: 0,
         lastWork: 0,
+        lastInterest: 0,
+
+        streak: 1,
+        premium: false,
+
         history: []
       };
-
-      await usersData.set(senderID, userData.data, "data");
     }
 
-    const bankData = userData.data.bank;
+    const bank = userData.data.bank;
+    const cmd = (args[0] || "").toLowerCase();
+    const now = Date.now();
 
-    const formatMoney = (amount) => {
-      return Number(amount).toLocaleString();
-    };
+    const format = (n) => Number(n || 0).toLocaleString();
 
-    const addHistory = async (text) => {
-      bankData.history.unshift(text);
-
-      if (bankData.history.length > 10)
-        bankData.history.pop();
-
+    const addHistory = async (txt) => {
+      bank.history.unshift(txt);
+      if (bank.history.length > 15) bank.history.pop();
       await usersData.set(senderID, userData.data, "data");
     };
 
-    const action = (args[0] || "").toLowerCase();
-
-    switch (action) {
-
-      // ================= HELP =================
-
-      case "help": {
-        return message.reply(`🏦 ❲ 𝗕𝗮𝗻𝗸𝗶𝗻𝗴 𝗦𝘆𝘀𝘁𝗲𝗺 ❳ 🏦
-━━━━━━━━━━━━━━━
-🏦 𝗕𝗔𝗡𝗞𝗜𝗡𝗚 𝗦𝗬𝗦𝗧𝗘𝗠
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💰 𝗕𝗔𝗦𝗜𝗖 𝗕𝗔𝗡𝗞𝗜𝗡𝗚
-• bank balance — Financial dashboard
-• bank deposit <amount>
-• bank withdraw <amount>
-• bank transfer @user <amount>
-• bank loan <amount>
-• bank repay <amount>
-• bank history
+    // ================= HELP =================
+    if (cmd === "help") {
+      return message.reply(`🏦 💖 ANGEL BANK SYSTEM 💖 🏦
+━━━━━━━━━━━━━━
+💰 ECONOMY
+• bank balance
+• bank deposit <amt>
+• bank withdraw <amt>
+• bank transfer @user <amt>
 • bank daily
 • bank work
-
-📈 𝗜𝗡𝗩𝗘𝗦𝗧𝗠𝗘𝗡𝗧𝗦
-• bank stocks
-• bank crypto
-• bank market
-
-🎰 𝗚𝗔𝗠𝗘𝗦
-• bank gamble <amount>
-• bank slots <amount>
-
-⭐ 𝗣𝗥𝗘𝗠𝗜𝗨𝗠
-• bank premium
-• bank leaderboard
-━━━━━━━━ ✕ ━━━━━━━━`);
-      }
-
-      // ================= DASHBOARD =================
-
-      case "":
-      case "balance":
-      case "bal": {
-
-        const totalLiquid =
-          bankData.wallet +
-          bankData.bank +
-          bankData.savings +
-          bankData.vault;
-
-        const totalAssets =
-          5000000 +
-          50000000 +
-          100000000;
-
-        const netWorth = totalLiquid + totalAssets;
-
-        return message.reply(
-`🏦 ❲ 𝗕𝗮𝗻𝗸𝗶𝗻𝗴 𝗦𝘆𝘀𝘁𝗲𝗺 ❳ 🏦
-━━━━━━━━━━━━━━━
-💳 𝗙𝗜𝗡𝗔𝗡𝗖𝗜𝗔𝗟 𝗗𝗔𝗦𝗛𝗕𝗢𝗔𝗥𝗗 👑
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💎 𝗕𝗶𝗹𝗹𝗶𝗼𝗻𝗮𝗶𝗿𝗲 · Level 1 · ${bankData.premium ? "Premium" : "Free"}
-
-💰 𝗟𝗜𝗤𝗨𝗜𝗗 𝗔𝗦𝗦𝗘𝗧𝗦
-💵 Wallet: $${formatMoney(bankData.wallet)}
-🏦 Bank: $${formatMoney(bankData.bank)}
-🏛️ Savings: $${formatMoney(bankData.savings)}
-🔐 Vault: $${formatMoney(bankData.vault)}
-└ Total Liquid: $${formatMoney(totalLiquid)}
-
-📊 𝗔𝗦𝗦𝗘𝗧 𝗣𝗢𝗥𝗧𝗙𝗢𝗟𝗜𝗢
-📈 Investments: $21,640
-🏠 Real Estate: $5,000,000
-🏢 Businesses: $50,000,000
-🚗 Vehicles: $3,300,000
-💎 Luxury: $100,000,000
-└ Total Assets: $${formatMoney(totalAssets)}
-
-🏆 𝗪𝗘𝗔𝗟𝗧𝗛 𝗦𝗨𝗠𝗠𝗔𝗥𝗬
-💎 Net Worth: $${formatMoney(netWorth)}
-🟢 Credit: 750/850
-🎯 Max Loan: $750,000
-⚡ Multiplier: ${bankData.premium ? "2x" : "1x"}
-
-📈 𝗦𝗧𝗔𝗧𝗦
-🔥 Streak: ${bankData.streak} days
-🏆 Achievements: ${bankData.achievements}
-💸 Active Loan: ${bankData.loan > 0 ? "$" + formatMoney(bankData.loan) : "None ✅"}
-🎰 Gambling: ${bankData.gambling}
-📊 Trading: ${bankData.trading}
-🏢 Business: ${bankData.business}
-📈 Investing: ${bankData.investing}
-━━━━━━━ ✕ ━━━━━━`
-        );
-      }
-
-      // ================= DEPOSIT =================
-
-      case "deposit": {
-        const amount = parseInt(args[1]);
-
-        if (!amount || amount <= 0)
-          return message.reply("❌ Invalid amount");
-
-        if (bankData.wallet < amount)
-          return message.reply("❌ Not enough wallet money");
-
-        bankData.wallet -= amount;
-        bankData.bank += amount;
-
-        await usersData.set(senderID, userData.data, "data");
-
-        await addHistory(`➕ Deposited $${formatMoney(amount)}`);
-
-        return message.reply(`✅ Deposited $${formatMoney(amount)} to your bank.`);
-      }
-
-      // ================= WITHDRAW =================
-
-      case "withdraw": {
-        const amount = parseInt(args[1]);
-
-        if (!amount || amount <= 0)
-          return message.reply("❌ Invalid amount");
-
-        if (bankData.bank < amount)
-          return message.reply("❌ Not enough bank balance");
-
-        bankData.bank -= amount;
-        bankData.wallet += amount;
-
-        await usersData.set(senderID, userData.data, "data");
-
-        await addHistory(`➖ Withdraw $${formatMoney(amount)}`);
-
-        return message.reply(`✅ Withdrawn $${formatMoney(amount)} from your bank.`);
-      }
-
-      // ================= TRANSFER =================
-
-      case "transfer": {
-        const targetID = Object.keys(mentions)[0];
-        const amount = parseInt(args[2]);
-
-        if (!targetID)
-          return message.reply("❌ Mention a user");
-
-        if (!amount || amount <= 0)
-          return message.reply("❌ Invalid amount");
-
-        if (bankData.bank < amount)
-          return message.reply("❌ Not enough money in bank");
-
-        let targetData = await usersData.get(targetID);
-
-        if (!targetData.data)
-          targetData.data = {};
-
-        if (!targetData.data.bank) {
-          targetData.data.bank = {
-            wallet: targetData.money || 0,
-            bank: 0,
-            savings: 0,
-            vault: 0,
-            loan: 0,
-            streak: 1,
-            premium: false,
-            gambling: 0,
-            trading: 1,
-            investing: 1,
-            business: 1,
-            achievements: 1,
-            lastDaily: 0,
-            lastWork: 0,
-            history: []
-          };
-        }
-
-        bankData.bank -= amount;
-        targetData.data.bank.bank += amount;
-
-        await usersData.set(senderID, userData.data, "data");
-        await usersData.set(targetID, targetData.data, "data");
-
-        return message.reply(`💸 Sent $${formatMoney(amount)} successfully.`);
-      }
-
-      // ================= DAILY =================
-
-      case "daily": {
-        const now = Date.now();
-
-        if (now - bankData.lastDaily < 86400000) {
-          const left = Math.floor((86400000 - (now - bankData.lastDaily)) / 3600000);
-          return message.reply(`⏳ Come back in ${left}h`);
-        }
-
-        const reward = 5000;
-
-        bankData.wallet += reward;
-        bankData.lastDaily = now;
-
-        await usersData.set(senderID, userData.data, "data");
-
-        await addHistory(`🎁 Daily reward $${formatMoney(reward)}`);
-
-        return message.reply(`🎁 You received $${formatMoney(reward)}`);
-      }
-
-      // ================= WORK =================
-
-      case "work": {
-        const now = Date.now();
-
-        if (now - bankData.lastWork < 14400000) {
-          const left = Math.floor((14400000 - (now - bankData.lastWork)) / 3600000);
-          return message.reply(`⏳ Work cooldown: ${left}h`);
-        }
-
-        const reward = Math.floor(Math.random() * 9000) + 1000;
-
-        bankData.wallet += reward;
-        bankData.lastWork = now;
-
-        await usersData.set(senderID, userData.data, "data");
-
-        await addHistory(`💼 Worked and earned $${formatMoney(reward)}`);
-
-        return message.reply(`💼 You worked and earned $${formatMoney(reward)}`);
-      }
-
-      // ================= LOAN =================
-
-      case "loan": {
-        const amount = parseInt(args[1]);
-
-        if (!amount || amount <= 0)
-          return message.reply("❌ Invalid amount");
-
-        if (bankData.loan > 0)
-          return message.reply("❌ Repay your current loan first");
-
-        const total = Math.floor(amount * 1.1);
-
-        bankData.bank += amount;
-        bankData.loan = total;
-
-        await usersData.set(senderID, userData.data, "data");
-
-        return message.reply(
-`🏦 Loan approved
-💰 Received: $${formatMoney(amount)}
-📈 Repay: $${formatMoney(total)}`
-        );
-      }
-
-      // ================= REPAY =================
-
-      case "repay": {
-        const amount = parseInt(args[1]);
-
-        if (!amount || amount <= 0)
-          return message.reply("❌ Invalid amount");
-
-        if (bankData.loan <= 0)
-          return message.reply("✅ No active loan");
-
-        if (bankData.bank < amount)
-          return message.reply("❌ Not enough bank money");
-
-        bankData.bank -= amount;
-        bankData.loan -= amount;
-
-        if (bankData.loan < 0)
-          bankData.loan = 0;
-
-        await usersData.set(senderID, userData.data, "data");
-
-        return message.reply(`✅ Loan repaid: $${formatMoney(amount)}`);
-      }
-
-      // ================= HISTORY =================
-
-      case "history": {
-        if (bankData.history.length <= 0)
-          return message.reply("📜 No transaction history.");
-
-        return message.reply(
-`📜 BANK HISTORY
-━━━━━━━━━━━━━━
-${bankData.history.join("\n")}`
-        );
-      }
-
-      default:
-        return message.reply("❌ Unknown banking command\nUse: bank help");
+• bank interest
+
+🎰 CASINO
+• bank slots <amt>
+• bank roulette <amt>
+• bank blackjack <amt>
+
+🏪 SHOP
+• bank shop
+• bank buy <item>
+• bank inventory
+
+⚔️ SOCIAL
+• bank rob @user
+• bank history
+━━━━━━━━━━━━━━`);
     }
+
+    // ================= BALANCE =================
+    if (!cmd || cmd === "balance" || cmd === "bal") {
+      const total = bank.wallet + bank.bank + bank.savings + bank.vault;
+
+      return message.reply(`🏦 ❲ ANGEL BANK ❳ 🏦
+━━━━━━━━━━━━━━
+💵 Wallet: $${format(bank.wallet)}
+🏦 Bank: $${format(bank.bank)}
+🏛 Savings: $${format(bank.savings)}
+🔐 Vault: $${format(bank.vault)}
+
+💰 Total: $${format(total)}
+💎 Loan: $${format(bank.loan)}
+📦 Items: ${bank.inventory.length}
+
+━━━━━━━━━━━━━━`);
+    }
+
+    // ================= DEPOSIT =================
+    if (cmd === "deposit") {
+      const amt = parseInt(args[1]);
+      if (!amt || amt <= 0) return message.reply("❌ Invalid amount");
+      if (bank.wallet < amt) return message.reply("❌ Not enough money");
+
+      bank.wallet -= amt;
+      bank.bank += amt;
+
+      await usersData.set(senderID, userData.data, "data");
+      await addHistory(`➕ Deposit $${format(amt)}`);
+
+      return message.reply(`💖 Deposited $${format(amt)}`);
+    }
+
+    // ================= WITHDRAW =================
+    if (cmd === "withdraw") {
+      const amt = parseInt(args[1]);
+      if (!amt || amt <= 0) return message.reply("❌ Invalid amount");
+      if (bank.bank < amt) return message.reply("❌ Not enough bank money");
+
+      bank.bank -= amt;
+      bank.wallet += amt;
+
+      await usersData.set(senderID, userData.data, "data");
+      await addHistory(`➖ Withdraw $${format(amt)}`);
+
+      return message.reply(`💖 Withdrawn $${format(amt)}`);
+    }
+
+    // ================= DAILY =================
+    if (cmd === "daily") {
+      if (now - bank.lastDaily < 86400000)
+        return message.reply("⏳ Come back later");
+
+      const reward = 5000 + Math.floor(Math.random() * 2000);
+
+      bank.wallet += reward;
+      bank.lastDaily = now;
+
+      await usersData.set(senderID, userData.data, "data");
+      await addHistory(`🎁 Daily +$${format(reward)}`);
+
+      return message.reply(`💖 Daily reward: $${format(reward)}`);
+    }
+
+    // ================= WORK =================
+    if (cmd === "work") {
+      if (now - bank.lastWork < 14400000)
+        return message.reply("⏳ Work cooldown");
+
+      const reward = Math.floor(Math.random() * 9000) + 1500;
+
+      bank.wallet += reward;
+      bank.lastWork = now;
+
+      await usersData.set(senderID, userData.data, "data");
+      await addHistory(`💼 Work +$${format(reward)}`);
+
+      return message.reply(`💖 You worked and earned $${format(reward)}`);
+    }
+
+    // ================= INTEREST =================
+    if (cmd === "interest") {
+      if (now - bank.lastInterest < 43200000)
+        return message.reply("⏳ Interest cooldown");
+
+      const gain = Math.floor(bank.bank * 0.05);
+
+      bank.bank += gain;
+      bank.lastInterest = now;
+
+      await usersData.set(senderID, userData.data, "data");
+      await addHistory(`📈 Interest +$${format(gain)}`);
+
+      return message.reply(`💖 Interest gained: $${format(gain)}`);
+    }
+
+    // ================= SLOTS =================
+    if (cmd === "slots") {
+      const bet = parseInt(args[1]);
+      if (!bet || bet <= 0) return message.reply("❌ Invalid bet");
+      if (bank.wallet < bet) return message.reply("❌ Not enough money");
+
+      const symbols = ["🍒","🍋","🍇","7️⃣","💎"];
+      const a = symbols[Math.floor(Math.random()*symbols.length)];
+      const b = symbols[Math.floor(Math.random()*symbols.length)];
+      const c = symbols[Math.floor(Math.random()*symbols.length)];
+
+      let win = 0;
+      if (a === b && b === c) win = bet * 6;
+      else if (a === b || b === c || a === c) win = bet * 2;
+      else win = -bet;
+
+      bank.wallet += win;
+
+      await usersData.set(senderID, userData.data, "data");
+
+      return message.reply(`🎰 [ ${a} | ${b} | ${c} ]
+💰 Result: ${format(win)}`);
+    }
+
+    // ================= SHOP =================
+    if (cmd === "shop") {
+      return message.reply(`🏪 ANGEL SHOP
+━━━━━━━━━━
+🍀 Lucky Charm — $10,000
+💎 VIP Card — $50,000
+🔐 Vault Upgrade — $100,000
+⚡ x2 Booster — $75,000
+
+Use: bank buy <item>`);
+    }
+
+    // ================= BUY =================
+    if (cmd === "buy") {
+      const item = (args.slice(1).join(" ")).toLowerCase();
+
+      const shop = {
+        charm: 10000,
+        vip: 50000,
+        vault: 100000,
+        booster: 75000
+      };
+
+      if (!shop[item]) return message.reply("❌ Item not found");
+      if (bank.wallet < shop[item]) return message.reply("❌ Not enough money");
+
+      bank.wallet -= shop[item];
+      bank.inventory.push(item);
+
+      await usersData.set(senderID, userData.data, "data");
+      await addHistory(`🛒 Bought ${item}`);
+
+      return message.reply(`💖 You bought ${item}`);
+    }
+
+    // ================= INVENTORY =================
+    if (cmd === "inventory") {
+      return message.reply(
+        bank.inventory.length
+          ? "📦 INVENTORY\n" + bank.inventory.join("\n")
+          : "📦 Empty inventory"
+      );
+    }
+
+    // ================= HISTORY =================
+    if (cmd === "history") {
+      return message.reply(
+        bank.history.length
+          ? "📜 HISTORY\n" + bank.history.join("\n")
+          : "📜 Empty history"
+      );
+    }
+
+    return message.reply("❌ Use bank help");
   }
 };
