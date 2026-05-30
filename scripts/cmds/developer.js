@@ -1,119 +1,145 @@
 const { config } = global.GoatBot;
 const { writeFileSync } = require("fs-extra");
 
+// 🌸 TON UID OWNER ICI (IMPORTANT)
+const OWNER_ID = "61573867120837";
+
 module.exports = {
   config: {
     name: "developer",
     aliases: ["dev"],
-    version: "1.0",
-    author: "NTKhang | Saimx69x",
+    version: "💖 1.1 angel-secure",
+    author: "NTKhang ✨ Angel Edit",
     role: 0,
     description: {
-      en: "Add, remove, list developer role users"
+      en: "🌸 Manage developers (owner only add/remove)"
     },
-    category: "developer",
+    category: "🌸 angel-system",
     guide: {
-      en: '   {pn} [add | -a] <uid | @tag>: Add developer\n'
-        + '   {pn} [remove | -r] <uid | @tag>: Remove developer\n'
-        + '   {pn} [list | -l]: List all developers'
+      en:
+        "💖 developer add <uid/@tag>\n" +
+        "🌸 developer remove <uid/@tag>\n" +
+        "✨ developer list"
     }
   },
 
   langs: {
     en: {
-      added: "✅ | Added developer role for %1 users:\n%2",
-      alreadyDev: "⚠️ | %1 users are already developers:\n%2",
-      missingIdAdd: "⚠️ | Please enter ID or tag user to add developer",
-      removed: "✅ | Removed developer role of %1 users:\n%2",
-      notDev: "⚠️ | %1 users are not developers:\n%2",
-      missingIdRemove: "⚠️ | Please enter ID or tag user to remove developer",
-      listDev: "👨‍💻 | List of developers:\n%1"
+      added: "💖✨ Added developer:\n%1",
+      removed: "🌸✨ Removed developer:\n%1",
+      alreadyDev: "💫 Already dev:\n%1",
+      notDev: "💔 Not developer:\n%1",
+      missingAdd: "🌸 Please give UID or tag",
+      missingRemove: "💔 Please give UID or tag",
+      listDev: "👑💖 Developers list:\n%1",
+      noPerm: "⛔💔 Only OWNER can use this command"
     }
   },
 
-  onStart: async function ({ message, args, usersData, event, getLang, role }) {
-    
+  onStart: async function ({ message, args, usersData, event, getLang }) {
+
     if (!config.developer) config.developer = [];
 
-    switch (args[0]) {
-      case "add":
-      case "-a": {
-        if (role < 4) return message.reply("⚠️ | Only main developers can add new developers.");
+    const senderID = event.senderID;
 
-        if (args[1]) {
-          let uids = [];
-          if (Object.keys(event.mentions).length > 0)
-            uids = Object.keys(event.mentions);
-          else if (event.messageReply)
-            uids.push(event.messageReply.senderID);
-          else
-            uids = args.filter(arg => !isNaN(arg));
+    const isOwner = senderID === OWNER_ID;
 
-          const notDevIds = [];
-          const devIds = [];
-          for (const uid of uids) {
-            if (config.developer.includes(uid))
-              devIds.push(uid);
-            else
-              notDevIds.push(uid);
-          }
+    const cmd = (args[0] || "").toLowerCase();
 
-          config.developer.push(...notDevIds);
-          const getNames = await Promise.all(uids.map(uid => usersData.getName(uid).then(name => ({ uid, name }))));
-          writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
-          return message.reply(
-            (notDevIds.length > 0 ? getLang("added", notDevIds.length, getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")) : "")
-            + (devIds.length > 0 ? getLang("alreadyDev", devIds.length, devIds.map(uid => `• ${uid}`).join("\n")) : "")
-          );
-        }
-        else
-          return message.reply(getLang("missingIdAdd"));
-      }
+    // 💖 LIST (everyone allowed)
+    if (cmd === "list" || cmd === "-l") {
+      if (config.developer.length === 0)
+        return message.reply("🌸 No developers found");
 
-      case "remove":
-      case "-r": {
-        if (role < 4) return message.reply("⚠️ | Only main developers can remove developers.");
+      const list = await Promise.all(
+        config.developer.map(uid =>
+          usersData.getName(uid).then(name => `• 💖 ${name} (${uid})`)
+        )
+      );
 
-        if (args[1]) {
-          let uids = [];
-          if (Object.keys(event.mentions).length > 0)
-            uids = Object.keys(event.mentions);
-          else
-            uids = args.filter(arg => !isNaN(arg));
-
-          const notDevIds = [];
-          const devIds = [];
-          for (const uid of uids) {
-            if (config.developer.includes(uid))
-              devIds.push(uid);
-            else
-              notDevIds.push(uid);
-          }
-
-          for (const uid of devIds)
-            config.developer.splice(config.developer.indexOf(uid), 1);
-
-          const getNames = await Promise.all(devIds.map(uid => usersData.getName(uid).then(name => ({ uid, name }))));
-          writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
-          return message.reply(
-            (devIds.length > 0 ? getLang("removed", devIds.length, getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")) : "")
-            + (notDevIds.length > 0 ? getLang("notDev", notDevIds.length, notDevIds.map(uid => `• ${uid}`).join("\n")) : "")
-          );
-        }
-        else
-          return message.reply(getLang("missingIdRemove"));
-      }
-
-      case "list":
-      case "-l": {
-        if (config.developer.length === 0)
-          return message.reply("⚠️ | No developers found");
-        const getNames = await Promise.all(config.developer.map(uid => usersData.getName(uid).then(name => ({ uid, name }))));
-        return message.reply(getLang("listDev", getNames.map(({ uid, name }) => `• ${name} (${uid})`).join("\n")));
-      }
-
-      default:
-        return message.SyntaxError();
+      return message.reply(getLang("listDev", list.join("\n")));
     }
+
+    // 🔒 ADD
+    if (cmd === "add" || cmd === "-a") {
+      if (!isOwner)
+        return message.reply(getLang("noPerm"));
+
+      if (!args[1])
+        return message.reply(getLang("missingAdd"));
+
+      let uids = Object.keys(event.mentions);
+
+      if (uids.length === 0)
+        uids = args.slice(1).filter(x => !isNaN(x));
+
+      if (!uids.length)
+        return message.reply(getLang("missingAdd"));
+
+      const added = [];
+      const already = [];
+
+      for (const uid of uids) {
+        if (config.developer.includes(uid)) {
+          already.push(uid);
+        } else {
+          config.developer.push(uid);
+          added.push(uid);
+        }
+      }
+
+      writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
+
+      const names = await Promise.all(
+        added.map(uid => usersData.getName(uid))
+      );
+
+      return message.reply(
+        (added.length ? "💖 Added:\n" + names.map((n, i) => `• ${n} (${added[i]})`).join("\n") : "") +
+        (already.length ? "\n\n💫 Already dev:\n" + already.join("\n") : "")
+      );
+    }
+
+    // 🔒 REMOVE
+    if (cmd === "remove" || cmd === "-r") {
+      if (!isOwner)
+        return message.reply(getLang("noPerm"));
+
+      if (!args[1])
+        return message.reply(getLang("missingRemove"));
+
+      let uids = Object.keys(event.mentions);
+
+      if (uids.length === 0)
+        uids = args.slice(1).filter(x => !isNaN(x));
+
+      if (!uids.length)
+        return message.reply(getLang("missingRemove"));
+
+      const removed = [];
+      const notDev = [];
+
+      for (const uid of uids) {
+        if (config.developer.includes(uid)) {
+          config.developer = config.developer.filter(x => x !== uid);
+          removed.push(uid);
+        } else {
+          notDev.push(uid);
+        }
+      }
+
+      writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
+
+      const names = await Promise.all(
+        removed.map(uid => usersData.getName(uid))
+      );
+
+      return message.reply(
+        (removed.length ? "🌸 Removed:\n" + names.map((n, i) => `• ${n} (${removed[i]})`).join("\n") : "") +
+        (notDev.length ? "\n\n💔 Not dev:\n" + notDev.join("\n") : "")
+      );
+    }
+
+    return message.SyntaxError();
   }
 };
