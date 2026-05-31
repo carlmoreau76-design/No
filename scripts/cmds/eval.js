@@ -3,72 +3,90 @@ const { removeHomeDir, log } = global.utils;
 module.exports = {
 	config: {
 		name: "eval",
-		version: "1.6",
-		author: "NTKhang",
+		version: "2.0 angel secure",
+		author: "Angel Edit ✨",
 		countDown: 5,
 		role: 3,
-		description: {
-			vi: "Test code nhanh",
-			en: "Test code quickly"
-		},
+		description: "🌸 Execute JS safely (Angel Secure Mode)",
 		category: "owner",
-		guide: {
-			vi: "{pn} <đoạn code cần test>",
-			en: "{pn} <code to test>"
-		}
+		guide: "{pn} <code>"
 	},
 
 	langs: {
-		vi: {
-			error: "❌ Đã có lỗi xảy ra:"
-		},
 		en: {
-			error: "❌ An error occurred:"
+			error: "💔 Angel Error:",
+			loading: "🌸 Executing code in Angel sandbox...",
+			blocked: "⛔ Dangerous code blocked by Angel security"
 		}
 	},
 
-	onStart: async function ({ api, args, message, event, threadsData, usersData, dashBoardData, globalData, threadModel, userModel, dashBoardModel, globalModel, role, commandName, getLang }) {
-		function output(msg) {
-			if (typeof msg == "number" || typeof msg == "boolean" || typeof msg == "function")
-				msg = msg.toString();
-			else if (msg instanceof Map) {
-				let text = `Map(${msg.size}) `;
-				text += JSON.stringify(mapToObj(msg), null, 2);
-				msg = text;
-			}
-			else if (typeof msg == "object")
-				msg = JSON.stringify(msg, null, 2);
-			else if (typeof msg == "undefined")
-				msg = "undefined";
+	onStart: async function ({ api, args, message, event, getLang }) {
 
-			message.reply(msg);
+		const code = args.join(" ").trim();
+
+		if (!code) {
+			return message.reply(
+`╭─── 🌸 𝗔𝗡𝗚𝗘𝗟 𝗘𝗩𝗔𝗟 ───╮
+💡 Usage: !eval <code>
+✨ Example: !eval 2 + 2
+╰────────────────────╯`
+			);
 		}
-		function out(msg) {
-			output(msg);
+
+		// 💔 ANGEL SECURITY CHECK
+		const blacklist = [
+			"process.exit",
+			"rmSync",
+			"rm(",
+			"fs.",
+			"child_process",
+			"eval(",
+			"require('fs')",
+			"require(\"fs\")"
+		];
+
+		if (blacklist.some(x => code.includes(x))) {
+			return message.reply(
+`╭─── 💔 𝗔𝗡𝗚𝗘𝗟 𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬 ───╮
+⛔ Dangerous code detected
+🛡️ Execution blocked for safety
+╰──────────────────────╯`
+			);
 		}
-		function mapToObj(map) {
-			const obj = {};
-			map.forEach(function (v, k) {
-				obj[k] = v;
-			});
-			return obj;
-		}
-		const cmd = `
-		(async () => {
-			try {
-				${args.join(" ")}
+
+		const loading = await message.reply("🌸 Angel is running your code... ⏳");
+
+		try {
+
+			function output(msg) {
+				if (typeof msg === "object")
+					msg = JSON.stringify(msg, null, 2);
+				else if (msg === undefined)
+					msg = "undefined";
+				message.reply(String(msg));
 			}
-			catch(err) {
-				log.err("eval command", err);
-				message.send(
-					"${getLang("error")}\\n" +
-					(err.stack ?
-						removeHomeDir(err.stack) :
-						removeHomeDir(JSON.stringify(err, null, 2) || "")
-					)
-				);
-			}
-		})()`;
-		eval(cmd);
+
+			const result = eval(`
+				(async () => {
+					try {
+						${code}
+					} catch (err) {
+						err
+					}
+				})()
+			`);
+
+			api.unsendMessage(loading.messageID);
+
+		} catch (err) {
+
+			api.unsendMessage(loading.messageID);
+
+			return message.reply(
+`╭─── 💔 𝗔𝗡𝗚𝗘𝗟 𝗘𝗥𝗥𝗢𝗥 ───╮
+❌ ${err.message || err}
+╰────────────────────╯`
+			);
+		}
 	}
 };
