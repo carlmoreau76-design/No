@@ -88,11 +88,16 @@ module.exports = {
 
       const buffer = Buffer.from(base64, "base64");
 
-      const filePath = path.join(
-        __dirname,
-        "cache",
-        `gem_${Date.now()}.png`
-      );
+      const cacheDir = path.join(__dirname, "cache");
+
+if (!fs.existsSync(cacheDir)) {
+  fs.mkdirSync(cacheDir, { recursive: true });
+}
+
+const filePath = path.join(
+  cacheDir,
+  `gem_${Date.now()}.png`
+);
 
       fs.writeFileSync(filePath, buffer);
 
@@ -128,12 +133,13 @@ module.exports = {
   api.setMessageReaction("❌", event.messageID, () => {}, true);
 
   return message.reply(
-    "💔 Gem Memory a rencontré une erreur.\n📜 Vérifie la console du bot."
-  );
-    }
+  "💔 Gem Memory a rencontré une erreur.\n📜 Vérifie la console du bot."
+);
+}
+},
 
-  // ♻️ RESET MEMORY
-  onChat: async function ({ event, message }) {
+// ♻️ RESET MEMORY
+onChat: async function ({ event, message }) {
 
     const body = event.body?.trim();
 
