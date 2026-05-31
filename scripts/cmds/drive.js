@@ -1,38 +1,83 @@
-const axios = require('axios');
+const axios = require("axios");
+
 const apiUrl = "http://65.109.80.126:20409/aryan/drive";
 
 module.exports = {
-  config: {
-    name: "drive",
-    version: "0.0.2",
-    author: "Christus",
-    countDown: 5,
-    role: 2,
-    description: "Uploader facilement des vidéos sur Google Drive !",
-    category: "utility",
-    guide: "Utilisation : {pn} <lien> pour uploader une vidéo depuis un lien\nOu répondre à un message avec média pour uploader"
-  },
+	config: {
+		name: "drive",
+		version: "0.0.4 angel kawaii react",
+		author: "Angel Edit ✨",
+		countDown: 5,
+		role: 2,
+		description: "💖 Upload vidéo vers Google Drive (Angel version)",
+		category: "💾 angel utility",
+		guide: "Reply média ou utilise : {pn} <lien>"
+	},
 
-  onStart: async function ({ message, event, args }) {
-    const mediaUrl = event?.messageReply?.attachments?.[0]?.url || args[0];
+	onStart: async function ({ message, event, args, api }) {
 
-    if (!mediaUrl)
-      return message.reply("⚠️ Merci de fournir un lien vidéo valide ou de répondre à un message contenant un média.");
+		const mediaUrl =
+			event?.messageReply?.attachments?.[0]?.url || args[0];
 
-    try {
-      const response = await axios.get(`${apiUrl}?url=${encodeURIComponent(mediaUrl)}`);
-      const data = response.data || {};
-      console.log("Réponse API :", data);
+		if (!mediaUrl) {
+			return message.reply(
+`╭─── 💔 𝗔𝗡𝗚𝗘𝗟 𝗗𝗥𝗜𝗩𝗘 ───╮
+⚠️ Please send a valid video link
+or reply to a media message
+╰────────────────────╯`
+			);
+		}
 
-      const driveLink = data.driveLink || data.driveLIink;
-      if (driveLink) 
-        return message.reply(`✅ Fichier uploadé sur Google Drive avec succès !\n\n🔗 Lien : ${driveLink}`);
+		// ⏳ reaction loading sur message user
+		api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
-      const errorMsg = data.error || JSON.stringify(data) || "❌ Échec de l'upload du fichier.";
-      return message.reply(`Échec de l'upload : ${errorMsg}`);
-    } catch (err) {
-      console.error("Erreur d'upload :", err.message || err);
-      return message.reply("❌ Une erreur est survenue lors de l'upload. Merci de réessayer plus tard.");
-    }
-  }
+		try {
+
+			const response = await axios.get(
+				`${apiUrl}?url=${encodeURIComponent(mediaUrl)}`,
+				{ timeout: 15000 }
+			);
+
+			const data = response.data || {};
+			const driveLink = data.driveLink || data.driveLIink;
+
+			if (driveLink) {
+
+				// 💾 success reaction
+				api.setMessageReaction("💾", event.messageID, () => {}, true);
+
+				return message.reply(
+`╭─── 💖 𝗨𝗣𝗟𝗢𝗔𝗗 𝗦𝗨𝗖𝗖𝗘𝗦𝗦 ───╮
+✨ File uploaded successfully
+💾 Google Drive ready
+🔗 ${driveLink}
+╰──────────────────────╯`
+				);
+			}
+
+			// ❌ fail reaction
+			api.setMessageReaction("❌", event.messageID, () => {}, true);
+
+			return message.reply(
+`╭─── 💔 𝗔𝗡𝗚𝗘𝗟 𝗘𝗥𝗥𝗢𝗥 ───╮
+❌ Upload failed
+💬 ${data.error || "Unknown error"}
+╰────────────────────╯`
+			);
+
+		} catch (err) {
+
+			console.log(err.message);
+
+			// ❌ error reaction
+			api.setMessageReaction("❌", event.messageID, () => {}, true);
+
+			return message.reply(
+`╭─── 💔 𝗖𝗥𝗜𝗧𝗜𝗖𝗔𝗟 𝗘𝗥𝗥𝗢𝗥 ───╮
+❌ Server error or timeout
+💬 Try again later angel~
+╰──────────────────────╯`
+			);
+		}
+	}
 };
