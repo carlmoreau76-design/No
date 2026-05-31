@@ -6,33 +6,36 @@ module.exports = {
   config: {
     name: "accept",
     aliases: ["acp"],
-    version: "1.3",
-    author: "Christus + Shade fix",
+    version: "✨ 2.0 angel fix kawaii",
+    author: "Christus × Shade ✨",
     role: 2,
-    description: "Gérer les demandes d'amis (accept/refuse)",
+    description: "🌸 Gestion kawaii des demandes d’amis 💖",
     category: "owner",
     guide: {
       en: "{pn} add <num> | del <num> | add all | del all"
     }
   },
 
-  // 🔒 OWNER ONLY REPLY CONTROL
   onReply: async function ({ message, Reply, event, api }) {
-    const { author, listRequest, messageID } = Reply;
+    const { author, listRequest, messageID } = Reply || {};
 
-    // ❌ only owner can use
-    if (event.senderID !== OWNER_ID) return;
+    // 🔒 OWNER ONLY
+    if (event.senderID !== OWNER_ID) {
+      return api.sendMessage("🌸⛔ Accès refusé (owner only)", event.threadID);
+    }
 
-    // ❌ only original author of menu can control it
-    if (event.senderID !== author) return;
+    if (!author || event.senderID !== author) return;
 
-    const args = event.body.trim().toLowerCase().split(/\s+/);
+    const args = (event.body || "").trim().toLowerCase().split(/\s+/);
     const action = args[0];
 
-    clearTimeout(Reply.unsendTimeout);
+    api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
-    if (!listRequest || !Array.isArray(listRequest)) {
-      return api.sendMessage("❌ Liste expirée ou invalide.", event.threadID);
+    clearTimeout(Reply?.unsendTimeout);
+
+    if (!Array.isArray(listRequest)) {
+      api.setMessageReaction("❌", event.messageID, () => {}, true);
+      return api.sendMessage("❌ Liste expirée 💔", event.threadID);
     }
 
     let targetIDs = args.slice(1);
@@ -47,7 +50,7 @@ module.exports = {
     for (const num of targetIDs) {
       const user = listRequest[parseInt(num) - 1];
 
-      if (!user) {
+      if (!user?.node) {
         failed.push(`❌ Demande #${num} introuvable`);
         continue;
       }
@@ -79,29 +82,35 @@ module.exports = {
           form
         );
 
-        const data = JSON.parse(res);
-
-        if (!data.errors) {
-          success.push(
-            `✅ ${isAdd ? "Accepté" : "Refusé"}: ${user.node.name}`
-          );
-        } else {
-          failed.push(`❌ Échec: ${user.node.name}`);
+        let data;
+        try {
+          data = JSON.parse(res);
+        } catch {
+          failed.push(`❌ Réponse invalide: ${user.node.name}`);
+          continue;
         }
+
+        if (!data?.errors) {
+          success.push(`✨ ${isAdd ? "Accepté" : "Refusé"} → ${user.node.name}`);
+        } else {
+          failed.push(`❌ Échec → ${user.node.name}`);
+        }
+
       } catch (e) {
-        failed.push(`❌ Error: ${user.node.name}`);
+        failed.push(`❌ Error → ${user.node.name}`);
       }
     }
 
-    let msg = "";
+    api.setMessageReaction("✅", event.messageID, () => {}, true);
+
+    let msg = "🌸💖 𝗔𝗡𝗚𝗘𝗟 𝗔𝗖𝗖𝗘𝗣𝗧 𝗦𝗬𝗦𝗧𝗘𝗠 💖🌸\n\n";
 
     if (success.length) msg += success.join("\n") + "\n\n";
     if (failed.length) msg += failed.join("\n");
 
-    api.sendMessage(msg || "❌ Rien traité", event.threadID, messageID);
+    return api.sendMessage(msg || "❌ Rien traité 💔", event.threadID, messageID);
   },
 
-  // 📥 MENU
   onStart: async function ({ api, event, commandName }) {
     try {
       const form = {
@@ -122,53 +131,56 @@ module.exports = {
       try {
         data = JSON.parse(response);
       } catch {
-        return api.sendMessage("❌ Erreur Facebook API", event.threadID);
+        api.setMessageReaction("❌", event.messageID, () => {}, true);
+        return api.sendMessage("❌ Facebook API error 💔", event.threadID);
       }
 
       const listRequest =
         data?.data?.viewer?.friending_possibilities?.edges || [];
 
       if (!listRequest.length) {
-        return api.sendMessage("🌸 Aucune demande d'ami", event.threadID);
+        api.setMessageReaction("💔", event.messageID, () => {}, true);
+        return api.sendMessage("🌸 Aucune demande d’ami 💖", event.threadID);
       }
 
-      let msg = "╔═══ 💖 DEMANDES D'AMIS 💖 ═══╗\n\n";
+      let msg =
+        "╔═══ 💖 𝗔𝗡𝗚𝗘𝗟 𝗥𝗘𝗤𝗨𝗘𝗦𝗧𝗦 💖 ═══╗\n\n";
 
       listRequest.forEach((u, i) => {
-        msg += `💠 No. ${i + 1}\n`;
-        msg += `👤 Nom: ${u.node.name}\n`;
-        msg += `🆔 ID: ${u.node.id}\n`;
-        msg += `🔗 Profil: ${
-          u.node.url
-            ? u.node.url.replace("www.facebook", "fb")
-            : "Lien indisponible"
-        }\n`;
-        msg += "━━━━━━━━━━━━━━━━\n";
+        const id = u.node.id;
+        const name = u.node.name;
+
+        msg += `💠 ${i + 1}. ${name}\n`;
+        msg += `🆔 ${id}\n`;
+        msg += `🔗 https://www.facebook.com/${id}\n`;
+        msg += "━━━━━━━━━━━━━━━\n";
       });
 
-      msg += "\n💡 Réponds avec:\n";
-      msg += "✔ add <num> → accepter\n";
-      msg += "❌ del <num> → refuser\n";
-      msg += "🔥 add all → tout accepter\n";
-      msg += "💔 del all → tout refuser\n\n";
-      msg += "⏳ Auto delete 2 min";
+      msg +=
+        "\n🌸 add <num> → accepter\n" +
+        "💔 del <num> → refuser\n" +
+        "✨ add all → tout accepter\n" +
+        "❌ del all → tout refuser\n\n" +
+        "⏳ Auto delete 2 min";
 
-      api.sendMessage(msg, event.threadID, (err, info) => {
-        if (err) return;
+      const sent = await api.sendMessage(msg, event.threadID);
 
-        global.GoatBot.onReply.set(info.messageID, {
-          commandName,
-          author: event.senderID,
-          listRequest,
-          messageID: info.messageID,
-          unsendTimeout: setTimeout(() => {
-            api.unsendMessage(info.messageID);
-          }, 120000)
-        });
+      global.GoatBot.onReply.set(sent.messageID, {
+        commandName,
+        author: event.senderID,
+        listRequest,
+        messageID: sent.messageID,
+        unsendTimeout: setTimeout(() => {
+          api.unsendMessage(sent.messageID);
+        }, 120000)
       });
+
+      api.setMessageReaction("💖", event.messageID, () => {}, true);
+
     } catch (e) {
       console.log(e);
-      api.sendMessage("❌ Erreur chargement demandes", event.threadID);
+      api.setMessageReaction("❌", event.messageID, () => {}, true);
+      api.sendMessage("❌ Erreur chargement 💔", event.threadID);
     }
   }
 };
