@@ -107,17 +107,30 @@ module.exports = {
 
     } catch (e) {
 
-      console.error(e);
+  console.log("====== GEM ERROR ======");
+  console.log("USER:", userID);
+  console.log("IMAGE URL:", memory[userID]?.image);
 
-      if (loading) {
-        await api.unsendMessage(loading.messageID);
-      }
+  if (e.response) {
+    console.log("API RESPONSE:");
+    console.log(e.response.data);
+  }
 
-      api.setMessageReaction("❌", event.messageID, () => {}, true);
+  console.log("ERROR:");
+  console.log(e.message || e);
 
-      return message.reply("💔 erreur gem memory");
+  console.log("=======================");
+
+  if (loading) {
+    await api.unsendMessage(loading.messageID);
+  }
+
+  api.setMessageReaction("❌", event.messageID, () => {}, true);
+
+  return message.reply(
+    "💔 Gem Memory a rencontré une erreur.\n📜 Vérifie la console du bot."
+  );
     }
-  },
 
   // ♻️ RESET MEMORY
   onChat: async function ({ event, message }) {
