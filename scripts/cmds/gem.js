@@ -27,7 +27,7 @@ module.exports = {
     version: "2.0",
     author: "Shade",
     role: 0,
-    category: "image"
+    category: "🎨 image"
   },
 
   onStart: async function ({ message, event, args, api }) {
