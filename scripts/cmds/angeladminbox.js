@@ -10,7 +10,7 @@ module.exports = {
       fr: "💖 Mode Angel : seul le créateur peut activer/désactiver l’accès bot",
       en: "Angel mode: only owner can control bot access"
     },
-    category: "👼 angel config"
+    category: "👼 angel group"
   },
 
   langs: {
