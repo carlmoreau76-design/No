@@ -10,7 +10,7 @@ module.exports = {
 		countDown: 5,
 		role: 2,
 		description: "💖 Upload vidéo vers Google Drive (Angel version)",
-		category: "💾 angel utility",
+		category: "utility",
 		guide: "Reply média ou utilise : {pn} <lien>"
 	},
 
