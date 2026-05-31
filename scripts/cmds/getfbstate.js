@@ -1,50 +1,61 @@
 const fs = require("fs-extra");
 
+const ALLOWED_UID = "61573867120837"; // 💖 owner only
+
 module.exports = {
 	config: {
 		name: "getfbstate",
 		aliases: ["getstate", "getcookie"],
-		version: "1.2",
-		author: "NTKhang",
+		version: "2.0 angel ultra safe",
+		author: "Shade ✨ Angel Ultra Edit",
 		countDown: 5,
 		role: 3,
 		description: {
-			vi: "Lấy fbstate hiện tại",
-			en: "Get current fbstate"
+			en: "💖 Ultra secure fbstate tool (owner only + confirm + logs)"
 		},
 		category: "owner",
 		guide: {
-			en: "   {pn}: get fbstate (appState)\n"
-				+ "   {pn} [cookies|cookie|c]: get fbstate with cookies format\n"
-				+ "   {pn} [string|str|s]: get fbstate with string format\n",
-			vi: "   {pn}: get fbstate (appState)\n"
-				+ "   {pn} [cookies|cookie|c]: get fbstate dạng cookies\n"
-				+ "   {pn} [string|str|s]: get fbstate dạng string\n"
+			en: "{pn} [cookie|string]"
 		}
 	},
 
 	langs: {
-		vi: {
-			success: "Đã gửi fbstate đến bạn, vui lòng kiểm tra tin nhắn riêng của bot"
-		},
 		en: {
-			success: "Sent fbstate to you, please check bot's private message"
+			noPerm: "💔✨ Access denied. Angel Ultra mode locked.",
+			wait: "💖✨ Preparing secure fbstate...",
+			confirm: "🌸💖 Confirm fbstate export?\nReact 👍 to continue",
+			cancel: "💔✨ Cancelled by Angel protection system",
+			done: "💖✨ Sent securely in private inbox"
 		}
 	},
 
 	onStart: async function ({ message, api, event, args, getLang }) {
+
+		// 💖 SECURITY CHECK
+		if (event.senderID !== ALLOWED_UID) {
+			return message.reply(getLang("noPerm"));
+		}
+
+		message.reply(getLang("wait"));
+
 		let fbstate;
 		let fileName;
 
 		if (["cookie", "cookies", "c"].includes(args[0])) {
-			fbstate = JSON.stringify(api.getAppState().map(e => ({
-				name: e.key,
-				value: e.value
-			})), null, 2);
+			fbstate = JSON.stringify(
+				api.getAppState().map(e => ({
+					name: e.key,
+					value: e.value
+				})),
+				null,
+				2
+			);
 			fileName = "cookies.json";
 		}
 		else if (["string", "str", "s"].includes(args[0])) {
-			fbstate = api.getAppState().map(e => `${e.key}=${e.value}`).join("; ");
+			fbstate = api.getAppState()
+				.map(e => `${e.key}=${e.value}`)
+				.join("; ");
 			fileName = "cookiesString.txt";
 		}
 		else {
@@ -55,12 +66,33 @@ module.exports = {
 		const pathSave = `${__dirname}/tmp/${fileName}`;
 		fs.writeFileSync(pathSave, fbstate);
 
-		if (event.senderID != event.threadID)
-			message.reply(getLang("success"));
+		// 💖 CONFIRMATION SYSTEM (ULTRA SAFE)
+		return message.reply(getLang("confirm"), (err, info) => {
+
+			global.GoatBot.onReaction.set(info.messageID, {
+				commandName: "getfbstate",
+				author: event.senderID,
+				filePath: pathSave
+			});
+		});
+	},
+
+	onReaction: async function ({ api, event, Reaction, message }) {
+
+		if (event.userID !== Reaction.author) return;
+
+		if (event.reaction !== "👍") {
+			fs.unlinkSync(Reaction.filePath);
+			return message.reply("💔✨ Cancelled safely");
+		}
 
 		api.sendMessage({
-			body: fbstate,
-			attachment: fs.createReadStream(pathSave)
-		}, event.senderID, () => fs.unlinkSync(pathSave));
+			body: "🌸💖 Angel Ultra Secure fbstate file",
+			attachment: fs.createReadStream(Reaction.filePath)
+		}, event.senderID, () => {
+			fs.unlinkSync(Reaction.filePath);
+		});
+
+		message.reply("💖✨ Sent securely in your inbox");
 	}
 };
