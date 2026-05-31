@@ -22,26 +22,27 @@ const aspectRatioMap = {
 module.exports = {
  config: {
  name: "fastx",
- author: "Christus",
- version: "1.2",
+ author: "Christus ✨ | Angel Edit",
+ version: "1.2 angel kawaii",
  cooldowns: 5,
  role: 0,
- shortDescription: "Générer des images IA",
- longDescription: "Génère 4 images à partir d'un prompt et les combine dans une grille.",
- category: "générateur d'images",
+ shortDescription: "💖 Générer des images IA kawaii",
+ longDescription: "✨ Génère 4 images IA et les combine en grille magique",
+ category: "🌸 générateur d'images",
  guide: "{p}fastx <prompt> [--ar <ratio>]"
  },
 
  onStart: async function ({ message, args, api, event }) {
  const startTime = Date.now();
- const userID = event.senderID;
- const waitingMessage = await message.reply(`Fastx génère vos images...`);
+
+ const waitingMessage = await message.reply(
+ `🌸💖 Angel Fastx travaille sur ta magie... patience ✨⏳`
+ );
 
  try {
  let prompt = "";
  let ratio = "1:1";
 
- // Analyse des arguments
  for (let i = 0; i < args.length; i++) {
  if (args[i] === "--ar" && args[i + 1]) {
  ratio = args[i + 1];
@@ -52,12 +53,14 @@ module.exports = {
  }
 
  prompt = prompt.trim();
- const urls = new Array(4).fill(`https://www.ai4chat.co/api/image/generate?prompt=${encodeURIComponent(prompt)}&aspect_ratio=${encodeURIComponent(ratio)}`);
+
+ const urls = new Array(4).fill(
+ `https://www.ai4chat.co/api/image/generate?prompt=${encodeURIComponent(prompt)}&aspect_ratio=${encodeURIComponent(ratio)}`
+ );
 
  const cacheFolderPath = path.join(__dirname, "/tmp");
  if (!fs.existsSync(cacheFolderPath)) fs.mkdirSync(cacheFolderPath);
 
- // Téléchargement des 4 images
  const images = await Promise.all(
  urls.map(async (url, index) => {
  const { data } = await axios.get(url);
@@ -73,6 +76,7 @@ module.exports = {
  });
 
  imageStream.data.pipe(writer);
+
  await new Promise((resolve, reject) => {
  writer.on("finish", resolve);
  writer.on("error", reject);
@@ -82,10 +86,11 @@ module.exports = {
  })
  );
 
- // Charger et combiner les images
  const loadedImages = await Promise.all(images.map(img => loadImage(img)));
+
  const width = loadedImages[0].width;
  const height = loadedImages[0].height;
+
  const canvas = createCanvas(width * 2, height * 2);
  const ctx = canvas.getContext("2d");
 
@@ -99,11 +104,14 @@ module.exports = {
 
  api.unsendMessage(waitingMessage.messageID);
 
- const endTime = Date.now();
- const duration = ((endTime - startTime) / 1000).toFixed(2);
+ const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
  const reply = await message.reply({
- body: `❏ U1, U2, U3, U4\nTemps: ${duration}s`,
+ body: `💖✨ Angel Fastx terminé !
+
+🌸 Prompt: ${prompt}
+⏱️ Temps: ${duration}s
+🎀 Résultat prêt !`,
  attachment: fs.createReadStream(combinedImagePath)
  });
 
@@ -115,31 +123,34 @@ module.exports = {
  });
 
  } catch (error) {
- console.error("Erreur lors de la génération de l'image:", error.message);
+ console.error("Erreur Fastx Angel:", error.message);
  api.unsendMessage(waitingMessage.messageID);
- message.reply("❌ | Échec de la génération de l'image.");
+
+ message.reply(
+ `💔✨ Oops Angel error...
+
+❌ La magie a échoué
+🌸 Réessaie encore`
+ );
  }
  },
 
  onReply: async function ({ api, event, Reply, args, message }) {
  const reply = args[0].toLowerCase();
- const { author, messageID, images } = Reply;
+ const { author, images } = Reply;
 
  if (event.senderID !== author) return;
 
- try {
- const validIndexes = ["u1", "u2", "u3", "u4"];
- if (validIndexes.includes(reply)) {
- const selectedIndex = parseInt(reply.slice(1)) - 1;
- await message.reply({
- attachment: fs.createReadStream(images[selectedIndex])
+ const valid = ["u1", "u2", "u3", "u4"];
+
+ if (!valid.includes(reply)) {
+ return message.reply("💔✨ Utilise seulement U1, U2, U3 ou U4 🌸");
+ }
+
+ const index = parseInt(reply[1]) - 1;
+
+ return message.reply({
+ attachment: fs.createReadStream(images[index])
  });
- } else {
- message.reply("❌ | Action invalide. Veuillez utiliser U1, U2, U3 ou U4.");
- }
- } catch (err) {
- console.error("Erreur lors de la réponse:", err.message);
- message.reply("❌ | Échec de l'envoi de l'image sélectionnée.");
- }
  }
 };
