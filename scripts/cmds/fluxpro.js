@@ -5,59 +5,102 @@ const path = require("path");
 module.exports = {
   config: {
     name: "fluxpro",
-    version: "1.0",
-    author: "Christus",
+    version: "1.0 angel kawaii",
+    author: "Christus | Shade Angel Edit ✨",
     countDown: 5,
     role: 0,
     description: {
-      fr: "Génère une image IA en utilisant l'API Oculux Flux 1.1 Pro",
+      fr: "💖 Génération IA FluxPro style Angel kawaii"
     },
-    category: "générateur d'image",
+    category: "🌸 générateur d'images",
     guide: {
-      fr: "{pn} <prompt>\nExemple : {prefix}fluxpro samouraï cyberpunk sous la pluie",
+      fr: "{pn} <prompt>"
     },
   },
 
   onStart: async function ({ message, event, args, api, commandName }) {
+
     const prefix =
       global.utils?.getPrefix?.(event.threadID) ||
       global.GoatBot?.config?.prefix ||
       "/";
 
     const prompt = args.join(" ");
+
     if (!prompt) {
       return message.reply(
-        `⚠️ Veuillez fournir un prompt.\nExemple : ${prefix}${commandName} dragon futuriste volant dans l'espace`
+`💔🌸 ANGEL FLUXPRO
+
+⚠️ Donne-moi un prompt magique
+
+✨ Exemple :
+${prefix}${commandName} samouraï cyberpunk sous la pluie`
       );
     }
 
+    // 💖 REACTION LOADING
     api.setMessageReaction("🎨", event.messageID, () => {}, true);
+
     const waitingMsg = await message.reply(
-      "🎨 Génération de votre image... Veuillez patienter..."
+`🌸💖 Angel prépare ta vision IA...
+
+⏳ Génération en cours...`
     );
 
     const encodedPrompt = encodeURIComponent(prompt);
+
     const url = `https://dev.oculux.xyz/api/flux-1.1-pro?prompt=${encodedPrompt}`;
-    const imgPath = path.join(__dirname, "cache", `fluxpro_${event.senderID}.png`);
+
+    const imgPath = path.join(
+      __dirname,
+      "cache",
+      `fluxpro_${event.senderID}.png`
+    );
 
     try {
-      const response = await axios.get(url, { responseType: "arraybuffer" });
+      const response = await axios.get(url, {
+        responseType: "arraybuffer"
+      });
+
+      await fs.ensureDir(path.dirname(imgPath));
       fs.writeFileSync(imgPath, response.data);
+
+      // 💖 SUCCESS REACTION
+      api.setMessageReaction("✅", event.messageID, () => {}, true);
 
       await message.reply(
         {
-          body: `✅ Voici votre image FluxPro IA.\n🖋️ Prompt : ${prompt}`,
-          attachment: fs.createReadStream(imgPath),
+          body:
+`💖✨ ANGEL FLUXPRO RESULT
+
+🖋️ Prompt : ${prompt}
+
+🌸 Ton image est prête !`,
+          attachment: fs.createReadStream(imgPath)
         },
         () => {
           fs.unlinkSync(imgPath);
-          if (waitingMsg?.messageID) api.unsendMessage(waitingMsg.messageID);
+          if (waitingMsg?.messageID)
+            api.unsendMessage(waitingMsg.messageID);
         }
       );
+
     } catch (error) {
-      console.error("Erreur de génération FluxPro :", error);
-      message.reply("⚠️ Échec lors de la génération de l'image FluxPro. Veuillez réessayer plus tard.");
-      if (waitingMsg?.messageID) api.unsendMessage(waitingMsg.messageID);
+      console.error("FluxPro error:", error);
+
+      // 💔 ERROR REACTION
+      api.setMessageReaction("❌", event.messageID, () => {}, true);
+
+      if (waitingMsg?.messageID)
+        api.unsendMessage(waitingMsg.messageID);
+
+      return message.reply(
+`💔🌸 ANGEL ERROR
+
+❌ Échec de génération FluxPro
+
+💬 Réessaie plus tard Angel~`
+      );
     }
-  },
+  }
 };
