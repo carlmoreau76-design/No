@@ -8,67 +8,60 @@ module.exports = {
     role: 0,
     author: "Shade ✨ Angel Edit",
     countDown: 5,
-    longDescription: "💖 Upscale une image en qualité 4K magique ✨",
+    longDescription: "💖 Upscale image en 4K magique ✨",
     category: "🌸 image",
     guide: {
       en: "{pn} reply to an image 💖✨"
     }
   },
 
-  onStart: async function ({ message, event }) {
+  onStart: async function ({ api, message, event }) {
     try {
 
-      // 🖼️ Vérifie image reply
       const reply = event.messageReply;
-      if (
-        !reply ||
-        !reply.attachments ||
-        reply.attachments.length === 0
-      ) {
-        return message.reply("❌💔 Réponds à une image pour l’upscale ✨");
+
+      if (!reply?.attachments?.length) {
+        return message.reply("❌💔 Réponds à une image ✨");
       }
 
-      const imgurl = encodeURIComponent(reply.attachments[0].url);
+      const imgurl = reply.attachments[0].url;
 
-      // 🌐 API (corrigée)
-      const upscaleUrl = `https://free-goat-api.onrender.com/4k?url=${imgurl}`;
+      // ⏳ reaction
+      api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
-      // ⏳ réaction loading
-      message.reaction("⏳", event.messageID);
+      const waitMsg = await message.reply("💖✨ Upscaling en cours...");
 
-      // 💬 message temporaire
-      const waitMsg = await message.reply("💖✨ Upscaling en cours... patience l'ami 🌸");
+      const apiUrl = `https://free-goat-api.onrender.com/4k?url=${encodeURIComponent(imgurl)}`;
 
-      // 🔄 requête API
-      const { data } = await axios.get(upscaleUrl);
+      const res = await axios.get(apiUrl).catch(() => null);
 
-      if (!data || !data.image) {
-        message.reaction("❌", event.messageID);
-        return message.reply("❌💔 API n’a pas renvoyé d’image...");
+      const imageLink = res?.data?.image || res?.data?.url || res?.data?.result;
+
+      if (!imageLink) {
+        api.setMessageReaction("❌", event.messageID, () => {}, true);
+        return message.reply("❌💔 API ne renvoie pas d’image valide...");
       }
 
-      const img = await global.utils.getStreamFromURL(
-        data.image,
-        "angel-upscale.png"
-      );
+      // téléchargement safe
+      const imgBuffer = await axios.get(imageLink, {
+        responseType: "arraybuffer"
+      });
 
-      // ✅ succès
-      message.reaction("✅", event.messageID);
+      api.setMessageReaction("✅", event.messageID, () => {}, true);
 
       await message.reply({
         body: "✨💖 Voilà ton image 4K angelifiée ✨",
-        attachment: img
+        attachment: Buffer.from(imgBuffer.data)
       });
 
-      // 🧹 supprime message loading
       if (waitMsg?.messageID) {
         message.unsend(waitMsg.messageID);
       }
 
     } catch (err) {
       console.error(err);
-      message.reaction("❌", event.messageID);
-      return message.reply("❌💔 Une erreur est survenue avec l’upscale...");
+      api.setMessageReaction("❌", event.messageID, () => {}, true);
+      return message.reply("❌💔 Upscale failed (API ou réseau)");
     }
   }
 };
