@@ -3,48 +3,74 @@ const axios = require("axios");
 module.exports = {
   config: {
     name: "imgur",
-    version: "1.0.0",
-    author: "Christus",
-    countDown: 0,
+    version: "✨ 1.1 angel kawaii",
+    author: "Christus ✨ Shade Edit",
+    countDown: 3,
     role: 0,
-    shortDescription: "Téléverse une image/vidéo sur Imgur",
-    longDescription: "Répondre à une image/vidéo ou fournir une URL pour la téléverser sur Imgur.",
-    category: "utilitaire",
-    guide: "{pn} répondre à une image/vidéo ou fournir une URL"
+    shortDescription: "🌸 Upload image/vidéo sur Imgur",
+    longDescription: "💖 Réponds à une image ou envoie une URL pour l’envoyer sur Imgur",
+    category: "utility ",
+    guide: "{pn} reply image/vidéo ou lien 🌸"
   },
 
   onStart: async function ({ api, event, args }) {
     const { threadID, messageID, messageReply } = event;
-    let mediaUrl = "";
 
-    if (messageReply && messageReply.attachments.length > 0) {
-      mediaUrl = messageReply.attachments[0].url;
-    } else if (args.length > 0) {
-      mediaUrl = args.join(" ");
-    }
-
-    if (!mediaUrl) {
-      return api.sendMessage("❌ Veuillez répondre à une image/vidéo ou fournir une URL !", threadID, messageID);
-    }
+    const send = (text) =>
+      api.sendMessage(`🌸✨ ${text}`, threadID, messageID);
 
     try {
-      api.setMessageReaction("⏳", messageID, () => {}, true);
+      let mediaUrl = "";
 
-      const res = await axios.get(`http://65.109.80.126:20409/aryan/imgur?url=${encodeURIComponent(mediaUrl)}`);
-      const imgurLink = res.data.imgur;
-
-      if (!imgurLink) {
-        api.setMessageReaction("", messageID, () => {}, true);
-        return api.sendMessage("❌ Échec du téléversement sur Imgur.", threadID, messageID);
+      // 📸 reply image
+      if (messageReply?.attachments?.length > 0) {
+        mediaUrl = messageReply.attachments[0].url;
       }
 
+      // 🔗 url
+      else if (args.length > 0) {
+        mediaUrl = args.join(" ");
+      }
+
+      if (!mediaUrl) {
+        return send("❌ Réponds à une image/vidéo ou donne un lien valide 💔✨");
+      }
+
+      // ⏳ reaction loading
+      api.setMessageReaction("⏳", messageID, () => {}, true);
+
+      const res = await axios.get(
+        `http://65.109.80.126:20409/aryan/imgur?url=${encodeURIComponent(mediaUrl)}`
+      );
+
+      const link = res.data?.imgur;
+
+      if (!link) {
+        api.setMessageReaction("❌", messageID, () => {}, true);
+        return send("💔✨ Upload échoué sur Imgur...");
+      }
+
+      // ✅ success reaction
       api.setMessageReaction("✅", messageID, () => {}, true);
-      return api.sendMessage(`${imgurLink}`, threadID, messageID);
+
+      return api.sendMessage(
+        `╭───────────────✦
+│ 🌸 𝗜𝗠𝗚𝗨𝗥 𝗨𝗣𝗟𝗢𝗔𝗗 𝗔𝗡𝗚𝗘𝗟 ✨
+├────────────────
+│ 💖 Lien : ${link}
+├────────────────
+│ ⏳ Status : Upload terminé
+│ 🤖 Bot : Angel system ✨
+╰───────────────✦`,
+        threadID,
+        messageID
+      );
 
     } catch (err) {
-      console.error("Erreur de téléversement sur Imgur :", err);
-      api.setMessageReaction("", messageID, () => {}, true);
-      return api.sendMessage("⚠️ Une erreur est survenue lors du téléversement.", threadID, messageID);
+      console.error("Imgur error:", err);
+      api.setMessageReaction("❌", messageID, () => {}, true);
+
+      return send("⚠️ Une erreur est survenue pendant l’upload 💔✨");
     }
   }
 };
