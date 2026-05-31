@@ -68,9 +68,9 @@ module.exports = {
 
     try {
 
-      api.setMessageReaction("⏳", event.messageID, () => {}, true);
+      api.setMessageReaction("🎨", event.messageID, () => {}, true);
 
-      loading = await message.reply("⏳ génération en cours... 🌸");
+      loading = await message.reply("🎨 génération en cours... 🌸");
 
       const res = await axios.get(API, {
         params: {
@@ -98,7 +98,7 @@ module.exports = {
 
       await api.unsendMessage(loading.messageID);
 
-      api.setMessageReaction("✔️", event.messageID, () => {}, true);
+      api.setMessageReaction("🖼️", event.messageID, () => {}, true);
 
       return message.reply({
         body: "✨ Image mise à jour avec mémoire",
