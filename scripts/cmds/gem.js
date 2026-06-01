@@ -4,7 +4,7 @@ const path = require("path");
 
 const API = "https://gemini-edit-omega.vercel.app/edit";
 
-// 🧠 MEMORY IMAGE
+// 🧠 mémoire simple
 const memoryFile = "./gem_memory.json";
 
 let memory = {};
@@ -24,15 +24,16 @@ function saveMemory() {
 module.exports = {
   config: {
     name: "gem",
-    version: "2.0",
+    version: "1.0",
     author: "Shade",
     role: 0,
-    category: "🎨 édit image"
+    category: "image-edit"
   },
 
   onStart: async function ({ message, event, args, api }) {
 
     const userID = event.senderID;
+    const prompt = args.join(" ").trim();
 
     const attachment = event.messageReply?.attachments?.[0];
 
@@ -40,37 +41,27 @@ module.exports = {
       return message.reply("🌸 Réponds à une image !");
     }
 
-    const prompt = args.join(" ").trim();
-
     if (!prompt) {
-      return message.reply("💡 Exemple : !gem gojo apparaît");
+      return message.reply("💡 Exemple : !gem ajoute un ciel sombre");
     }
 
-    // 🧠 INIT MEMORY
+    // init mémoire
     if (!memory[userID]) {
       memory[userID] = {
-        image: null,
+        image: attachment.url,
         story: ""
       };
     }
 
-    // 🧠 FIRST IMAGE SAVE
-    if (!memory[userID].image) {
-      memory[userID].image = attachment.url;
-    }
-
-    // 🧠 ADD PROMPT TO STORY
     memory[userID].story += `, ${prompt}`;
-
     saveMemory();
 
     let loading;
 
     try {
-
       api.setMessageReaction("🎨", event.messageID, () => {}, true);
 
-      loading = await message.reply("🎨 génération en cours... 🌸");
+      loading = await message.reply("🎨 édition en cours...");
 
       const res = await axios.get(API, {
         params: {
@@ -80,25 +71,18 @@ module.exports = {
       });
 
       if (!res.data?.images?.[0]) {
-        throw new Error("no image");
+        return message.reply("❌ API n’a rien renvoyé");
       }
 
-      const base64 = res.data.images[0]
-        .replace(/^data:image\/\w+;base64,/, "");
-
+      const base64 = res.data.images[0].replace(/^data:image\/\w+;base64,/, "");
       const buffer = Buffer.from(base64, "base64");
 
       const cacheDir = path.join(__dirname, "cache");
+      if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+      }
 
-if (!fs.existsSync(cacheDir)) {
-  fs.mkdirSync(cacheDir, { recursive: true });
-}
-
-const filePath = path.join(
-  cacheDir,
-  `gem_${Date.now()}.png`
-);
-
+      const filePath = path.join(cacheDir, `gem_${Date.now()}.png`);
       fs.writeFileSync(filePath, buffer);
 
       await api.unsendMessage(loading.messageID);
@@ -106,51 +90,30 @@ const filePath = path.join(
       api.setMessageReaction("🖼️", event.messageID, () => {}, true);
 
       return message.reply({
-        body: "✨ Image mise à jour avec mémoire",
+        body: "✨ Image éditée avec succès",
         attachment: fs.createReadStream(filePath)
       });
 
     } catch (e) {
+      console.log("GEM ERROR:", e);
 
-  console.log("====== GEM ERROR ======");
-  console.log("USER:", userID);
-  console.log("IMAGE URL:", memory[userID]?.image);
+      if (loading) {
+        await api.unsendMessage(loading.messageID);
+      }
 
-  if (e.response) {
-    console.log("API RESPONSE:");
-    console.log(e.response.data);
-  }
+      api.setMessageReaction("❌", event.messageID, () => {}, true);
 
-  console.log("ERROR:");
-  console.log(e.message || e);
+      return message.reply("💔 erreur gem edit");
+    }
+  },
 
-  console.log("=======================");
+  onChat: async function ({ event, message }) {
+    const body = event.body?.toLowerCase();
 
-  if (loading) {
-    await api.unsendMessage(loading.messageID);
-  }
-
-  api.setMessageReaction("❌", event.messageID, () => {}, true);
-
-  return message.reply(
-  "💔 Gem Memory a rencontré une erreur.\n📜 Vérifie la console du bot."
-);
-}
-},
-
-// ♻️ RESET MEMORY
-onChat: async function ({ event, message }) {
-
-    const body = event.body?.trim();
-
-    if (!body) return;
-
-    if (body.toLowerCase() === "!gem reset") {
-
+    if (body === "!gem reset") {
       delete memory[event.senderID];
       saveMemory();
-
-      return message.reply("🧠 mémoire image reset ✔️");
+      return message.reply("🧠 mémoire reset ✔️");
     }
   }
 };
