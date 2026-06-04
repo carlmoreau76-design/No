@@ -6,8 +6,8 @@ module.exports = {
   config: {
     name: "accept",
     aliases: ["acp"],
-    version: "3.0 angel stable",
-    author: "Shade ✨ Fix Edition",
+    version: "3.1 angel stable fix",
+    author: "Shade ✨ Fix",
     role: 2,
     description: "🌸 Gestion des demandes d’amis Facebook",
     category: "owner",
@@ -50,7 +50,13 @@ module.exports = {
 
       for (const num of targetIDs) {
 
-        const user = listRequest[parseInt(num) - 1];
+        const n = parseInt(num);
+        if (!n || n < 1 || n > listRequest.length) {
+          failed.push(`❌ #${num} invalide`);
+          continue;
+        }
+
+        const user = listRequest[n - 1];
 
         if (!user?.node?.id) {
           failed.push(`❌ #${num} introuvable`);
@@ -87,15 +93,11 @@ module.exports = {
 
           console.log("FB RESPONSE:", res);
 
-          let data = {};
-          try {
-            data = typeof res === "string" ? JSON.parse(res) : res;
-          } catch {}
+          const lower = String(res).toLowerCase();
 
           const ok =
-            !String(res).includes("error") &&
-            !String(res).includes("fail") &&
-            !data?.errors;
+            !lower.includes("error") &&
+            !lower.includes("fail");
 
           if (ok) {
             success.push(`✨ ${isAdd ? "Accepté" : "Refusé"} → ${user.node.name}`);
@@ -165,12 +167,9 @@ module.exports = {
         "╔═══ 💖 𝗔𝗡𝗚𝗘𝗟 𝗥𝗘𝗤𝗨𝗘𝗦𝗧𝗦 💖 ═══╗\n\n";
 
       listRequest.forEach((u, i) => {
-        const id = u.node.id;
-        const name = u.node.name;
-
-        msg += `💠 ${i + 1}. ${name}\n`;
-        msg += `🆔 ${id}\n`;
-        msg += `🔗 https://www.facebook.com/${id}\n`;
+        msg += `💠 ${i + 1}. ${u.node.name}\n`;
+        msg += `🆔 ${u.node.id}\n`;
+        msg += `🔗 https://www.facebook.com/${u.node.id}\n`;
         msg += "━━━━━━━━━━━━━━━\n";
       });
 
