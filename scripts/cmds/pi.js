@@ -17,7 +17,7 @@ module.exports = {
     version: "angel-ai-1.0",
     author: "Angel ✨",
     role: 0,
-    category: "🌸 ai",
+    category: "assistant",
     description: {
       fr: "🤖 Assistant Angel AI avec voix et styles personnalisés"
     },
