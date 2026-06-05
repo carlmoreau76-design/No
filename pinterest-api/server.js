@@ -5,7 +5,6 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
-// 🔥 PINTEREST STYLE API
 app.get("/pinterest", async (req, res) => {
   const query = req.query.query;
 
@@ -14,22 +13,36 @@ app.get("/pinterest", async (req, res) => {
   }
 
   try {
-    // 💥 SOURCE JSON IMAGE (plus stable)
-    const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`;
-
-    const response = await axios.get(url);
-    const data = response.data;
-
-    // 🧠 extraction images via DuckDuckGo related topics (safe fallback)
-    let images = [];
-
-    if (data.RelatedTopics) {
-      data.RelatedTopics.forEach(item => {
-        if (item.Icon && item.Icon.URL) {
-          images.push("https://duckduckgo.com" + item.Icon.URL);
+    // 🔥 STEP 1: get token vqd
+    const html = await axios.get(
+      `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0"
         }
-      });
+      }
+    );
+
+    const match = html.data.match(/vqd='(.*?)'/);
+
+    if (!match) {
+      return res.json({ error: "no token found" });
     }
+
+    const vqd = match[1];
+
+    // 🔥 STEP 2: real image API
+    const img = await axios.get(
+      `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&p=1`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Referer": "https://duckduckgo.com/"
+        }
+      }
+    );
+
+    const images = img.data.results.map(i => i.image);
 
     res.json({
       query,
@@ -44,7 +57,6 @@ app.get("/pinterest", async (req, res) => {
   }
 });
 
-// 🚀 START SERVER
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
