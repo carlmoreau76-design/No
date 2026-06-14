@@ -1,127 +1,124 @@
-module.exports = {
-  config: {
-    name: "box",
-    version: "1.5 angel fixed",
-    author: "Shade ✨ Fix",
-    role: 0,
-    shortDescription: "📦 Gestion groupe",
-    category: "group"
-  },
+module.exports.config = {
+  name: "box",
+  version: "1.1",
+  author: "Shade",
+  description: "Gestion du groupe en 8 commandes"
+};
 
-  onStart: async function ({ api, event, message }) {
+module.exports.run = async ({ api, event, args }) => {
+  const { threadID, senderID } = event;
+  const sub = args[0];
 
-    try {
+  try {
+    const info = await api.getThreadInfo(threadID);
 
-      const info = await api.getThreadInfo(event.threadID);
+    const name = info.threadName || "Sans nom";
+    const emoji = info.emoji || "💬";
+    const members = info.participantIDs.length;
+    const admins = info.adminIDs.map(a => a.id);
 
-      const box = `
-╭───────────────✦
-│ 📦 𝗚𝗥𝗢𝗨𝗣 𝗠𝗘𝗡𝗨
-├────────────────
-│ 🏷️ ${info.threadName}
-│ 😀 ${info.emoji || "😊"}
-│ 👥 ${info.participantIDs.length}
-│ 👑 ${info.adminIDs.length}
-├────────────────
-│ 1️⃣ Nom groupe
-│ 2️⃣ Photo groupe
-│ 3️⃣ Emoji groupe
-│ 4️⃣ UID groupe
-│ 5️⃣ Membres
-│ 6️⃣ Infos
-├────────────────
-👉 Réponds avec un chiffre 💖
-      `;
+    const botID = api.getCurrentUserID();
+    const botIsAdmin = admins.includes(botID);
 
-      const msg = await api.sendMessage(box, event.threadID);
-
-      global.GoatBot.onReply.set(msg.messageID, {
-        commandName: "box",
-        author: event.senderID,
-        threadID: event.threadID
-      });
-
-    } catch (err) {
-      console.log(err);
-      message.reply("💔 Erreur box");
-    }
-  },
-
-  onReply: async function ({ api, event, Reply, message }) {
-
-    if (event.senderID !== Reply.author) return;
-
-    const choice = event.body?.trim();
-
-    const info = await api.getThreadInfo(event.threadID);
-
-    // 🆔 UID
-    if (choice === "4") {
-      return message.reply(`🆔 ${event.threadID}`);
-    }
-
-    // 👥 MEMBERS
-    if (choice === "5") {
-      return message.reply(info.participantIDs.join("\n"));
-    }
-
-    // 📊 INFO
-    if (choice === "6") {
-      return message.reply(
-        `📦 Groupe: ${info.threadName}\n👥 ${info.participantIDs.length}\n👑 ${info.adminIDs.length}`
+    // PANEL
+    if (!sub) {
+      return api.sendMessage(
+`╭─────── BOX ───────
+│ 📦 Groupe : ${name}
+│ 😀 Emoji : ${emoji}
+│ 👥 Membres : ${members}
+│ 👑 Admins : ${admins.length}
+│ 🤖 Bot admin : ${botIsAdmin ? "Oui" : "Non"}
+├──────────────
+│ ⚙️ 1 nom
+│ ⚙️ 2 photo
+│ ⚙️ 3 emoji
+│ ⚙️ 4 pseudo
+│ ⚙️ 5 approval
+│ ⚙️ 6 uid
+│ ⚙️ 7 membres
+│ ⚙️ 8 infos
+╰────────────────`,
+        threadID
       );
     }
 
-    // 🏷️ NAME
-    if (choice === "1") {
-      return message.reply("🏷️ Envoie le nouveau nom 💖", (err, msg) => {
-        global.GoatBot.onReply.set(msg.messageID, {
-          commandName: "box_name",
-          author: event.senderID,
-          threadID: event.threadID
-        });
-      });
+    // 1 NAME
+    if (sub === "1") {
+      const newName = args.slice(1).join(" ");
+      if (!newName) return api.sendMessage("Utilise: box 1 [nom]", threadID);
+      await api.setTitle(newName, threadID);
+      return api.sendMessage("Nom modifié ✅", threadID);
     }
 
-    // 🖼️ PHOTO
-    if (choice === "2") {
-      return message.reply("🖼️ Envoie une image 💖", (err, msg) => {
-        global.GoatBot.onReply.set(msg.messageID, {
-          commandName: "box_photo",
-          author: event.senderID,
-          threadID: event.threadID
-        });
-      });
+    // 2 PHOTO (reply image)
+    if (sub === "2") {
+      if (!event.messageReply?.attachments?.[0])
+        return api.sendMessage("Répond à une image avec: box 2", threadID);
+
+      const img = event.messageReply.attachments[0].url;
+      await api.changeGroupImage(img, threadID);
+      return api.sendMessage("Photo modifiée ✅", threadID);
     }
 
-    // 😀 EMOJI
-    if (choice === "3") {
-      return message.reply("😀 Envoie un emoji 💖", (err, msg) => {
-        global.GoatBot.onReply.set(msg.messageID, {
-          commandName: "box_emoji",
-          author: event.senderID,
-          threadID: event.threadID
-        });
-      });
+    // 3 EMOJI
+    if (sub === "3") {
+      const emoji = args[1];
+      if (!emoji) return api.sendMessage("box 3 🔥", threadID);
+      await api.changeThreadEmoji(emoji, threadID);
+      return api.sendMessage("Emoji changé ✅", threadID);
     }
-  },
 
-  // 💖 EXTRA HANDLERS (IMPORTANT)
-  onReplyBox_name: async function ({ api, event }) {
-    await api.setTitle(event.body, event.threadID);
-    api.sendMessage("🏷️ Nom changé 💖", event.threadID);
-  },
+    // 4 NICKNAME
+    if (sub === "4") {
+      const nick = args.slice(1).join(" ");
+      if (!nick) return api.sendMessage("box 4 pseudo", threadID);
+      await api.changeNickname(nick, senderID, threadID);
+      return api.sendMessage("Pseudo modifié ✅", threadID);
+    }
 
-  onReplyBox_photo: async function ({ api, event }) {
-    const img = event.attachments?.[0]?.url;
-    if (!img) return api.sendMessage("❌ Envoie une image", event.threadID);
+    // 5 APPROVAL
+    if (sub === "5") {
+      if (!botIsAdmin)
+        return api.sendMessage("Je dois être admin pour faire ça ❌", threadID);
 
-    const res = await api.changeGroupImage(img, event.threadID);
-    api.sendMessage("🖼️ Photo changée 💖", event.threadID);
-  },
+      const newMode = !info.approvalMode;
+      await api.setApprovalMode(newMode, threadID);
+      return api.sendMessage(
+        `Approval ${newMode ? "ON 🔒" : "OFF 🔓"}`,
+        threadID
+      );
+    }
 
-  onReplyBox_emoji: async function ({ api, event }) {
-    await api.changeThreadEmoji(event.body, event.threadID);
-    api.sendMessage("😀 Emoji changé 💖", event.threadID);
+    // 6 UID
+    if (sub === "6") {
+      return api.sendMessage(`UID groupe: ${threadID}`, threadID);
+    }
+
+    // 7 MEMBERS
+    if (sub === "7") {
+      let list = "👥 Membres:\n";
+      info.participantIDs.forEach(id => {
+        list += `• ${id}\n`;
+      });
+      return api.sendMessage(list, threadID);
+    }
+
+    // 8 INFO
+    if (sub === "8") {
+      return api.sendMessage(
+`📊 INFO
+Nom: ${name}
+ID: ${threadID}
+Membres: ${members}`,
+        threadID
+      );
+    }
+
+    return api.sendMessage("Commande 1-8 uniquement", threadID);
+
+  } catch (e) {
+    console.log(e);
+    return api.sendMessage("Erreur box ❌", threadID);
   }
 };
