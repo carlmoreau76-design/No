@@ -336,11 +336,34 @@ module.exports = {
       bank.robCooldown = now();
 
       if (!success) {
-        const fine = Math.floor(bank.wallet * 0.1);
-        bank.wallet -= fine;
+  const fs = require("fs-extra");
+  const axios = require("axios");
+  const path = require("path");
 
-        await usersData.set(senderID, userData);
-        return message.reply(`🚨 FAIL\n💸 -${format(fine)}`);
+  const fine = Math.floor(bank.wallet * 0.1);
+  bank.wallet -= fine;
+
+  const imgPath = path.join(__dirname, "cache", `caught_${senderID}.jpg`);
+
+  const response = await axios({
+    url: "https://files.catbox.moe/q8lbwm.jpg",
+    method: "GET",
+    responseType: "stream"
+  });
+
+  await new Promise((resolve, reject) => {
+    const writer = fs.createWriteStream(imgPath);
+    response.data.pipe(writer);
+    writer.on("finish", resolve);
+    writer.on("error", reject);
+  });
+
+  await usersData.set(senderID, userData);
+
+  return message.reply({
+    body: `🚨 TU ES GRILLÉ 😌\n\n👮 Et oui le mal finit toujours par perdre 😌.\n💸 Amende : ${format(fine)}\n💰 Portefeuille : ${format(bank.wallet)}`,
+    attachment: fs.createReadStream(imgPath)
+  }, () => fs.unlinkSync(imgPath));
       }
 
       const stolen = Math.floor(targetMoney * (Math.random() * 0.3 + 0.1));
