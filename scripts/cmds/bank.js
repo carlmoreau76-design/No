@@ -196,6 +196,164 @@ module.exports = {
       }
     }
 
-    // 👉 PARTIE 2 CONTINUE ICI
+    // ================= PROPERTY =================
+    if (cmd === "property") {
+      const action = args[1]?.toLowerCase();
+
+      const props = [
+        { name: "Studio", cost: 50000, income: 2000 },
+        { name: "House", cost: 150000, income: 7000 },
+        { name: "Villa", cost: 400000, income: 20000 }
+      ];
+
+      if (action === "buy") {
+        const index = parseInt(args[2]) - 1;
+        if (isNaN(index) || !props[index]) return message.reply("❌ property buy [1-3]");
+
+        const p = props[index];
+        if (bank.wallet < p.cost) return message.reply("❌ not enough money");
+
+        bank.wallet -= p.cost;
+        bank.properties.push(p);
+
+        await usersData.set(senderID, userData);
+        return message.reply(`🏠 Bought ${p.name}`);
+      }
+
+      if (action === "list") {
+        let msg = "🏠 PROPERTIES\n━━━━━━━━━━\n";
+        props.forEach((p, i) => {
+          msg += `${i + 1}. ${p.name} - ${format(p.cost)}\n`;
+        });
+
+        return message.reply(msg);
+      }
+
+      if (action === "collect") {
+        const income = bank.properties.reduce((a, b) => a + b.income, 0);
+        bank.wallet += income;
+
+        await usersData.set(senderID, userData);
+        return message.reply(`💰 +${format(income)}`);
+      }
+    }
+
+    // ================= GAMBLE =================
+    if (cmd === "gamble" || cmd === "slots" || cmd === "blackjack" || cmd === "roulette") {
+      const game = cmd === "gamble" ? args[1] : cmd;
+      const amount = parseInt(args[2] || args[1]);
+
+      if (!amount || amount <= 0) return message.reply("❌ invalid bet");
+      if (amount > bank.wallet) return message.reply("❌ not enough money");
+
+      let win = false;
+      let winAmount = 0;
+      let text = "";
+
+      // -------- SLOTS --------
+      if (game === "slots") {
+        const s = ["🍒", "🍋", "💎"];
+        const r = [s[rand(0, 2)], s[rand(0, 2)], s[rand(0, 2)]];
+
+        win = r[0] === r[1] && r[1] === r[2];
+        winAmount = win ? amount * 3 : 0;
+
+        text = `🎰 SLOTS\n${r.join(" | ")}\n${win ? "WIN" : "LOSE"}`;
+      }
+
+      // -------- BLACKJACK --------
+      if (game === "blackjack") {
+        const player = rand(15, 22);
+        const dealer = rand(15, 22);
+
+        win = player <= 21 && player > dealer;
+        winAmount = win ? amount * 2 : 0;
+
+        text = `♠️ BJ\nYou: ${player}\nDealer: ${dealer}\n${win ? "WIN" : "LOSE"}`;
+      }
+
+      // -------- ROULETTE --------
+      if (game === "roulette") {
+        const choice = args[3]?.toLowerCase();
+        if (!["red", "black"].includes(choice))
+          return message.reply("❌ roulette [amount] [red/black]");
+
+        const result = Math.random() < 0.5 ? "red" : "black";
+
+        win = result === choice;
+        winAmount = win ? amount * 2 : 0;
+
+        text = `🎡 ROULETTE\nResult: ${result}\n${win ? "WIN" : "LOSE"}`;
+      }
+
+      bank.wallet += winAmount - amount;
+
+      await usersData.set(senderID, userData);
+      return message.reply(`${text}\n💰 ${win ? "+" : "-"}${format(amount)}`);
+    }
+
+    // ================= LEADERBOARD =================
+    if (cmd === "leaderboard" || cmd === "lb") {
+      const all = await usersData.getAll();
+
+      const top = Object.entries(all)
+        .map(([id, data]) => ({
+          id,
+          net: (data.bank?.wallet || 0) + (data.bank?.balance || 0)
+        }))
+        .sort((a, b) => b.net - a.net)
+        .slice(0, 10);
+
+      let msg = "🏆 LEADERBOARD\n━━━━━━━━━━\n";
+
+      top.forEach((u, i) => {
+        msg += `${i + 1}. ${u.id} - ${format(u.net)}\n`;
+      });
+
+      return message.reply(msg);
+    }
+
+    // ================= ROB =================
+    if (cmd === "rob") {
+      const targetID = args[1];
+
+      if (!targetID) return message.reply("❌ rob [uid]");
+      if (targetID === senderID) return message.reply("❌ no self rob");
+
+      if (now() - bank.robCooldown < 3600) {
+        const left = 3600 - (now() - bank.robCooldown);
+        return message.reply(`⏳ cooldown ${Math.floor(left / 60)}m`);
+      }
+
+      let target = await usersData.get(targetID);
+      if (!target?.bank) return message.reply("❌ target has no bank");
+
+      const targetMoney = target.bank.wallet || 0;
+      if (targetMoney < 500) return message.reply("❌ too poor");
+
+      const success = Math.random() < 0.45;
+
+      bank.robCooldown = now();
+
+      if (!success) {
+        const fine = Math.floor(bank.wallet * 0.1);
+        bank.wallet -= fine;
+
+        await usersData.set(senderID, userData);
+        return message.reply(`🚨 FAIL\n💸 -${format(fine)}`);
+      }
+
+      const stolen = Math.floor(targetMoney * (Math.random() * 0.3 + 0.1));
+
+      target.bank.wallet -= stolen;
+      bank.wallet += stolen;
+
+      await usersData.set(senderID, userData);
+      await usersData.set(targetID, target);
+
+      return message.reply(`🔫 SUCCESS\n💰 +${format(stolen)}`);
+    }
+
+    return message.reply("🏦 bank: balance / work / daily / deposit / withdraw / transfer / invest / crypto / business / property / gamble / leaderboard / rob");
   }
 };
