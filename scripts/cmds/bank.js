@@ -340,36 +340,36 @@ module.exports = {
       bank.robCooldown = now();
 
       if (!success) {
-const fine = Math.floor(bank.wallet * 0.1);
-bank.wallet -= fine;
+  const fine = Math.floor(bank.wallet * 0.1);
+  bank.wallet -= fine;
 
-fs.ensureDirSync(path.join(__dirname, "cache"));
+  fs.ensureDirSync(path.join(__dirname, "cache"));
 
-const imgPath = path.join(__dirname, "cache", "caught_${senderID}.jpg");
+  const imgPath = path.join(__dirname, "cache", `caught_${senderID}.jpg`);
 
-const response = await axios({
-url: "https://files.catbox.moe/q8lbwm.jpg",
-method: "GET",
-responseType: "stream"
-});
+  const response = await axios({
+    url: "https://files.catbox.moe/q8lbwm.jpg",
+    method: "GET",
+    responseType: "stream"
+  });
 
-await new Promise((resolve, reject) => {
-const writer = fs.createWriteStream(imgPath);
-response.data.pipe(writer);
-writer.on("finish", resolve);
-writer.on("error", reject);
-});
+  await new Promise((resolve, reject) => {
+    const writer = fs.createWriteStream(imgPath);
+    response.data.pipe(writer);
+    writer.on("finish", resolve);
+    writer.on("error", reject);
+  });
 
-await usersData.set(senderID, userData);
+  await usersData.set(senderID, userData);
 
-return message.reply({
-body: `🚨 TU ES GRILLÉ 😌
+  return message.reply({
+    body: `🚨 TU ES GRILLÉ 😌
 
 👮 Et oui le mal finit toujours par perdre 😌.
 💸 Amende : ${format(fine)}
 💰 Portefeuille : ${format(bank.wallet)}`,
-attachment: fs.createReadStream(imgPath)
-}, () => fs.unlinkSync(imgPath));
+    attachment: fs.createReadStream(imgPath)
+  }, () => fs.unlinkSync(imgPath));
       }
   await usersData.set(senderID, userData);
 
