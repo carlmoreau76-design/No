@@ -477,3 +477,93 @@ module.exports = {
                     return api.sendMessage(`ðŸ’Ž SuccÃ¨s ! Vous venez d'acquÃ©rir votre ${shopItems[choice].name}. Votre statut social augmente !`, threadID, messageID);
                 }
                         }
+
+                case "vault": {
+                const action = args[1]?.toLowerCase();
+                const amount = parseInt(args[2]);
+
+                if (!action) {
+                    return api.sendMessage(`ðŸ”’ [ COFFRE-FORT DE HAUTE SÃ‰CURITÃ‰ ] ðŸ”’\n` +
+                        `Le coffre protÃ¨ge votre argent des raids et des vols.\n` +
+                        `â€¢ Contenu actuel : ${eco.vault} $\n` +
+                        `â€¢ Assurance vol : ${eco.vaultInsurance ? "ACTIVE ðŸ›¡ï¸" : "INACTIVE âš ï¸ (CoÃ»t: 5,000 $)"}\n\n` +
+                        `Commandes :\n` +
+                        `- \`bank vault store [montant]\` : Mettre Ã  l'abri\n` +
+                        `- \`bank vault take [montant]\` : Retirer du coffre\n` +
+                        `- \`bank vault insurance\` : Souscrire Ã  l'assurance`, threadID, messageID);
+                }
+
+                if (action === "store") {
+                    if (isNaN(amount) || amount <= 0 || eco.cash < amount) return api.sendMessage("âŒ Montant en liquide invalide ou insuffisant.", threadID, messageID);
+                    eco.cash -= amount;
+                    eco.vault += amount;
+                    await usersData.set(senderID, userData);
+                    return api.sendMessage(`ðŸ”’ ${amount} $ ont Ã©tÃ© cadenassÃ©s dans votre coffre personnel.`, threadID, messageID);
+                }
+
+                if (action === "take") {
+                    if (isNaN(amount) || amount <= 0 || eco.vault < amount) return api.sendMessage("âŒ Le coffre ne contient pas cette somme.", threadID, messageID);
+                    eco.vault -= amount;
+                    eco.cash += amount;
+                    await usersData.set(senderID, userData);
+                    return api.sendMessage(`ðŸ”“ Retrait sÃ©curisÃ© : Vous reprenez ${amount} $ en liquide.`, threadID, messageID);
+                }
+
+                if (action === "insurance") {
+                    if (eco.vaultInsurance) return api.sendMessage("ðŸ›¡ï¸ Votre coffre est dÃ©jÃ  sous couverture d'assurance.", threadID, messageID);
+                    if (eco.cash < 5000) return api.sendMessage("âŒ L'activation de la police d'assurance coÃ»te 5 000 $ en cash.", threadID, messageID);
+
+                    eco.cash -= 5000;
+                    eco.vaultInsurance = true;
+                    await usersData.set(senderID, userData);
+                    return api.sendMessage("ðŸ›¡ï¸ Contrat signÃ©. Votre coffre est dÃ©sormais immunisÃ© contre les pertes collatÃ©rales.", threadID, messageID);
+                }
+            }
+
+            case "history": {
+                if (!eco.history || eco.history.length === 0) return api.sendMessage("ðŸ“‹ Aucun relevÃ© bancaire rÃ©cent trouvÃ©.", threadID, messageID);
+                
+                let histText = "ðŸ“‹ [ 10 DERNIÃˆRES TRANSACTIONS ] ðŸ“‹\n\n";
+                eco.history.forEach((t, i) => {
+                    histText += `${i + 1}. [${t.date}] ${t.type} : ${t.amount > 0 ? "+" : ""}${t.amount} $ (${t.details})\n`;
+                });
+                return api.sendMessage(histText, threadID, messageID);
+            }
+
+            case "achievements": {
+                const totalInvest = (eco.investments.stocks || 0) + (eco.investments.crypto || 0) + (eco.investments.bonds || 0);
+                let achText = "ðŸ… [ DISTINCTIONS ET RÃ‰COMPENSES ] ðŸ…\n\n" +
+                    `ðŸ’¼ Travailleur Assidu : ${eco.achievements.workCount || 0} sessions validÃ©es.\n` +
+                    `ðŸ¥· Hors-la-loi recherchÃ© : ${eco.achievements.successfulRobs || 0} cambriolages rÃ©ussis.\n` +
+                    `ðŸ“Š Portefeuille d'actifs : ${totalInvest} unitÃ©s financiÃ¨res possÃ©dÃ©es.\n` +
+                    `ðŸŽï¸ Garage & Objets d'Ã©lite : ${[...(eco.inventory.vehicles || []), ...(eco.inventory.luxury || [])].length} items possÃ©dÃ©s.`;
+                return api.sendMessage(achText, threadID, messageID);
+            }
+
+            default: {
+                return api.sendMessage(
+                    "âš™ï¸ â”€â”€ [ CONFIGURATION BANCAIRE ] â”€â”€ âš™ï¸\n\n" +
+                    "Veuillez entrer l'une des sous-commandes suivantes :\n" +
+                    "ðŸ”¹ `balance` : Solde & Profil financier\n" +
+                    "ðŸ”¹ `deposit [montant/all]` : DÃ©poser du cash en banque\n" +
+                    "ðŸ”¹ `withdraw [montant/all]` : Retirer l'argent de la banque\n" +
+                    "ðŸ”¹ `transfer [ID] [montant]` : Faire un virement bancaire\n" +
+                    "ðŸ”¹ `daily` : RÃ©cupÃ©rer son salaire quotidien\n" +
+                    "ðŸ”¹ `work` : Travailler pour gÃ©nÃ©rer du cash\n" +
+                    "ðŸ”¹ `loan request [montant]` : Demander un emprunt bancaire\n" +
+                    "ðŸ”¹ `repay [montant/all]` : Rembourser sa dette\n" +
+                    "ðŸ”¹ `rob [ID]` : Essayer de dÃ©valiser un utilisateur\n" +
+                    "ðŸ”¹ `invest` : Ouvrir le panneau de la bourse (Crypto, Actions)\n" +
+                    "ðŸ”¹ `business` : Fonder ou dÃ©velopper sa propre entreprise\n" +
+                    "ðŸ”¹ `property` : Acheter des biens immobiliers locatifs\n" +
+                    "ðŸ”¹ `shop` : Acheter des vÃ©hicules de sport ou objets de luxe\n" +
+                    "ðŸ”¹ `vault` : DÃ©poser de l'argent dans le coffre blindÃ© sÃ©curisÃ©\n" +
+                    "ðŸ”¹ `history` : Consulter son relevÃ© bancaire de transactions\n" +
+                    "ðŸ”¹ `achievements` : Voir ses succÃ¨s et accomplissements\n" +
+                    "ðŸ”¹ `leaderboard` : Classement des plus grandes fortunes",
+                    threadID, messageID
+                );
+            }
+        }
+    }
+};
