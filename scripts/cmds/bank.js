@@ -96,3 +96,80 @@ module.exports = {
                 await usersData.set(senderID, userData);
                 return api.sendMessage(`âœ… Vous avez dÃ©posÃ© ${amount} $ sur votre compte bancaire.`, threadID, messageID);
             }
+
+            case "withdraw":
+            case "wd": {
+                const amountInput = args[1];
+                if (!amountInput) return api.sendMessage("âš ï¸ SpÃ©cifiez un montant ou 'all'.", threadID, messageID);
+                
+                let amount = amountInput === "all" ? eco.bank : parseInt(amountInput);
+                if (isNaN(amount) || amount <= 0) return api.sendMessage("âŒ Montant invalide.", threadID, messageID);
+                if (eco.bank < amount) return api.sendMessage("âŒ Solde bancaire insuffisant.", threadID, messageID);
+
+                eco.bank -= amount;
+                eco.cash += amount;
+                addHistory("Retrait", amount, "Retrait de la banque");
+                await usersData.set(senderID, userData);
+                return api.sendMessage(`âœ… Vous avez retirÃ© ${amount} $ de votre compte bancaire.`, threadID, messageID);
+            }
+
+            case "transfer": {
+                const targetID = args[1];
+                const amount = parseInt(args[2]);
+                if (!targetID || isNaN(amount) || amount <= 0) {
+                    return api.sendMessage("âš ï¸ Utilisation: bank transfer [ID_Utilisateur] [Montant]", threadID, messageID);
+                }
+                if (eco.bank < amount) return api.sendMessage("âŒ Solde bancaire insuffisant pour ce virement.", threadID, messageID);
+
+                let targetData = await usersData.get(targetID);
+                if (!targetData) return api.sendMessage("âŒ Utilisateur cible introuvable.", threadID, messageID);
+                if (!targetData.bankSystem) return api.sendMessage("âŒ La cible n'a pas encore ouvert de compte bancaire.", threadID, messageID);
+
+                eco.bank -= amount;
+                targetData.bankSystem.bank += amount;
+
+                addHistory("Transfert", -amount, `Vers l'utilisateur ${targetID}`);
+                targetData.bankSystem.history.unshift({
+                    date: new Date().toISOString().split('T')[0],
+                    type: "Transfert",
+                    amount: amount,
+                    details: `ReÃ§u de l'utilisateur ${senderID}`
+                });
+
+                await usersData.set(senderID, userData);
+                await usersData.set(targetID, targetData);
+                return api.sendMessage(`âœ… Virement rÃ©ussi de ${amount} $ vers l'utilisateur ${targetID}.`, threadID, messageID);
+            }
+
+            case "daily": {
+                const now = Date.now();
+                if (now - eco.lastDaily < 86400000) {
+                    const remaining = 86400000 - (now - eco.lastDaily);
+                    const hours = Math.floor(remaining / 3600000);
+                    return api.sendMessage(`â³ Vous avez dÃ©jÃ  rÃ©cupÃ©rÃ© votre bonus quotidien. Revenez dans ${hours}h.`, threadID, messageID);
+                }
+                const dailyReward = 1500;
+                eco.cash += dailyReward;
+                eco.lastDaily = now;
+                addHistory("Daily", dailyReward, "RÃ©compense quotidienne");
+                await usersData.set(senderID, userData);
+                return api.sendMessage(`ðŸŽ RÃ©compense quotidienne rÃ©cupÃ©rÃ©e ! Vous gagnez ${dailyReward} $.`, threadID, messageID);
+            }
+
+            case "work": {
+                const now = Date.now();
+                if (now - eco.lastWork < 1800000) { // 30 mins cooldown
+                    return api.sendMessage("â³ Vous Ãªtes fatiguÃ©. Attendez 30 minutes entre chaque session de travail.", threadID, messageID);
+                }
+                const salary = Math.floor(Math.random() * (600 - 250 + 1)) + 250;
+                eco.cash += salary;
+                eco.lastWork = now;
+                eco.achievements.workCount = (eco.achievements.workCount || 0) + 1;
+                
+                // AmÃ©lioration du score de crÃ©dit via le travail rÃ©gulier
+                if (eco.creditScore < 850) eco.creditScore = Math.min(850, eco.creditScore + 2);
+
+                addHistory("Travail", salary, "Salaire reÃ§u");
+                await usersData.set(senderID, userData);
+                return api.sendMessage(`ðŸ› ï¸ Vous avez travaillÃ© dur et touchÃ© un salaire de ${salary} $. Votre score de crÃ©dit s'amÃ©liore lÃ©gÃ¨rement.`, threadID, messageID);
+            }
