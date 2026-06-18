@@ -14,7 +14,7 @@ module.exports = {
     description: {
       en: "🌸 Manage developers (owner only add/remove)"
     },
-    category: "🌸 angel-system",
+    category: "owner",
     guide: {
       en:
         "💖 developer add <uid/@tag>\n" +
