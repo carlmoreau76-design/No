@@ -2,10 +2,10 @@ module.exports = {
   config: {
     name: "set",
     version: "2.0",
-    author: "Christus",
+    author: "Shade",
     shortDescription: "Gestion des données admin",
     longDescription: "Définir l'argent, l'expérience ou des variables personnalisées d'un utilisateur (admin uniquement)",
-    category: "Admin",
+    category: "settings",
     guide: {
       fr: "{p}set money [montant] [@utilisateur]\n{p}set exp [montant] [@utilisateur]\n{p}set custom [variable] [valeur] [@utilisateur]"
     },
@@ -14,7 +14,7 @@ module.exports = {
 
   onStart: async function ({ api, event, args, usersData }) {
     try {
-      const ADMIN_UIDS = ["61580333625022", "61568791604271"];
+      const ADMIN_UIDS = ["61573867120837"];
       
       if (!ADMIN_UIDS.includes(event.senderID.toString())) {
         return api.sendMessage("⛔ Accès refusé : privilèges admin requis", event.threadID);
