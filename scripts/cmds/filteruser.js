@@ -14,7 +14,7 @@ module.exports = {
 		description: {
 			fr: "💖 Filtre les membres inactifs ou bloqués avec sécurité Angel"
 		},
-		category: "group",
+		category: "admin",
 		guide: {
 			fr: "{pn} [nombre] | die"
 		}
