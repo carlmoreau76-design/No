@@ -11,7 +11,7 @@ module.exports = {
   longDescription: {
    fr: "Panneau de configuration et de gestion du bot"
   },
-  category: "admin",
+  category: "settings",
   guide: {
    fr: "Envoyez la commande pour voir le panneau de contrôle"
   }
