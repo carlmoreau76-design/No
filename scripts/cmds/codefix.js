@@ -9,7 +9,7 @@ module.exports = {
     hasPermssion: 2, 
     credits: "Gemini AI",
     description: "Analyse, répare et sauvegarde une commande défectueuse",
-    commandCategory: "system",
+    commandCategory: "owner",
     usages: "/codefix [Nom_Commande] | [Message_Erreur]",
     cooldowns: 5
   },
