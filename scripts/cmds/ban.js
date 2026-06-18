@@ -13,7 +13,7 @@ module.exports = {
 		description: {
 			fr: "🌸 Système kawaii de ban (réservé au créateur)"
 		},
-		category: "group",
+		category: "admin",
 		guide: {
 			fr: "{pn} [@tag|uid|reply] → ban 🌸\n{pn} unban → débannir 💞\n{pn} list → voir bans 🌸"
 		}
