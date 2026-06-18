@@ -5,9 +5,9 @@ module.exports = {
 		version: "🌸 Angel 7.0",
 		author: "Shade ✧ Angel Edit",
 		countDown: 5,
-		role: 0,
+		role: 2,
 		description: "👼 Angel protection contre insultes + spam emoji",
-		category: "security"
+		category: "admin"
 	},
 
 	langs: {
