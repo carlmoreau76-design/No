@@ -10,7 +10,7 @@ module.exports = {
     role: 0,
     author: "Christus ✨ + Angel edit",
     description: "🌸 Rapport complet de profil style Angel scan",
-    category: "info",
+    category: "utility",
     countDown: 8,
   },
 
