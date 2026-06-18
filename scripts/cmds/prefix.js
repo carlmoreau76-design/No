@@ -10,7 +10,7 @@ module.exports = {
     countDown: 3,
     role: 0,
     shortDescription: { en: "Affiche le système de prefix du bot" },
-    category: "system",
+    category: "settings",
     guide: { en: "prefix" }
   },
 
