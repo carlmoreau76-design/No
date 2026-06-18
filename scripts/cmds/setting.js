@@ -15,7 +15,7 @@ module.exports = {
   longDescription: {
    fr: "🌸 Interface kawaii de contrôle du bot (version angel)"
   },
-  category: "admin",
+  category: "settings",
   guide: {
    fr: "Tape la commande pour ouvrir le panneau 🌸"
   }
