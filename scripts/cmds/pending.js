@@ -72,7 +72,7 @@ module.exports = {
     countDown: 5,
     role: 2, // Réservé au Owner/Admins du bot
     shortDescription: { en: "Gère les groupes en attente d'approbation" },
-    category: "owner",
+    category: "admin",
     guide: { en: "pending" }
   },
 
