@@ -201,7 +201,7 @@ ${text}
 
     reply = font(reply);
 
-    const vibes = [" 😹", " 🔥", " 👀", " 🛐", ""];
+    const vibes = [" 😹", " 🔥", " 👀", " 🛐", " 😌"];
     const extra = vibes[Math.floor(Math.random() * vibes.length)];
 
     let finalMsg = reply + extra + "\n\n𝗞𝗮𝗶 😹";
@@ -237,7 +237,7 @@ module.exports = {
     version: 'KAI-3.0',
     author: 'Shade',
     role: 0,
-    category: '🤖 ai'
+    category: 'ai'
   },
 
   // 🌸 PREFIX
