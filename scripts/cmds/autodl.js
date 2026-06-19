@@ -28,7 +28,7 @@ module.exports = {
     shortDescription: "🌸 Angel Auto Media Downloader",
     longDescription:
       "👼 Télécharge automatiquement des médias depuis les plateformes supportées",
-    category: "utility",
+    category: "download",
     guide: {
       fr: "🌸 Envoie simplement un lien https:// et le bot te répondra automatiquement"
     }
