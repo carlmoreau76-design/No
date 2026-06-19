@@ -18,7 +18,7 @@ function formatCategory(cat) {
     economy: "💰 ÉCONOMIE",
     ai: "🤖 IA",
     angelsys: "⭐ ANGEL SYSTEM",
-    images: "🎨 IMAGES",
+    image: "🎨 IMAGES",
     media: "🎵 MÉDIA",
     game: "🎮 GAMES",
     utility: "📜 UTILITAIRES",
