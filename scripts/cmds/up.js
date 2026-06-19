@@ -12,7 +12,7 @@ module.exports = {
     longDescription: {
       en: "uptime information"
     },
-    category: "system",
+    category: "utility",
     guide: { en: "{p}uptime" }
   },
 
