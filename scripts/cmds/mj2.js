@@ -20,7 +20,7 @@ module.exports = {
     longDescription: {
       ar: "Créer et agrandir des images style MidJourney via une interface rapide"
     },
-    category: "IA",
+    category: "image",
     guide: {
       en: "{pn} <description> — pour générer une image\nRéponds par U1-U4 pour agrandir un résultat"
     }
