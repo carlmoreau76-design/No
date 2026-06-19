@@ -17,7 +17,7 @@ module.exports = {
     version: "7.0 ultra final",
     author: "Shade × ChatGPT",
     role: 0,
-    category: "game"
+    category: "economy"
   },
 
   onStart: async function ({
