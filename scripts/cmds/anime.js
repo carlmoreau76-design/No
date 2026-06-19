@@ -7,7 +7,7 @@ module.exports = {
     version: "2.0 angel",
     author: "Shade ✨",
     role: 0,
-    category: "anime",
+    category: "game",
     countDown: 5,
     longDescription: "Recherche anime + détails + image après sélection",
     guide: {
