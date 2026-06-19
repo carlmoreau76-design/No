@@ -12,7 +12,7 @@ module.exports = {
     description: {
       fr: "💖 Génération IA FluxPro style Angel kawaii"
     },
-    category: "🌸 générateur d'images",
+    category: "image",
     guide: {
       fr: "{pn} <prompt>"
     },
