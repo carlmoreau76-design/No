@@ -12,7 +12,7 @@ module.exports = {
     author: "Christus ✨ | Angel Edit by Shade",
     version: "1.0 Angel",
     role: 0,
-    category: "💘 angel-love",
+    category: "game",
     shortDescription: {
       fr: "🌸 Trouve ton duo kawaii du destin 💞"
     },
