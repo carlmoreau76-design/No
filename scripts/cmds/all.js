@@ -9,7 +9,7 @@ module.exports = {
 			fr: "👼 Tag tous les membres avec style Angel",
 			en: "👼 Tag all members with Angel style"
 		},
-		category: "box chat",
+		category: "utility",
 		guide: {
 			fr: "{pn} [message]"
 		}
