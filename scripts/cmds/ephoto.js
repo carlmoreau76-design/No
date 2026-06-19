@@ -33,7 +33,7 @@ module.exports = {
     role: 0,
     shortDescription: "💖 angel ephoto generator",
     longDescription: "🌸 create magical kawaii text effects",
-    category: "🌸 image",
+    category: "image",
     guide: {
       fr: "{pn} <texte> - <id>\n{pn} list"
     }
