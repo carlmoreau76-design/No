@@ -8,7 +8,7 @@ module.exports = {
 		role: 2,
 		shortDescription: "send you pic of pussy",
 		longDescription: "sends u pic of girls pussy",
-		category: "18+",
+		category: "other",
 		guide: "{pn}"
 	},
 
