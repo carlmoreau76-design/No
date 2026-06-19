@@ -8,7 +8,7 @@ version: "1.1",
 author: "Shade ✨ Angel Edition",
 countDown: 5,
 role: 0,
-category: "make",
+category: "utility",
 shortDescription: "🌸 Convertir du texte en polices kawaii stylées",
 longDescription: "💖 Utilisez /font <id> <texte> ou /font list",
 guide: "{pn} list | {pn} 16 Shade"
