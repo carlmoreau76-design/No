@@ -13,7 +13,7 @@ function getDomain(url) {
 
 module.exports = {
 	config: {
-		name: "event",
+		name: "settings",
 		version: "1.9 angel kawaii",
 		author: "NTKhang | Angel Edit ✨",
 		countDown: 5,
