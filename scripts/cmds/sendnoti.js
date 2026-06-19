@@ -6,12 +6,12 @@ module.exports = {
 		version: "1.5",
 		author: "NTKhang",
 		countDown: 5,
-		role: 0,
+		role: 2,
 		description: {
 			vi: "Tạo và gửi thông báo đến các nhóm do bạn quản lý",
 			en: "Create and send notification to groups that you manage"
 		},
-		category: "box chat",
+		category: "settings",
 		guide: {
 			vi: "   {pn} create <groupName>: Tạo một group noti (notification) mới với tên gọi <groupName>"
 				+ "\n   Ví dụ:\n    {pn} create TEAM1"
