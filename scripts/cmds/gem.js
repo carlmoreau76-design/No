@@ -46,7 +46,7 @@ module.exports = {
     version: "4.0 PRO ULTRA",
     author: "Shade ✨ Angel Edit",
     role: 0,
-    category: "image-edit"
+    category: "ai"
   },
 
   onStart: async function ({ message, event, args, api }) {
