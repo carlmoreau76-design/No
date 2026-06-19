@@ -3,11 +3,11 @@ const axios = require('axios');
 module.exports = {
   config: {
     name: "codegen",
-    version: "1.1.1",
+    version: "1.2.0",
     author: "Shade",
     countDown: 5,
     role: 0, 
-    shortDescription: { en: "Génère le code d'une commande via OpenAI" },
+    shortDescription: { en: "Génère le code d'une commande via une IA gratuite" },
     category: "utility",
     guide: { en: "codegen [description]" }
   },
@@ -18,7 +18,7 @@ module.exports = {
 
     if (!description) {
       return message.reply(
-`🤖 **AI Code Generator**
+`🤖 **AI Code Generator (Version Gratuite)**
 
 Décrivez la commande que vous souhaitez créer pour que l'IA génère le code de base.
 
@@ -34,10 +34,10 @@ Décrivez la commande que vous souhaitez créer pour que l'IA génère le code d
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      return message.reply("❌ Erreur : La variable `OPENAI_API_KEY` n'est pas configurée dans votre fichier d'environnement (.env).");
+      return message.reply("❌ Erreur : La variable `OPENAI_API_KEY` (votre clé OpenRouter) n'est pas configurée dans votre fichier d'environnement (.env).");
     }
 
-    await message.reply("🤖 Analyse de la demande et génération du code JavaScript...");
+    await message.reply("🤖 Analyse de la demande et génération du code JavaScript via l'IA gratuite...");
 
     try {
       const prompt = `
@@ -67,27 +67,29 @@ module.exports = {
 - The command name must be strictly lowercase.
 `;
 
+      // Requête configurée pour OpenRouter avec un modèle gratuit
       const res = await axios.post(
-        "[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)",
+        "https://openrouter.ai/api/v1/chat/completions",
         {
-          model: "gpt-4o-mini",
+          model: "meta-llama/llama-3.3-70b-instruct:free", // Modèle performant et totalement gratuit
           messages: [
             { role: "user", content: prompt }
           ],
-          temperature: 0.3, 
-          max_tokens: 1500
+          temperature: 0.3
         },
         {
           headers: {
             "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/GoatBot", // Requis par OpenRouter
+            "X-Title": "GoatBot Code Generator"
           }
         }
       );
 
       let code = res.data?.choices?.[0]?.message?.content || "";
 
-      // Nettoyage de sécurité corrigé (sans l'indicateur /e erroné)
+      // Nettoyage des balises markdown si l'IA en génère
       code = code
         .replace(/^```javascript/i, "")
         .replace(/^```js/i, "")
@@ -116,7 +118,7 @@ ${code}
       console.error("CODEGEN ERROR:", err?.response?.data || err.message);
       
       const errorDetails = err?.response?.data?.error?.message || err.message;
-      return message.reply(`❌ Erreur API OpenAI : ${errorDetails}\nVérifiez la validité de votre clé ou vos crédits.`);
+      return message.reply(`❌ Erreur API OpenRouter : ${errorDetails}\nVérifiez la configuration de votre clé d'environnement.`);
     }
   }
 };
