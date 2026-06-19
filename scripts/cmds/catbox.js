@@ -10,7 +10,7 @@ module.exports = {
     version: "Angel-2.1",
     author: "Shade ✨ Angel Edition",
     role: 0,
-    category: "utility",
+    category: "download",
     description: "☁️ Upload tes médias sur Catbox et récupère un lien magique ✨",
     guide: {
       fr: "Réponds à une image, vidéo ou audio puis utilise : catbox 🌸"
