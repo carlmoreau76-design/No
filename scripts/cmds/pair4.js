@@ -33,7 +33,7 @@ module.exports = {
     author: "Christus",
     version: "2.0",
     role: 0,
-    category: "love",
+    category: "game",
     shortDescription: { 
       en: "💘 Génère un match amoureux entre toi et un autre membre du groupe" 
     },
