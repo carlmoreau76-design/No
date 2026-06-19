@@ -23,7 +23,7 @@ module.exports = {
     author: "Christus",
     countDown: 10,
     role: 0,
-    category: "jeu",
+    category: "game",
     guide: { fr: "{pn} — Quiz pour deviner le personnage de Windbreaker" }
   },
 
@@ -117,7 +117,7 @@ module.exports = {
 💰 +${rewardCoin} Pièces
 🌟 +${rewardExp} EXP
 
-🔥 Sakura Haruka approuve vos compétences !`);
+🔥 Angel approuve vos compétences !`);
 
       if (global.GoatBot.onReply.has(messageID)) {
         global.GoatBot.onReply.get(messageID).answered = true;
