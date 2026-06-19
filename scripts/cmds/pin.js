@@ -12,7 +12,7 @@ module.exports = {
     role: 0,
     shortDescription: "💖 Pinterest-style image grid viewer PRO",
     longDescription: "🌸 Recherche images via DuckDuckGo stable + grid + selection",
-    category: "générateur d'images",
+    category: "image",
     guide: "{p}pin <recherche> <nombre 1-35>"
   },
 
