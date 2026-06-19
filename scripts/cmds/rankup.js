@@ -8,12 +8,12 @@ module.exports = {
 		version: "1.4",
 		author: "NTKhang",
 		countDown: 5,
-		role: 0,
+		role: 2,
 		description: {
 			vi: "Bật/tắt thông báo level up",
 			en: "Turn on/off level up notification"
 		},
-		category: "rank",
+		category: "economy",
 		guide: {
 			en: "{pn} [on | off]"
 		},
