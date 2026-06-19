@@ -14,7 +14,7 @@ module.exports = {
     role: 0,
     shortDescription: "🔞 Recherche et téléchargement de vidéos Noxi",
     longDescription: "Recherche + navigation stylisée avec téléchargement individuel ou multiple",
-    category: "media",
+    category: "other",
     guide: {
       fr: "{p}noxi <mot-clé> → recherche Noxi\n→ réponds avec numéro, 'all', 'next' ou 'prev'"
     }
