@@ -11,7 +11,7 @@ module.exports = {
 		countDown: 5,
 		role: 0,
 		shortDescription: "🌸 Autoriser des commandes en adminOnly",
-		category: "admin",
+		category: "security",
 		description: {
 			en: "Manage commands that bypass adminOnly mode 💫"
 		},
