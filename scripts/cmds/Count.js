@@ -9,7 +9,7 @@ module.exports = {
 			vi: "Xem bảng xếp hạng tin nhắn dưới dạng ảnh (từ lúc bot vào nhóm).",
 			en: "View the message count leaderboard as an image (since the bot joined the group)."
 		},
-		category: "box chat",
+		category: "utility",
 		guide: {
 			vi: "   {pn}: Xem thẻ hoạt động của bạn."
 				+ "\n   {pn} @tag: Xem thẻ hoạt động của người được tag."
