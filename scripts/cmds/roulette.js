@@ -6,7 +6,7 @@ module.exports = {
     countDown: 10,
     role: 0,
     description: "🎰 Casino roulette system",
-    category: "game",
+    category: "economy",
     guide: {
       en: "{pn} <bet> <red/black/green/number>"
     }
