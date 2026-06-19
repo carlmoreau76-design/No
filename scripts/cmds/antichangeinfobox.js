@@ -10,7 +10,7 @@ module.exports = {
 		countDown: 5,
 		role: 0,
 		description: "👼🌸 FULL Angel protection (OWNER ONLY)",
-		category: "admin"
+		category: "security"
 	},
 
 	langs: {
