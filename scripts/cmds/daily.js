@@ -8,7 +8,7 @@ module.exports = {
 		countDown: 5,
 		role: 0,
 		description: "Daily reward + bank system + streak + RNG",
-		category: "game"
+		category: "economy"
 	},
 
 	langs: {
