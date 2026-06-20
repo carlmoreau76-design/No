@@ -315,3 +315,109 @@ module.exports = {
                     });
                     return api.sendMessage(boardText, threadID, messageID);
                 }
+
+                    case "rob": {
+                    const targetID = Object.keys(event.mentions)[0];
+                    if (!targetID) return api.sendMessage("❌ Declare asset target via @tag marker.", threadID, messageID);
+                    if (targetID === senderID) return api.sendMessage("❌ Paradox error. Self-expropriation invalid.", threadID, messageID);
+
+                    const cooldown = 3600000; // 1 hr
+                    if (Date.now() - senderProfile.data.cooldowns.rob < cooldown) {
+                        return api.sendMessage("⏳ Security patterns watching. Cooldown vectors active.", threadID, messageID);
+                    }
+
+                    let targetProfile = await getUserProfile(targetID);
+                    if (targetProfile.money < 500) return api.sendMessage("❌ Target profiles carry insignificant wallet structures to warrant exposure.", threadID, messageID);
+
+                    senderProfile.data.cooldowns.rob = Date.now();
+
+                    if (targetProfile.data.bank.insurance) {
+                        targetProfile.data.bank.insurance = false; // Breach burns insurance coverage
+                        await usersData.set(targetID, targetProfile);
+                        await usersData.set(senderID, senderProfile);
+                        return api.sendMessage("🚨 Expropriation aborted! Target's defensive insurance net deflected attack vectors completely.", threadID, messageID);
+                    }
+
+                    const logicChance = Math.random();
+                    if (logicChance > 0.45) { // 45% Success vector
+                        const lootPercent = Math.random() * (0.40 - 0.15) + 0.15;
+                        const seizedAsset = Math.floor(targetProfile.money * lootPercent);
+
+                        targetProfile.money -= seizedAsset;
+                        senderProfile.money += seizedAsset;
+                        senderProfile.data.bank.creditScore = Math.max(300, senderProfile.data.bank.creditScore - 30);
+
+                        await usersData.set(senderID, senderProfile);
+                        await usersData.set(targetID, targetProfile);
+                        return api.sendMessage(`🥷 Operation successful. Intercepted $${seizedAsset.toLocaleString()} from target profile context.`, threadID, messageID);
+                    } else {
+                        const penalty = Math.floor(senderProfile.money * 0.20);
+                        senderProfile.money -= penalty;
+                        senderProfile.data.bank.creditScore = Math.max(300, senderProfile.data.bank.creditScore - 50);
+
+                        await usersData.set(senderID, senderProfile);
+                        return api.sendMessage(`🚨 Operation failure. Caught by regulatory assets. Fined $${penalty.toLocaleString()} and credit score penalized.`, threadID, messageID);
+                    }
+                }
+
+                case "invest": {
+                    const type = args[1]?.toLowerCase();
+                    const amt = parseInt(args[2]);
+
+                    if (!["stocks", "crypto", "bonds"].includes(type) || isNaN(amt) || amt <= 0) {
+                        return api.sendMessage("❌ Formatting Error. Correct structural execution: `bank invest [stocks/crypto/bonds] <amount>`", threadID, messageID);
+                    }
+                    if (senderProfile.money < amt) return api.sendMessage("❌ Processing fail. Wallet structures lacking depth.", threadID, messageID);
+
+                    // Multipliers depending on variance architecture
+                    let yieldRate = 0;
+                    if (type === "stocks") yieldRate = Math.random() * (0.35 - (-0.20)) + (-0.20); // High spread
+                    if (type === "crypto") yieldRate = Math.random() * (0.80 - (-0.50)) + (-0.50); // Extreme spread
+                    if (type === "bonds") yieldRate = Math.random() * (0.08 - 0.02) + 0.02;     // Secure returns
+
+                    const computationResult = Math.floor(amt * (1 + yieldRate));
+                    const delta = computationResult - amt;
+
+                    senderProfile.money -= amt;
+                    senderProfile.money += computationResult;
+
+                    senderProfile.data.bank.history.push({ type: `Investment: ${type}`, amount: delta, time: new Date().toISOString() });
+                    await usersData.set(senderID, senderProfile);
+
+                    if (delta >= 0) {
+                        return api.sendMessage(`📈 Position liquidated. Market indicators shifted upward.\n💵 Result: +$${delta.toLocaleString()} asset gains.`, threadID, messageID);
+                    } else {
+                        return api.sendMessage(`📉 Position liquidated. Market indicators correction materialized.\n💵 Result: -$${Math.abs(delta).toLocaleString()} asset depreciation.`, threadID, messageID);
+                    }
+                }
+
+                case "business": {
+                    const operationalMode = args[1]?.toLowerCase();
+                    const options = [
+                        { identity: "Logistics Hub", price: 25000, yields: 450 },
+                        { identity: "AI Matrix Architecture", price: 100000, yields: 2100 }
+                    ];
+
+                    if (operationalMode === "list") {
+                        let roster = "🏢 【 MARKET ENTERPRISE OPTIONS 】 🏢\n\n";
+                        options.forEach((opt, idx) => {
+                            roster += `${idx + 1}. **${opt.identity}**\n   💰 Setup Cost: $${opt.price.toLocaleString()} | 📊 Yield: $${opt.yields}/hr\n`;
+                        });
+                        return api.sendMessage(roster, threadID, messageID);
+                    }
+
+                    if (operationalMode === "buy") {
+                        const targetIndex = parseInt(args[2]) - 1;
+                        if (isNaN(targetIndex) || !options[targetIndex]) return api.sendMessage("❌ Designate index allocation map ID.", threadID, messageID);
+                        const selection = options[targetIndex];
+
+                        if (senderProfile.money < selection.price) return api.sendMessage("❌ Under-capitalized for selected venture acquisition.", threadID, messageID);
+
+                        senderProfile.money -= selection.price;
+                        senderProfile.data.businesses.push({ identity: selection.identity, yieldPerHour: selection.yields, purchased: Date.now() });
+                        await usersData.set(senderID, senderProfile);
+
+                        return api.sendMessage(`🏢 Asset Transfer executed. You now operate **${selection.identity}**. Yield pipelines are actively running.`, threadID, messageID);
+                    }
+                    return api.sendMessage("❌ Direct syntax structure mapping: `bank business [list/buy]`", threadID, messageID);
+                }
