@@ -1,81 +1,83 @@
-module.exports = {
-  config: {
-    name: "roulette",
-    version: "1.0",
-    author: "Shade",
-    countDown: 10,
-    role: 0,
-    description: "🎰 Casino roulette system",
-    category: "economy",
-    guide: {
-      en: "{pn} <bet> <red/black/green/number>"
+module.exports.config = {
+  name: "roulette",
+  version: "1.0.0",
+  hasPermssion: 0,
+  credits: "Shade",
+  description: "🎰 Simple roulette game (wallet only)",
+  commandCategory: "economy",
+  usages: "{pn} <bet> <red/black/green/number>",
+  cooldowns: 5
+};
+
+module.exports.onStart = async function ({ api, event, args, usersData }) {
+  const uid = event.senderID;
+
+  let userData = await usersData.get(uid);
+
+  // Ensure wallet exists
+  if (!userData) userData = { money: 0 };
+  if (typeof userData.money !== "number") userData.money = 0;
+
+  const bet = parseInt(args[0]);
+  const choice = (args[1] || "").toLowerCase();
+
+  // Validate bet
+  if (!bet || isNaN(bet) || bet <= 0)
+    return api.sendMessage("❌ Bet invalide. Utilisation: roulette <bet> <red/black/green/number>", event.threadID);
+
+  if (userData.money < bet)
+    return api.sendMessage("❌ Tu n'as pas assez d'argent dans ton wallet.", event.threadID);
+
+  // Roulette setup
+  const redNumbers = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+  const blackNumbers = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35];
+
+  const result = Math.floor(Math.random() * 37); // 0-36
+
+  let resultColor = "green";
+  if (redNumbers.includes(result)) resultColor = "red";
+  else if (blackNumbers.includes(result)) resultColor = "black";
+
+  let win = false;
+  let reward = 0;
+
+  // Check number bet
+  if (!isNaN(parseInt(choice))) {
+    const chosenNumber = parseInt(choice);
+    if (chosenNumber === result) {
+      win = true;
+      reward = bet * 35;
     }
-  },
-
-  onStart: async function ({ message, event, args, usersData }) {
-    const { senderID } = event;
-
-    const bet = parseInt(args[0]);
-    const choice = (args[1] || "").toLowerCase();
-
-    if (isNaN(bet) || bet <= 0) {
-      return message.reply("❌ Invalid bet amount!");
+  } 
+  // Check color bet
+  else if (choice === "red" || choice === "black" || choice === "green") {
+    if (choice === resultColor) {
+      win = true;
+      reward = bet * (choice === "green" ? 35 : 2);
     }
-
-    const user = await usersData.get(senderID);
-
-    if (user.money < bet) {
-      return message.reply(`❌ You don't have enough money.`);
-    }
-
-    const rouletteNumbers = Array.from({ length: 37 }, (_, i) => i); // 0-36
-
-    const redNumbers = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-    const blackNumbers = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35];
-
-    const result = rouletteNumbers[Math.floor(Math.random() * rouletteNumbers.length)];
-
-    let color = "green";
-    if (redNumbers.includes(result)) color = "red";
-    if (blackNumbers.includes(result)) color = "black";
-
-    let winnings = 0;
-    let status = "";
-
-    // 🎯 NUMBER BET (x35)
-    if (!isNaN(parseInt(choice)) && parseInt(choice) === result) {
-      winnings = bet * 35;
-      status = "💥 PERFECT NUMBER HIT!";
-    }
-
-    // 🔴 RED / ⚫ BLACK BET (x2)
-    else if (choice === color) {
-      winnings = bet * 2;
-      status = "🔥 COLOR WIN!";
-    }
-
-    // ❌ LOSS
-    else {
-      winnings = -bet;
-      status = "💸 YOU LOST!";
-    }
-
-    const newBalance = user.money + winnings;
-
-    await usersData.set(senderID, {
-      money: newBalance
-    });
-
-    return message.reply(
-      `🎰 𝗥𝗢𝗨𝗟𝗘𝗧𝗧𝗘 💎\n━━━━━━━━━━━━━━\n` +
-      `🎯 Number: ${result}\n` +
-      `🎨 Color: ${color.toUpperCase()}\n\n` +
-      `📊 Choice: ${choice}\n` +
-      `💰 Bet: $${bet}\n\n` +
-      `✨ ${status}\n` +
-      `💵 Result: ${winnings >= 0 ? "+" : ""}$${winnings}\n` +
-      `🏦 New Balance: $${newBalance}\n` +
-      `━━━━━━━━━━━━━━`
-    );
+  } 
+  else {
+    return api.sendMessage("❌ Choix invalide. Utilise red / black / green / number", event.threadID);
   }
+
+  // Update money safely (NO BANK SYSTEM)
+  if (win) {
+    userData.money += reward;
+  } else {
+    userData.money -= bet;
+  }
+
+  await usersData.set(uid, userData);
+
+  const msg =
+    `🎰 𝗥𝗢𝗨𝗟𝗘𝗧𝗧𝗘\n` +
+    `──────────────────\n` +
+    `🎯 Résultat: ${result} (${resultColor})\n` +
+    `🎲 Ton choix: ${choice}\n` +
+    `💰 Mise: ${bet}\n` +
+    `──────────────────\n` +
+    `${win ? `✅ Tu as GAGNÉ +${reward}` : `❌ Tu as PERDU -${bet}`}\n` +
+    `💳 Nouveau solde: ${userData.money}`;
+
+  return api.sendMessage(msg, event.threadID);
 };
