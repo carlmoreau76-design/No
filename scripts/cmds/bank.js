@@ -1,5 +1,5 @@
 /**
- * @author System
+ * @author Shade
  * @title Advanced Banking System
  * @name bank
  * @class bank
