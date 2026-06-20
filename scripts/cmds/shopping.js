@@ -44,10 +44,27 @@ const SHOP_ITEMS = {
   { id: "m20", name: "Maison intelligente (Smart Home)", price: 1100000, desc: "Domotique complète" }
 ],
   telephones: [
-    { id: "t1", name: "iPhone 17 Pro Max", price: 1500, desc: "Le dernier monstre d'Apple" },
-    { id: "t2", name: "Samsung Galaxy S26 Ultra", price: 1400, desc: "Le roi du zoom et de l'IA" },
-    { id: "t3", name: "Google Pixel 10 Pro", price: 1100, desc: "Photophone ultime" }
-  ],
+  { id: "t1", name: "iPhone 17 Pro Max", price: 1500, desc: "Le dernier monstre d'Apple" },
+  { id: "t2", name: "Samsung Galaxy S26 Ultra", price: 1400, desc: "Le roi du zoom et de l'IA" },
+  { id: "t3", name: "Google Pixel 10 Pro", price: 1100, desc: "Photophone ultime" },
+  { id: "t4", name: "Xiaomi 15 Ultra", price: 999, desc: "Puissance et photo avancée" },
+  { id: "t5", name: "OnePlus 13 Pro", price: 950, desc: "Rapide et fluide" },
+  { id: "t6", name: "Huawei P70 Pro", price: 1200, desc: "Caméra exceptionnelle" },
+  { id: "t7", name: "Sony Xperia 1 VII", price: 1300, desc: "Écran cinéma 4K" },
+  { id: "t8", name: "Oppo Find X8 Pro", price: 1050, desc: "Design premium et charge rapide" },
+  { id: "t9", name: "Vivo X200 Pro", price: 1000, desc: "Photo pro et IA avancée" },
+  { id: "t10", name: "Asus ROG Phone 9", price: 1150, desc: "Gaming ultra puissant" },
+  { id: "t11", name: "Realme GT 7 Pro", price: 800, desc: "Performance à petit prix" },
+  { id: "t12", name: "Motorola Edge 60 Ultra", price: 850, desc: "Équilibre performance/design" },
+  { id: "t13", name: "Nokia Magic Max", price: 700, desc: "Solidité et autonomie" },
+  { id: "t14", name: "Honor Magic 7 Pro", price: 1100, desc: "IA et caméra avancée" },
+  { id: "t15", name: "ZTE Nubia Z60 Ultra", price: 900, desc: "Écran sans notch" },
+  { id: "t16", name: "Nothing Phone (3)", price: 750, desc: "Design transparent unique" },
+  { id: "t17", name: "iPhone 16", price: 999, desc: "Apple classique et puissant" },
+  { id: "t18", name: "Samsung Galaxy S25", price: 950, desc: "Haut de gamme équilibré" },
+  { id: "t19", name: "Google Pixel 9a Pro", price: 650, desc: "Photo abordable premium" },
+  { id: "t20", name: "Infinix Zero Ultra 2", price: 500, desc: "Budget puissant et stylé" }
+],
   consoles: [
     { id: "g1", name: "PlayStation 5 Pro", price: 800, desc: "4K 60FPS sans compromis" },
     { id: "g2", name: "Nintendo Switch 2", price: 400, desc: "La polyvalence portable" },
