@@ -3,7 +3,7 @@ module.exports = {
     name: "emojireact",
     version: "1.5",
     author: "Shade × ChatGPT",
-    category: "fun"
+    category: "events"
   },
 
   onStart: async function ({ api, event }) {
