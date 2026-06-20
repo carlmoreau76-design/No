@@ -88,10 +88,27 @@ const SHOP_ITEMS = {
   { id: "g20", name: "NVIDIA Shield Gaming Box", price: 400, desc: "Streaming et cloud gaming puissant" }
 ],
   vetements: [
-    { id: "f1", name: "Sweat à capuche Nike Tech", price: 120, desc: "Le classique du quotidien" },
-    { id: "f2", name: "Veste Moncler Maya", price: 1500, desc: "Pour rester au chaud avec style" },
-    { id: "f3", name: "Costume sur mesure Gucci", price: 4500, desc: "Élégance maximale en rendez-vous" }
-  ],
+  { id: "f1", name: "Sweat à capuche Nike Tech", price: 120, desc: "Le classique du quotidien" },
+  { id: "f2", name: "Veste Moncler Maya", price: 1500, desc: "Pour rester au chaud avec style" },
+  { id: "f3", name: "Costume sur mesure Gucci", price: 4500, desc: "Élégance maximale en rendez-vous" },
+  { id: "f4", name: "T-shirt Balenciaga oversize", price: 450, desc: "Style streetwear premium" },
+  { id: "f5", name: "Jean Levi’s 501 Vintage", price: 90, desc: "Classique intemporel" },
+  { id: "f6", name: "Veste en cuir Saint Laurent", price: 2200, desc: "Look rock élégant" },
+  { id: "f7", name: "Sneakers Air Jordan 1", price: 250, desc: "Icône du streetwear" },
+  { id: "f8", name: "Survêtement Adidas Originals", price: 140, desc: "Confort et style sportif" },
+  { id: "f9", name: "Pull en laine Prada", price: 900, desc: "Luxe discret et chaud" },
+  { id: "f10", name: "Manteau long Burberry", price: 1800, desc: "Élégance britannique" },
+  { id: "f11", name: "Casquette Louis Vuitton", price: 600, desc: "Accessoire de luxe" },
+  { id: "f12", name: "Hoodie Off-White", price: 500, desc: "Streetwear hype" },
+  { id: "f13", name: "Pantalon cargo Supreme", price: 300, desc: "Style urbain tendance" },
+  { id: "f14", name: "Blouson bomber Alpha Industries", price: 200, desc: "Militaire et stylé" },
+  { id: "f15", name: "Robe Dior élégante", price: 3500, desc: "Haute couture féminine" },
+  { id: "f16", name: "Costume Hugo Boss", price: 800, desc: "Business élégant" },
+  { id: "f17", name: "Sneakers Yeezy Boost", price: 400, desc: "Design futuriste" },
+  { id: "f18", name: "T-shirt basic Uniqlo", price: 25, desc: "Simple et efficace" },
+  { id: "f19", name: "Veste Nike Windbreaker", price: 110, desc: "Léger et sportif" },
+  { id: "f20", name: "Ensemble streetwear Trapstar", price: 350, desc: "Style urbain premium" }
+],
   bijoux: [
     { id: "b1", name: "Chaîne en Or 18k", price: 2500, desc: "Discrète mais précieuse" },
     { id: "b2", name: "Rolex Submariner Date", price: 15000, desc: "L'horlogerie intemporelle" },
