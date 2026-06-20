@@ -277,8 +277,20 @@ if (config.autoRestart) {
 	const parentIdGoogleDrive = await utils.drive.checkAndCreateParentFolder("GoatBot");
 	utils.drive.parentID = parentIdGoogleDrive;
 	
-    require("./server");
-	require(`./bot/login/login.js`);
+    (async () => {
+    console.log("⏳ Démarrage du bot...");
+
+    // Charger le bot
+    require("./bot/login/login.js");
+    console.log("✅ Bot chargé");
+
+    // Charger le serveur
+    const app = require("./server");
+
+    const PORT = process.env.PORT || 10000;
+    app.listen(PORT, () => {
+        console.log("🚀 Bot READY + Server LIVE sur port " + PORT);
+    });
 })();
 
 function compareVersion(version1, version2) {
