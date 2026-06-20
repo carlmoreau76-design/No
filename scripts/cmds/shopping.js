@@ -22,10 +22,27 @@ const SHOP_ITEMS = {
   { id: "v20", name: "Tesla Model S Plaid", price: 110000, desc: "Électrique ultra rapide" }
 ],
   maisons: [
-    { id: "m1", name: "Villa avec Piscine", price: 850000, desc: "Superbe vue dégagée" },
-    { id: "m2", name: "Penthouse à New York", price: 4500000, desc: "Vue sur Central Park" },
-    { id: "m3", name: "Manoir à Bel-Air", price: 35000000, desc: "Héliport privé" }
-  ],
+  { id: "m1", name: "Villa avec Piscine", price: 850000, desc: "Superbe vue dégagée" },
+  { id: "m2", name: "Penthouse à New York", price: 4500000, desc: "Vue sur Central Park" },
+  { id: "m3", name: "Manoir à Bel-Air", price: 35000000, desc: "Héliport privé" },
+  { id: "m4", name: "Maison moderne minimaliste", price: 320000, desc: "Design épuré et lumineux" },
+  { id: "m5", name: "Chalet en montagne", price: 540000, desc: "Vue sur les Alpes" },
+  { id: "m6", name: "Maison de campagne", price: 210000, desc: "Calme et nature" },
+  { id: "m7", name: "Villa en bord de mer", price: 1200000, desc: "Accès direct à la plage" },
+  { id: "m8", name: "Loft industriel", price: 750000, desc: "Style urbain et ouvert" },
+  { id: "m9", name: "Maison familiale 4 chambres", price: 280000, desc: "Quartier résidentiel" },
+  { id: "m10", name: "Duplex moderne", price: 600000, desc: "Deux niveaux spacieux" },
+  { id: "m11", name: "Maison écologique", price: 390000, desc: "Énergie solaire intégrée" },
+  { id: "m12", name: "Bungalow tropical", price: 450000, desc: "Climat chaud et exotique" },
+  { id: "m13", name: "Maison avec jardin XXL", price: 520000, desc: "Grand espace vert" },
+  { id: "m14", name: "Villa de luxe", price: 5000000, desc: "Piscine infinity et spa" },
+  { id: "m15", name: "Maison de ville", price: 300000, desc: "Proche des commodités" },
+  { id: "m16", name: "Château ancien", price: 15000000, desc: "Architecture historique" },
+  { id: "m17", name: "Maison contemporaine", price: 680000, desc: "Grandes baies vitrées" },
+  { id: "m18", name: "Cabane en bois", price: 90000, desc: "Petit refuge nature" },
+  { id: "m19", name: "Villa méditerranéenne", price: 980000, desc: "Style sud de l’Europe" },
+  { id: "m20", name: "Maison intelligente (Smart Home)", price: 1100000, desc: "Domotique complète" }
+],
   telephones: [
     { id: "t1", name: "iPhone 17 Pro Max", price: 1500, desc: "Le dernier monstre d'Apple" },
     { id: "t2", name: "Samsung Galaxy S26 Ultra", price: 1400, desc: "Le roi du zoom et de l'IA" },
