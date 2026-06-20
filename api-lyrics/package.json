@@ -1,5 +1,5 @@
 {
-  "name": "mon-api-lyrics",
+  "name": "api-lyrics",
   "version": "1.0.0",
   "description": "Mon API de paroles de chansons",
   "main": "server.js",
