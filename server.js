@@ -1,14 +1,12 @@
 const express = require("express");
 const app = express();
 
-const PORT = process.env.PORT || 3000;
-
-// page de test (ping)
+// 🟢 page test
 app.get("/", (req, res) => {
   res.send("🟢 Bot is alive");
 });
 
-// endpoint uptime (utile pour uptime services)
+// 🔁 uptime endpoint
 app.get("/ping", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -16,7 +14,5 @@ app.get("/ping", (req, res) => {
   });
 });
 
-// démarre le serveur web
-app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
-});
+// ❗ IMPORTANT : on exporte seulement l'app
+module.exports = app;
