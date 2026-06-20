@@ -66,10 +66,27 @@ const SHOP_ITEMS = {
   { id: "t20", name: "Infinix Zero Ultra 2", price: 500, desc: "Budget puissant et stylé" }
 ],
   consoles: [
-    { id: "g1", name: "PlayStation 5 Pro", price: 800, desc: "4K 60FPS sans compromis" },
-    { id: "g2", name: "Nintendo Switch 2", price: 400, desc: "La polyvalence portable" },
-    { id: "g3", name: "PC Master Race RTX 5090", price: 5000, desc: "Puissance absolue hors catégorie" }
-  ],
+  { id: "g1", name: "PlayStation 5 Pro", price: 800, desc: "4K 60FPS sans compromis" },
+  { id: "g2", name: "Nintendo Switch 2", price: 400, desc: "La polyvalence portable" },
+  { id: "g3", name: "PC Master Race RTX 5090", price: 5000, desc: "Puissance absolue hors catégorie" },
+  { id: "g4", name: "Xbox Series X2", price: 750, desc: "Puissance et Game Pass ultime" },
+  { id: "g5", name: "PlayStation 5 Slim", price: 550, desc: "Version compacte et efficace" },
+  { id: "g6", name: "Nintendo Switch OLED+", price: 450, desc: "Écran amélioré et portable" },
+  { id: "g7", name: "Steam Deck OLED 2", price: 700, desc: "PC gaming portable avancé" },
+  { id: "g8", name: "ASUS ROG Ally X", price: 800, desc: "Console PC portable ultra puissante" },
+  { id: "g9", name: "Xbox Series S Pro", price: 500, desc: "Next-gen accessible" },
+  { id: "g10", name: "PlayStation 6 Dev Kit", price: 1200, desc: "Version développeur futuriste" },
+  { id: "g11", name: "Nintendo Switch Lite 2", price: 300, desc: "Portable pur et simple" },
+  { id: "g12", name: "Alienware Console Hybrid", price: 1500, desc: "Console-PC hybride gaming" },
+  { id: "g13", name: "Lenovo Legion Go 2", price: 900, desc: "PC gaming portable premium" },
+  { id: "g14", name: "MSI Claw 2", price: 850, desc: "Handheld gaming Intel boosté" },
+  { id: "g15", name: "Razer Edge Pro 2", price: 650, desc: "Cloud gaming et mobilité" },
+  { id: "g16", name: "Oculus Meta Quest 4", price: 600, desc: "VR gaming immersif total" },
+  { id: "g17", name: "PlayStation Portal Pro", price: 300, desc: "Streaming PS5 amélioré" },
+  { id: "g18", name: "Xbox Cloud Console", price: 350, desc: "Gaming 100% cloud" },
+  { id: "g19", name: "Retro Console Ultimate", price: 200, desc: "Toutes les consoles rétro intégrées" },
+  { id: "g20", name: "NVIDIA Shield Gaming Box", price: 400, desc: "Streaming et cloud gaming puissant" }
+],
   vetements: [
     { id: "f1", name: "Sweat à capuche Nike Tech", price: 120, desc: "Le classique du quotidien" },
     { id: "f2", name: "Veste Moncler Maya", price: 1500, desc: "Pour rester au chaud avec style" },
