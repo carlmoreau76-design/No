@@ -9,7 +9,7 @@ module.exports = {
     version: "1.0",
     author: "Christus ✨ | Angel Style by Shade 💠",
     role: 0,
-    category: "freefire",
+    category: "settings",
     countDown: 5,
     description: "💠 Génère une carte Free Fire stylée + infos joueur"
   },
