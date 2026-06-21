@@ -22,7 +22,7 @@ module.exports = {
     role: 2, 
     author: "AI Collaborator",
     description: "Explorateur, éditeur, créateur et suppresseur de fichiers sur dépôts GitHub",
-    category: "Développeur",
+    category: "security",
     guide: {
       fr: "{p}{n} [nom_du_repo]"
     },
