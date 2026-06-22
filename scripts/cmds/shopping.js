@@ -222,62 +222,68 @@ const SHOP_ITEMS = {
 };
 
 function formatMsg(title, content) {
-  return `🛒 ═══ 𝗠𝗔𝗚𝗔𝗦𝗜𝗡 𝗚𝗟𝗢𝗕𝗔𝗟 ═══ 🛒\n\n╔══ 🌟 ${title} ══╗\n${content}\n╚══════════════════════╝`;
+  return `⚡ **[CYBER SHOPPING - INTERFACE]**\n━━━━━━━━━━━━━━━━━━━━━━━━━\n🟩 **Registre :** ${title}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${content}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n» *[Système] Données économiques synchronisées.*`;
 }
 
 module.exports = {
   config: {
     name: "shopping",
-    aliases: ["shop", "magasin", "possede"],
-    version: "2.0",
-    author: "Shade × ChatGPT",
+    aliases: ["shop", "magasin", "possede", "possède"],
+    version: "3.0.0",
+    author: "Shade × Gemini",
     role: 0,
     category: "economy",
-    shortDescription: "Système de magasin premium à 10 rayons",
-    guide: "{pn} list [rayon] (Affiche un catalogue)\n{pn} buy [ID] (Acheter un article)\n{pn} possède (Affiche vos possessions)"
+    shortDescription: "Système de magasin à 10 rayons avec inventaire persistant",
+    guide: {
+      fr: "{p}{n} list [rayon] (Affiche un catalogue)\n{p}{n} buy [ID] (Acheter un article)\n{p}{n} possede (Affiche vos possessions)"
+    }
   },
 
   onStart: async function ({ message, event, args, usersData }) {
-    const { senderID } = event;
+    const { senderID, body } = event;
     const action = args[0] ? args[0].toLowerCase() : null;
 
     const userData = await usersData.get(senderID);
-    if (!userData) return message.reply("❌ Impossible de charger votre profil économique.");
+    if (!userData) return message.reply("❌ **[ERREUR]** Impossible de charger votre profil économique.");
 
-    // Initialisation structurelle de l'inventaire
+    // Initialisation structurelle blindée de l'inventaire
     if (!userData.customData) userData.customData = {};
     if (!userData.customData.shop) {
       userData.customData.shop = {};
-      Object.keys(SHOP_ITEMS).forEach(cat => {
-        userData.customData.shop[cat] = [];
-      });
     }
+    
+    // S'assurer que chaque catégorie du tableau de configuration existe sous forme de tableau
+    Object.keys(SHOP_ITEMS).forEach(cat => {
+      if (!userData.customData.shop[cat]) {
+        userData.customData.shop[cat] = [];
+      }
+    });
+
     const inv = userData.customData.shop;
 
     // ==========================================
-    // 📋 COMMANDE : AFFICHAGE DES POSSESSIONS
+    // 📋 COMMANDE : AFFICHAGE VOS BIENS (POSSEDE)
     // ==========================================
-    if (action === "possede" || action === "possède" || event.body.toLowerCase().includes("possede")) {
-      let txt = "Voici tout ce que vous possédez actuellement :\n\n";
+    if (action === "possede" || action === "possède" || body.toLowerCase().includes("possede")) {
+      let txt = "Voici l'état actuel de vos possessions :\n\n";
       let empty = true;
 
       for (const [category, items] of Object.entries(inv)) {
-        if (items && items.length > 0) {
+        if (Array.isArray(items) && items.length > 0) {
           empty = false;
-          // Comptage des occurrences pour regrouper les items identiques (ex: Ramen x3)
           const counts = {};
           items.forEach(i => counts[i.name] = (counts[i.name] || 0) + 1);
 
           txt += `📂 **${category.toUpperCase()} :**\n`;
           for (const [name, count] of Object.entries(counts)) {
-            txt += ` • ${name} ${count > 1 ? `(x${count})` : ""}\n`;
+            txt += ` └── 📦 ${name} ${count > 1 ? `*(x${count})*` : ""}\n`;
           }
           txt += "\n";
         }
       }
 
-      if (empty) return message.reply(formatMsg("VOS BIENS", "📦 Votre inventaire est totalement vide pour le moment !"));
-      return message.reply(formatMsg("VOS BIENS", txt.trim()));
+      if (empty) return message.reply(formatMsg("INVENTAIRE", "⚠️ Votre espace de stockage est totalement vide pour le moment."));
+      return message.reply(formatMsg("VOS BIENS ÉLITES", txt.trim()));
     }
 
     // ==========================================
@@ -287,18 +293,18 @@ module.exports = {
       const rayon = args[1] ? args[1].toLowerCase() : null;
 
       if (!rayon || !SHOP_ITEMS[rayon]) {
-        let menu = "Spécifiez un rayon valide à lister parmi les 10 suivants :\n\n";
-        Object.keys(SHOP_ITEMS).forEach(cat => menu += `• \`/shop list ${cat}\`\n`);
-        menu += `\n💡 *Pour acheter un objet, utilisez :* \`/shop buy [ID]\`\n📌 *Pour voir vos objets :* \`/shop possede\``;
-        return message.reply(formatMsg("10 RAYONS DISPONIBLES", menu));
+        let menu = "Spécifiez un rayon valide à lister parmi les secteurs suivants :\n\n";
+        Object.keys(SHOP_ITEMS).forEach(cat => menu += `• \`shop list ${cat}\`\n`);
+        menu += `\n💡 **[AIDE]**\n• Pour acheter : \`shop buy [ID]\`\n• Pour vos stocks : \`shop possede\``;
+        return message.reply(formatMsg("RAYONS REQUIS", menu));
       }
 
-      let catalog = `--- CATALOGUE : ${rayon.toUpperCase()} ---\n\n`;
+      let catalog = "";
       SHOP_ITEMS[rayon].forEach(item => {
-        catalog += `📦 **${item.name}**\n🔹 ID : \`${item.id}\` | 💰 Prix : **${item.price.toLocaleString()}$**\n💬 *${item.desc}*\n\n`;
+        catalog += `🟩 **${item.name}**\n├── ID : \`${item.id}\`\n├── Tarification : **${item.price.toLocaleString()}$**\n└── *Description : ${item.desc}*\n\n`;
       });
 
-      return message.reply(formatMsg(rayon.toUpperCase(), catalog.trim()));
+      return message.reply(formatMsg(`SECTEUR : ${rayon.toUpperCase()}`, catalog.trim()));
     }
 
     // ==========================================
@@ -306,7 +312,7 @@ module.exports = {
     // ==========================================
     if (action === "buy") {
       const targetId = args[1] ? args[1].toLowerCase() : null;
-      if (!targetId) return message.reply("💡 Exemple d'achat : `/shop buy v2` (pour l'article correspondant).");
+      if (!targetId) return message.reply("💡 Syntaxe d'achat requise : `shop buy [ID]` (Exemple: `shop buy v2`).");
 
       let foundItem = null;
       let itemCategory = null;
@@ -320,29 +326,35 @@ module.exports = {
         }
       }
 
-      if (!foundItem) return message.reply("❌ ID introuvable dans les rayons du magasin.");
+      if (!foundItem) return message.reply("❌ **[RECHERCHE]** Cet identifiant d'article n'existe pas dans la base.");
 
       const wallet = userData.money || 0;
       if (wallet < foundItem.price) {
-        return message.reply(`💔 Solde insuffisant. Prix : **${foundItem.price.toLocaleString()}$**. Solde : **${wallet.toLocaleString()}$**.`);
+        return message.reply(`🟥 **[FONDS INSUFFISANTS]** Solde requis : **${foundItem.price.toLocaleString()}$**. Votre solde : **${wallet.toLocaleString()}$**.`);
       }
 
-      // Ajout à l'inventaire de la catégorie
-      if (!inv[itemCategory]) inv[itemCategory] = [];
-      inv[itemCategory].push({ id: foundItem.id, name: foundItem.name, date: Date.now() });
+      // Ajout persistant à l'inventaire
+      inv[itemCategory].push({
+        id: foundItem.id,
+        name: foundItem.name,
+        date: Date.now()
+      });
 
-      // Retrait de l'argent et sauvegarde
+      // Assignation explicite pour forcer la mise à jour de l'objet profond
+      userData.customData.shop = inv;
       userData.money = wallet - foundItem.price;
+
+      // 💾 SAUVEGARDE EN BASE DE DONNÉES ENREGISTRÉE
       await usersData.set(senderID, userData);
 
-      return message.reply(`🎉 **ACHAT VALIDÉ !**\n\nVous venez d'acquérir : **${foundItem.name}** !\n📉 Montant déduit : -**${foundItem.price.toLocaleString()}$**\n💳 Solde restant : **${userData.money.toLocaleString()}$**.\n\nType \`/shop possede\` pour voir tes biens.`);
+      return message.reply(`🎉 **TRANSACTION APPROUVÉE !**\n\nVous venez d'acquérir : **${foundItem.name}**\n📉 Facturation : -**${foundItem.price.toLocaleString()}$**\n💳 Nouveau solde : **${userData.money.toLocaleString()}$**.\n\n💡 Tapez \`shop possede\` pour ouvrir votre inventaire.`);
     }
 
-    // Menu d'accueil par défaut si aucune option n'est entrée
-    let defaultMenu = `Bienvenue chez le grossiste du bot !\nPortefeuille : ** ${(userData.money || 0).toLocaleString()}$**\n\n🏬 **Explorez nos 10 Rayons d'achats :**\n`;
-    Object.keys(SHOP_ITEMS).forEach(cat => defaultMenu += `• \`/shop list ${cat}\`\n`);
-    defaultMenu += `\n⚙️ **Commandes de gestion :**\n• \`/shop buy [ID]\` : Acheter l'item\n• \`/shop possede\` : Voir vos possessions globales`;
+    // Menu d'accueil par défaut
+    let defaultMenu = `Bienvenue sur le terminal du marché noir.\n💳 Votre solde : ** ${(userData.money || 0).toLocaleString()}$**\n\n🏬 **Secteurs d'approvisionnement :**\n`;
+    Object.keys(SHOP_ITEMS).forEach(cat => defaultMenu += `• \`shop list ${cat}\`\n`);
+    defaultMenu += `\n⚙️ **Commandes système :**\n• \`shop buy [ID]\` : Acquérir l'item choisi\n• \`shop possede\` : Consulter votre entrepôt privé`;
 
-    return message.reply(formatMsg("ACCUEIL SHOPPING", defaultMenu));
+    return message.reply(formatMsg("ACCUEIL CENTRAL", defaultMenu));
   }
 };
