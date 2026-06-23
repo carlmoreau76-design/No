@@ -1,6 +1,6 @@
 const { writeFileSync } = require("fs-extra");
 const { createCanvas, loadImage } = require("canvas");
-const fs = require("fs");
+const fs = require("fs-extra");
 const path = require("path");
 
 const OWNER_ID = "61573867120837"; // 🔒 Ton ID exclusif
@@ -9,10 +9,10 @@ module.exports = {
   config: {
     name: "vip",
     aliases: ["vipmember", "viplist"],
-    version: "4.0.0",
+    version: "4.1.0",
     author: "Shade × Gemini",
     countDown: 5,
-    role: 0, // Laissé à 0 pour que tout le monde puisse faire "vip list"
+    role: 0, 
     description: "💎 Gestion du club VIP Privé avec interface Canvas Deluxe",
     category: "system",
     guide: {
@@ -36,7 +36,6 @@ module.exports = {
           return message.reply("⛔ **[ACCÈS REFUSÉ]** Ce terminal de configuration VIP est strictement réservé au Fondateur.");
         }
 
-        // Récupération des UIDs (Tag, Reply, ou UID écrit en argument)
         let uids = Object.keys(event.mentions || {}).length
           ? Object.keys(event.mentions)
           : event.messageReply
@@ -92,7 +91,7 @@ module.exports = {
 
         try { api.setMessageReaction("⏳", messageID, () => {}, true); } catch(e){}
 
-        // Configuration dynamique du Canvas selon le nombre de VIPs (max 6 affichés sur le tableau d'honneur)
+        // Maximum 6 membres affichés sur la carte d'honneur
         const vipsToShow = config.vipuser.slice(0, 6);
         const width = 900;
         const height = 150 + (vipsToShow.length * 110);
@@ -140,12 +139,18 @@ module.exports = {
           ctx.strokeStyle = "rgba(212, 175, 55, 0.15)";
           ctx.strokeRect(40, yPos - 45, width - 80, 90);
 
-          // Chargement de l'avatar avec Fallback
+          // 🖼️ Récupération de l'avatar via l'API interne stable (comme balance.js / spy.js)
           let avatarImg;
           try {
-            avatarImg = await loadImage(`https://graph.facebook.com/${uid}/picture?type=large`);
+            const avatarUrl = await usersData.getAvatarUrl(uid);
+            avatarImg = await loadImage(avatarUrl);
           } catch(e) {
-            avatarImg = await loadImage("https://files.catbox.moe/w9df05.png");
+            // Fallback si l'image distante échoue
+            try {
+              avatarImg = await loadImage(`https://graph.facebook.com/${uid}/picture?type=large`);
+            } catch(err) {
+              avatarImg = await loadImage("https://files.catbox.moe/w9df05.png");
+            }
           }
 
           // Dessin du portrait circulaire avec lueur or
@@ -163,7 +168,7 @@ module.exports = {
           ctx.beginPath();
           ctx.arc(100, yPos, 33, 0, Math.PI * 2);
           ctx.clip();
-          ctx.drawImage(avatarImg, 65, yPos - 35, 70, 70);
+          ctx.drawImage(avatarImg, 67, yPos - 33, 66, 66);
           ctx.restore();
 
           // Textes : Nom & UID style or/blanc
@@ -187,8 +192,10 @@ module.exports = {
 
         const filePath = path.join(__dirname, `vip_card_${Date.now()}.png`);
         const out = fs.createWriteStream(filePath);
-        canvas.createPNGStream().pipe(out);
+        const stream = canvas.createPNGStream();
+        stream.pipe(out);
 
+        // On attend la fin complète de l'écriture du fichier sur le disque avant d'envoyer
         out.on("finish", () => {
           try { api.setMessageReaction("💎", messageID, () => {}, true); } catch(e){}
           api.sendMessage({
