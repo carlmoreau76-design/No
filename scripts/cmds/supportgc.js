@@ -17,7 +17,7 @@ module.exports = {
     const { senderID, threadID, messageID } = event;
     
     // 📢 REMPLACE CE NUMÉRO PAR L'ID DE TON PROPRE GROUPE DE SUPPORT
-    const supportGroupThreadID = "1344835506883752";
+    const supportGroupThreadID = "2311426919273668";
 
     try {
       // Tentative de récupération des membres via les données de GoatBot ou l'API Facebook
