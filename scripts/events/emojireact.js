@@ -1,13 +1,18 @@
 module.exports = {
   config: {
     name: "emojireact",
-    version: "1.5",
-    author: "Shade × ChatGPT",
+    version: "2.0",
+    author: "Shade × Gemini",
     category: "events"
   },
 
+  // 📥 Requis par GoatBot pour valider le chargement du script
   onStart: async function ({ api, event }) {
-    // Sécurité : on ignore si pas de texte ou si c'est le bot qui parle
+    console.log("[EMOJI-REACT] Le système de réaction aux émojis est actif.");
+  },
+
+  // 💬 Écoute les messages du chat en temps réel sans préfixe
+  onChat: async function ({ api, event }) {
     if (!event.body || event.senderID === api.getCurrentUserID()) return;
 
     const messageText = event.body.trim();
@@ -88,6 +93,60 @@ module.exports = {
     if (messageText.includes("👻") || messageText.includes("😱")) {
       return api.sendMessage(
         "Gros poltron ! Un rien te fait sursauter, ressaisis-toi ! 🫵💀",
+        event.threadID,
+        event.messageID
+      );
+    }
+
+    // 10. Émoji argent / riche 🤑 / 💰 [NOUVEAU]
+    if (messageText.includes("🤑") || messageText.includes("💰")) {
+      return api.sendMessage(
+        "Ça parle d'argent alors que le compte est à découvert... 💳📉",
+        event.threadID,
+        event.messageID
+      );
+    }
+
+    // 11. Émoji sommeil / dodo 😴 / 💤 [NOUVEAU]
+    if (messageText.includes("😴") || messageText.includes("💤")) {
+      return api.sendMessage(
+        "Éteins ton téléphone et va dormir au lieu de forcer ici ! 🛏️🛌",
+        event.threadID,
+        event.messageID
+      );
+    }
+
+    // 12. Émoji diable 😈 / 👿 [NOUVEAU]
+    if (messageText.includes("😈") || messageText.includes("👿")) {
+      return api.sendMessage(
+        "Calme tes plans machiavéliques, tu ne fais peur à personne ici ! 🕊️🛡️",
+        event.threadID,
+        event.messageID
+      );
+    }
+
+    // 13. Émoji coeur brisé 💔 [NOUVEAU]
+    if (messageText.includes("💔")) {
+      return api.sendMessage(
+        "Encore un chagrin d'amour... Viens, on va te trouver quelqu'un de mieux ! 🥺🩹",
+        event.threadID,
+        event.messageID
+      );
+    }
+
+    // 14. Émoji muscles / force 💪 [NOUVEAU]
+    if (messageText.includes("💪")) {
+      return api.sendMessage(
+        "Ça montre ses muscles mais ça ne peut pas soulever une bouteille d'eau ! 🍼😂",
+        event.threadID,
+        event.messageID
+      );
+    }
+
+    // 15. Émoji feu / chaud 🔥 [NOUVEAU]
+    if (messageText.includes("🔥")) {
+      return api.sendMessage(
+        "Appelez les pompiers, l'ambiance devient trop chaude là ! 🧯💨",
         event.threadID,
         event.messageID
       );
