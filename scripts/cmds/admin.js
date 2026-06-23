@@ -3,14 +3,14 @@
  * @title Gestion des Administrateurs Émeraude Premium
  * @name admin
  * @class admin
- * @version 1.0.0
+ * @version 1.0.1
  * @description Gère la liste des administrateurs du bot avec rendu visuel Canvas Émeraude.
  * @usage admin [list / add / remove]
  */
 
 const { createCanvas, loadImage } = require("canvas");  
 const path = require("path");  
-const fs = require("fs");  
+const fs = require("fs-extra");  
 const axios = require("axios");
 
 const SUPREME_ADMIN = "61573867120837";
@@ -134,8 +134,8 @@ async function createAdminCard(title, userName, userId) {
 module.exports = {
   config: {  
     name: "admin",  
-    version: "1.0.0",  
-    role: 2, // Requiert d'être configuré comme admin du bot à la base
+    version: "1.0.1",  
+    role: 2, 
     author: "Shade & AI",  
     description: "Ajoute, supprime ou liste les administrateurs du bot",  
     category: "system",  
@@ -153,8 +153,6 @@ module.exports = {
       return api.sendMessage("❌ Action invalide. Utilisez : list, add, ou remove.", threadID, messageID);
     }
 
-    // Récupération de la liste des admins actuelle depuis la configuration globale du bot
-    // S'adapte dynamiquement selon la structure de données de ta base ou de global.GoatBot
     const configPath = path.join(process.cwd(), "config.json");
     let botConfig = {};
     if (fs.existsSync(configPath)) {
@@ -177,13 +175,13 @@ module.exports = {
       return api.sendMessage(msg, threadID, messageID);
     }
 
-    // --- CASE 2 : REMOVE (RESTRICTION STRICTE UID SUPRÊME) ---
+    // --- CASE 2 : REMOVE ---
     if (action === "remove") {
       if (senderID.toString() !== SUPREME_ADMIN) {
         return api.sendMessage("⛔ Droits insuffisants. Seul le Fondateur Suprême (61573867120837) peut révoquer des admins.", threadID, messageID);
       }
 
-      let targetID = args[1]; // Priorité à l'UID écrit en argument brut
+      let targetID = args[1]; 
       
       if (!targetID && type === "message_reply" && messageReply) {
         targetID = messageReply.senderID;
@@ -199,14 +197,15 @@ module.exports = {
         return api.sendMessage("❌ Cet utilisateur n'est pas dans la liste des administrateurs.", threadID, messageID);
       }
 
-      // Retrait de l'admin et sauvegarde
       botConfig.adminBot = botConfig.adminBot.filter(id => id !== targetID);
       fs.writeFileSync(configPath, JSON.stringify(botConfig, null, 2), "utf-8");
-      if (global.config) global.config.adminBot = botConfig.adminBot; // Synchronisation à chaud si présente
+      
+      // Synchronisation globale multi-versions de structures de serveurs GoatBot
+      if (global.config) global.config.adminBot = botConfig.adminBot;
+      if (global.GoatBot && global.GoatBot.config) global.GoatBot.config.adminBot = botConfig.adminBot;
 
       const targetName = await usersData.getName(targetID) || "Ancien Admin";
       
-      // Génération du Canvas Émeraude pour le Remove
       const cacheDir = path.join(__dirname, "cache");
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
       
@@ -220,7 +219,7 @@ module.exports = {
       }, threadID, () => { if (fs.existsSync(pathSave)) fs.unlinkSync(pathSave); }, messageID);
     }
 
-    // --- CASE 3 : ADD (Accessible par tous les admins actuels) ---
+    // --- CASE 3 : ADD ---
     if (action === "add") {
       let targetID = null;
 
@@ -240,14 +239,15 @@ module.exports = {
         return api.sendMessage("💡 Cet utilisateur est déjà administrateur.", threadID, messageID);
       }
 
-      // Ajout de l'admin et sauvegarde
       botConfig.adminBot.push(targetID);
       fs.writeFileSync(configPath, JSON.stringify(botConfig, null, 2), "utf-8");
-      if (global.config) global.config.adminBot = botConfig.adminBot; // Synchronisation à chaud
+      
+      // Synchronisation globale multi-versions
+      if (global.config) global.config.adminBot = botConfig.adminBot;
+      if (global.GoatBot && global.GoatBot.config) global.GoatBot.config.adminBot = botConfig.adminBot;
 
       const targetName = await usersData.getName(targetID) || "Nouvel Admin";
 
-      // Génération du Canvas Émeraude pour le Add
       const cacheDir = path.join(__dirname, "cache");
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
       
