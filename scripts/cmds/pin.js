@@ -7,7 +7,7 @@ module.exports = {
   config: {
     name: "pin",
     version: "3.5 portrait pro",
-    author: "Shade ✨ Angel Edit",
+    author: "Shade ✨ Angel Edit × Gemini",
     countDown: 5,
     role: 0,
     shortDescription: "💖 Pinterest-style portrait grid with 20 images",
@@ -26,34 +26,27 @@ module.exports = {
     const loading = await message.reply("💖🌸 Recherche Pinterest PRO... ⏳");
 
     try {
-      const headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "text/html,application/json"
-      };
+      // 1. Appel direct à votre API personnalisée avec une limite de 100 images pour la pagination
+      const apiUrl = `https://zetbot-page.onrender.com/api/pinterest?query=${encodeURIComponent(query)}&limit=100`;
+      const response = await axios.get(apiUrl, { timeout: 8000 });
 
-      // 1. Récupération du Token DuckDuckGo
-      const page = await axios.get(
-        `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
-        { headers }
-      );
+      // Extraction des liens d'images (S'adapte si l'API renvoie un tableau de chaînes ou un objet complexe)
+      let allImages = [];
+      if (Array.isArray(response.data)) {
+        allImages = response.data;
+      } else if (response.data && Array.isArray(response.data.results)) {
+        allImages = response.data.results;
+      } else if (response.data && typeof response.data === 'object') {
+        allImages = Object.values(response.data).filter(val => typeof val === 'string' && val.startsWith('http'));
+      }
 
-      const vqdMatch = page.data.match(/vqd='(.*?)'/) || page.data.match(/vqd=\"(.*?)\"/);
-      const vqd = vqdMatch?.[1] || vqdMatch?.[2];
-
-      if (!vqd) throw new Error("DuckDuckGo token introuvable");
-
-      // 2. Récupération de la liste complète d'images
-      const imgRes = await axios.get(
-        `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}`,
-        { headers }
-      );
-
-      if (!imgRes.data || !imgRes.data.results || imgRes.data.results.length === 0) {
+      if (!allImages || allImages.length === 0) {
         await message.unsend(loading.messageID);
         return message.reply("💔 Aucun résultat trouvé Angel...");
       }
 
-      const allImages = imgRes.data.results.map(x => x.image).filter(Boolean);
+      // Filtrage de sécurité pour s'assurer que les valeurs ne soient pas nulles
+      allImages = allImages.filter(Boolean);
 
       // Lancement de la Page 1
       await this.sendGridPage({ message, event, query, allImages, currentPage: 1, loadingId: loading.messageID });
@@ -61,7 +54,7 @@ module.exports = {
     } catch (e) {
       console.error(e);
       await message.unsend(loading.messageID);
-      return message.reply("💔 Une erreur est survenue lors de la recherche.");
+      return message.reply("💔 Une erreur est survenue lors de la communication avec l'API Pinterest.");
     }
   },
 
