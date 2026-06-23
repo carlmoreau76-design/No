@@ -1,54 +1,59 @@
-const axios = require("axios");
+const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs-extra");
 const path = require("path");
-const { createCanvas, loadImage } = require("canvas");
 
+// 👑 Vos informations configurées
 const ownerInfo = {
   name: "ヾ Kαɪ.夜",
   facebook: "https://www.facebook.com/shade.userX",
   instagram: "x.shade108",
-  supportGroup: "꒰ა 𝘚𝘶𝘱𝘱𝘰ʳᵗ 𝘣𝘪𝘦𝘯𝘵𝘰̂𝘵 𝘥𝘪𝘴𝘱𝘰𝘯𝘪𝘣𝘭𝘦 ໒꒱"
+  supportGroup: "꒰ა 𝘚𝘶𝘱𝘱𝘰ʳᵗ 𝘣𝘪𝘦𝘯𝒕𝒐̂𝒕 𝘥𝘪𝘴𝘱𝘰𝘯𝘪𝘣𝘭𝑒 ໒꒱"
 };
-
-// URL de fond que vous avez fournie
-const BACKGROUND_URL = "https://i.imgur.com/39RTtBo.jpeg";
 
 module.exports = {
   config: {
     name: "botjoin",
-    version: "3.0",
-    author: "Angel System & AI",
+    version: "2.2.0",
+    author: "Gemini & Angel System",
+    role: 0,
+    description: "Génère une bannière de présentation graphique haut de gamme lorsque le bot est intégré à un groupe.",
     category: "events"
   },
 
-  onStart: async function ({ event, api }) {
+  // Évite l'erreur "Function onStart is missing!" lors du chargement
+  onStart: async function () {},
+
+  onEvent: async function ({ api, event, prefix }) {
+    // Filtrer pour ne déclencher le script que si le bot lui-même est ajouté
     if (event.logMessageType !== "log:subscribe") return;
 
     const { threadID, logMessageData } = event;
     const botID = api.getCurrentUserID();
-    const addedUsers = logMessageData.addedParticipants;
-
-    // Vérifie si c'est le bot qui a été ajouté au groupe
-    const isBotAdded = addedUsers.some(u => u.userFbId === botID);
+    
+    // Vérifier si l'UID du bot fait partie des nouveaux arrivants
+    const isBotAdded = logMessageData.addedParticipants.some(p => p.userFbId === botID);
     if (!isBotAdded) return;
 
-    const prefix = global.utils.getPrefix(threadID);
     const nickNameBot = global.GoatBot.config.nickNameBot || "Angel Bot ✨";
 
-    // 1. Changement de pseudo automatique du Bot
+    // Changement de pseudo automatique du Bot
     try {
       await api.changeNickname(nickNameBot, threadID, botID);
     } catch (e) {
       console.log("Impossible de changer le pseudo du bot :", e);
     }
 
-    const cacheDir = path.join(__dirname, "..", "cache");
-    await fs.ensureDir(cacheDir);
-    const imgPath = path.join(cacheDir, `join_${threadID}.png`);
+    try {
+      // Collecte des données du salon
+      const threadInfo = await api.getThreadInfo(threadID);
+      const groupName = threadInfo.threadName || "Nouveau Secteur";
+      const memberCount = threadInfo.participantIDs.length;
 
-    // Préparation du message Premium
-    const mainMessage = `
-╭ ◜◝ ͡ ◜◝ ͡ ◝╮
+      // Génération de la bannière technologique avec l'ATH Cyberpunk
+      const imagePath = await generateBotJoinBanner(groupName, memberCount, prefix, threadID);
+
+      // Message Premium incluant tes coordonnées d'owner
+      const msg = `╭ ◜◝ ͡ ◜◝ ͡ ◝╮
 ♡ 𝘼𝙣𝙜𝙚𝙡 𝘽𝙤𝙩 ♡
 ╰ ◟◞ ͜ ◟◞ ╯
 
@@ -57,7 +62,7 @@ module.exports = {
 🔹 𝐏𝐫𝐞𝐟𝐢𝐱 : ${prefix}
 🔸 𝐔𝐬𝐞 : ${prefix}help
 
-💫 𝐈’𝐦 𝐀𝐧𝐠𝐞𝐥 𝐁𝐨𝐭
+💫 𝐈’𝐦 𝐀𝐧𝐠𝐞λ 𝐁𝐨𝐭
 
 ╭══════════════╮
 👑 𝐎𝐰𝐧𝐞𝐫 : ${ownerInfo.name}
@@ -66,126 +71,141 @@ module.exports = {
 🤖 𝐒𝐮𝐩𝐩𝐨𝐫𝐭 : ${ownerInfo.supportGroup}
 ╰══════════════╯
 
-✨ 𝐀𝐥𝐰𝐚𝐲𝐬 𝐚𝐜𝐭𝐢𝐯𝐞 • 𝐒𝐭𝐚𝐲 𝐜𝐮𝐭𝐞 ✨
-`;
+✨ 𝐀𝐥𝐰𝐚𝐲𝐬 𝐚𝐜𝐭𝐢𝐯𝐞 • 𝐒𝐭𝐚𝐲 𝐜𝐮𝐭𝐞 ✨`;
 
-    try {
-      // 2. Récupération des informations du groupe et des utilisateurs
-      const threadInfo = await api.getThreadInfo(threadID);
-      const threadName = threadInfo.threadName || "Groupe Messenger";
-      const memberCount = threadInfo.participantIDs.length;
-      
-      // ID de la personne qui a ajouté le bot (généralement l'auteur du log event)
-      const inviterID = event.author;
-
-      // URLs des avatars Facebook haute résolution
-      const inviterAvatarUrl = `https://graph.facebook.com/${inviterID}/picture?width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
-      const botAvatarUrl = `https://graph.facebook.com/${botID}/picture?width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
-
-      // 3. Téléchargement des images en parallèle
-      const [bgImg, inviterImgBuffer, botImgBuffer] = await Promise.all([
-        loadImage(BACKGROUND_URL),
-        axios.get(inviterAvatarUrl, { responseType: "arraybuffer" }).then(res => res.data).catch(() => null),
-        axios.get(botAvatarUrl, { responseType: "arraybuffer" }).then(res => res.data).catch(() => null)
-      ]);
-
-      // 4. Initialisation du Canvas (Basé sur la taille de l'image de fond)
-      const width = bgImg.width || 1280;
-      const height = bgImg.height || 720;
-      const canvas = createCanvas(width, height);
-      const ctx = canvas.getContext("2d");
-
-      // Dessiner le fond d'écran
-      ctx.drawImage(bgImg, 0, 0, width, height);
-
-      // --- AJOUT DE L'AVATAR EN HAUT À GAUCHE (Inviteur) ---
-      if (inviterImgBuffer) {
-        const inviterImg = await loadImage(inviterImgBuffer);
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(150, 150, 80, 0, Math.PI * 2, true); // Position X:150, Y:150, Rayon:80
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(inviterImg, 70, 70, 160, 160);
-        ctx.restore();
-        
-        // Bordure néon rose autour de l'avatar gauche
-        ctx.strokeStyle = "#ff007f";
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.arc(150, 150, 80, 0, Math.PI * 2, true);
-        ctx.stroke();
-      }
-
-      // --- AJOUT DE L'AVATAR EN BAS À DROITE (Bot) ---
-      if (botImgBuffer) {
-        const botImg = await loadImage(botImgBuffer);
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(width - 150, height - 150, 80, 0, Math.PI * 2, true); // Position ajustée selon la taille du fond
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(botImg, width - 230, height - 230, 160, 160);
-        ctx.restore();
-
-        // Bordure néon rose autour de l'avatar droit
-        ctx.strokeStyle = "#ff007f";
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.arc(width - 150, height - 150, 80, 0, Math.PI * 2, true);
-        ctx.stroke();
-      }
-
-      // --- INSERER LES TEXTES ---
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#ffffff";
-      
-      // Ombre pour effet Premium lisible
-      ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
-      ctx.shadowBlur = 10;
-
-      // 1. Texte "WELCOME" au centre (Légèrement décalé vers le haut du cercle pour esthétique)
-      ctx.font = "bold 70px Arial";
-      ctx.fillStyle = "#ffffff";
-      ctx.fillText("WELCOME", width / 2, height / 2 - 130);
-
-      // 2. Nom du groupe en bas
-      ctx.font = "bold 40px Arial";
-      ctx.fillStyle = "#ffb6c1"; // Rose clair premium
-      ctx.fillText(threadName, width / 2, height - 100);
-
-      // 3. Nombre exact de membres sous le nom du groupe
-      ctx.font = "italic 30px Arial";
-      ctx.fillStyle = "#ffffff";
-      ctx.fillText(`Membres: ${memberCount}`, width / 2, height - 50);
-
-      // Sauvegarde locale de l'image éditée
-      const buffer = canvas.toBuffer("image/png");
-      fs.writeFileSync(imgPath, buffer);
-
-      // Envoi réussi de l'image et du texte complet
+      // Envoi du message d'initialisation avec la pièce jointe
       await api.sendMessage({
-        body: mainMessage,
-        attachment: fs.createReadStream(imgPath)
+        body: msg,
+        attachment: fs.createReadStream(imagePath)
       }, threadID);
 
-      // Nettoyage du fichier temporaire cache
-      fs.unlinkSync(imgPath);
+      // Nettoyage instantané du cache
+      setTimeout(() => {
+        try { if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath); } catch (e) {}
+      }, 3500);
 
     } catch (err) {
-      console.error("Erreur de génération Canvas : ", err);
-      
-      // FALLBACK : En cas d'échec de la création graphique, envoie le message texte
-      const fallback = `
-╭ ◜◝ ͡ ◜◝ ͡ ◝╮
-♡ 𝘼𝙣𝙜𝙚𝙡 𝘽𝙤𝙩 ♡
-╰ ◟◞ ͜ ◟◞ ╯
-
-❌ 𝐈𝐦𝐚𝐠𝐞 𝐮𝐧𝐚𝐯𝐚𝐢𝐥𝐚𝐛𝐥𝐞 (Local Canvas Error)
-
-🎀 ${mainMessage}
-`;
-      api.sendMessage(fallback, threadID);
+      console.error("[BOTJOIN SYSTEM ERR]", err);
     }
   }
 };
+
+// ==========================================================
+// 🎨 MOTEUR GRAPHIQUE CANVAS (PRÉSENTATION DU BOT)
+// ==========================================================
+async function generateBotJoinBanner(groupName, memberCount, prefix, threadID) {
+  const width = 1100;
+  const height = 500;
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+
+  // 1. Fond Cyberpunk abstrait violet et néon profond
+  const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+  bgGrad.addColorStop(0, "#0a041a");
+  bgGrad.addColorStop(0.5, "#1b0933");
+  bgGrad.addColorStop(1, "#030f26");
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  // 2. Grille de données futuriste (ATH / HUD Effect)
+  ctx.strokeStyle = "rgba(0, 242, 254, 0.04)";
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < width; i += 40) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke();
+  }
+  for (let j = 0; j < height; j += 40) {
+    ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(width, j); ctx.stroke();
+  }
+
+  // 3. Cadre géométrique néon à angles coupés
+  ctx.strokeStyle = "rgba(168, 85, 247, 0.4)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(35, 50);
+  ctx.lineTo(width - 50, 35);
+  ctx.lineTo(width - 35, 50);
+  ctx.lineTo(width - 35, height - 50);
+  ctx.lineTo(width - 50, height - 35);
+  ctx.lineTo(35, height - 35);
+  ctx.closePath();
+  ctx.stroke();
+
+  // 4. Logo central symbolique (Intelligence Artificielle en ligne)
+  const centerX = 220;
+  const centerY = height / 2;
+  
+  ctx.save();
+  ctx.shadowColor = "#00f2fe";
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = "rgba(0, 242, 254, 0.1)";
+  ctx.beginPath(); ctx.arc(centerX, centerY, 90, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  ctx.strokeStyle = "#00f2fe";
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(centerX, centerY, 90, 0, Math.PI * 2); ctx.stroke();
+
+  // Dessin d'un mini-ATH interne au cercle
+  ctx.strokeStyle = "rgba(168, 85, 247, 0.7)";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(centerX, centerY, 102, 0.2, Math.PI * 1.4); ctx.stroke();
+  ctx.beginPath(); ctx.arc(centerX, centerY, 102, Math.PI + 0.2, Math.PI * 1.9); ctx.stroke();
+
+  // Icône texte IA au centre du cercle
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 48px Arial Black";
+  ctx.fillText("AI", centerX, centerY);
+
+  // 5. Section d'affichage des textes informatifs (Alignés à gauche)
+  ctx.textAlign = "left";
+  const textStartX = 390;
+
+  // En-tête de protocole
+  ctx.fillStyle = "#ff007f";
+  ctx.font = "bold 16px Courier New";
+  ctx.fillText("📡 // BOT_CORE_SYSTEM : ONLINE_ESTABLISHED", textStartX, height / 2 - 100);
+
+  // Titre principal de salutation
+  const mainGrad = ctx.createLinearGradient(textStartX, 0, textStartX + 450, 0);
+  mainGrad.addColorStop(0, "#ffffff");
+  mainGrad.addColorStop(1, "#00f2fe");
+  ctx.fillStyle = mainGrad;
+  ctx.font = "bold 46px sans-serif";
+  ctx.fillText("SYSTEM INITIALIZED", textStartX, height / 2 - 45);
+
+  // Insertion du nom du groupe connecté
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 26px Arial";
+  const cleanGroup = groupName.length > 30 ? groupName.substring(0, 28) + "..." : groupName;
+  ctx.fillText(`📍 Salon : ${cleanGroup}`, textStartX, height / 2 + 15);
+
+  // Nombre de membres détectés à l'arrivée
+  ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+  ctx.font = "19px sans-serif";
+  ctx.fillText(`👥 Analyse : ${memberCount} utilisateurs synchronisés`, textStartX, height / 2 + 55);
+
+  // 6. Affichage du badge d'utilisation du préfixe
+  const badgeText = `COMMAND PREFIX : ${prefix}`;
+  ctx.font = "bold 15px Courier New";
+  const textWidth = ctx.measureText(badgeText).width;
+
+  ctx.fillStyle = "rgba(255, 0, 127, 0.1)";
+  ctx.strokeStyle = "rgba(255, 0, 127, 0.4)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(textStartX, height / 2 + 95, textWidth + 24, 32, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#ff007f";
+  ctx.fillText(badgeText, textStartX + 12, height / 2 + 112);
+
+  // 7. Enregistrement sur l'espace disque temporaire
+  const cacheDir = path.join(__dirname, "cache");
+  await fs.ensureDir(cacheDir);
+  const pathSave = path.join(cacheDir, `botjoin_${threadID}_${Date.now()}.png`);
+  await fs.writeFile(pathSave, canvas.toBuffer("image/png"));
+  return pathSave;
+}
