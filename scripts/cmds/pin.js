@@ -6,29 +6,29 @@ const { createCanvas, loadImage } = require("canvas");
 module.exports = {
   config: {
     name: "pin",
-    version: "4.0 Portrait Gallery",
+    version: "4.5 Gallery",
     author: "Shade × Gemini",
     countDown: 5,
     role: 0,
-    shortDescription: "💖 Pinterest portrait gallery",
-    longDescription: "🌸 Galerie d'images au format strictement vertical (Portrait), fond noir, navigation par page.",
+    shortDescription: "Pinterest Gallery Grid",
+    longDescription: "Affiche une grille verticale d'images provenant de Pinterest avec navigation par page et sélection par numéro.",
     category: "image",
-    guide: "{p}pin <recherche>"
+    guide: "{p}pin [recherche]"
   },
 
   onStart: async function ({ message, args, event }) {
     const query = args.join(" ");
 
     if (!query) {
-      return message.reply("🌸 Pinterest Portrait\n\nUtilisation:\n!pin Naruto");
+      return message.reply("⚠️ Veuillez spécifier un terme de recherche.\nExemple : !pin chat");
     }
 
-    const loading = await message.reply("⏳ Génération de la galerie verticale...");
+    const loading = await message.reply("⏳ Recherche et génération de la galerie...");
 
     try {
-      // Appel à ton API personnalisée (Demande de 100 images max pour gérer les pages)
+      // Appel à ton API Pinterest (Demande de 100 images max pour gérer le défilement)
       const apiUrl = `https://zetbot-page.onrender.com/api/pinterest?query=${encodeURIComponent(query)}&limit=100`;
-      const response = await axios.get(apiUrl, { timeout: 8000 });
+      const response = await axios.get(apiUrl, { timeout: 10000 });
 
       let allImages = [];
       if (Array.isArray(response.data)) {
@@ -44,19 +44,20 @@ module.exports = {
         return message.reply("❌ Aucun résultat trouvé pour cette recherche.");
       }
 
+      // Nettoyer la liste des liens
       allImages = allImages.filter(Boolean);
 
-      // Lancement de la première page de la galerie verticale
-      await this.sendVerticalGrid({ message, event, query, allImages, currentPage: 1, loadingId: loading.messageID });
+      // Génération de la première page
+      await this.sendGridPage({ message, event, query, allImages, currentPage: 1, loadingId: loading.messageID });
 
     } catch (e) {
       console.error(e);
       await message.unsend(loading.messageID);
-      return message.reply("❌ Une erreur est survenue lors du chargement des images.");
+      return message.reply("❌ Une erreur est survenue lors de la communication avec l'API Pinterest.");
     }
   },
 
-  sendVerticalGrid: async function ({ message, event, query, allImages, currentPage, loadingId }) {
+  sendGridPage: async function ({ message, event, query, allImages, currentPage, loadingId }) {
     const cache = path.join(__dirname, "cache");
     await fs.ensureDir(cache);
 
@@ -67,53 +68,50 @@ module.exports = {
     const pageImages = allImages.slice(startIndex, endIndex);
 
     if (pageImages.length === 0) {
-      return message.reply("🌸 Fin des images disponibles.");
+      if (loadingId) await message.unsend(loadingId);
+      return message.reply("📋 Fin des images disponibles pour cette recherche.");
     }
 
-    // ==========================================
-    // 📐 CONFIGURATION DE LA GALERIE VERTICALE
-    // ==========================================
-    // Structure : 4 colonnes de large, 5 lignes de haut = 20 images
+    // Configuration géométrique de la grille verticale (4 colonnes x 5 lignes = 20 images)
     const cols = 4;
     const rows = Math.ceil(pageImages.length / cols);
     
-    const cellWidth = 240;   // Largeur de chaque vignette (Format debout)
-    const cellHeight = 360;  // Hauteur de chaque vignette (Format debout)
-    const padding = 15;      // Espace entre les images
+    const cellWidth = 240;   // Proportion verticale (debout)
+    const cellHeight = 360;  
+    const padding = 15;      
     
-    const headerHeight = 80; // Espace en haut pour le titre
-    const footerHeight = 40; // Espace de sécurité en bas
+    const headerHeight = 90; 
+    const footerHeight = 30; 
 
-    // Dimensions globales du Canva : STRICTEMENT DROIT / VERTICAL
     const canvasWidth = (cellWidth * cols) + (padding * (cols + 1));
     const canvasHeight = headerHeight + (cellHeight * rows) + (padding * (rows + 1)) + footerHeight;
 
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext("2d");
 
-    // 1. Fond arrière NOIR PUR (comme demandé)
+    // Fond arrière Noir Uni Strict
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Texte de l'en-tête de la galerie
+    // Titre de l'interface
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 28px Arial";
-    ctx.fillText(`📊 GALERIE : ${query.toUpperCase()}`, padding, 45);
+    ctx.font = "bold 30px Arial";
+    ctx.fillText(`🔍 RECHERCHE : ${query.toUpperCase()}`, padding, 50);
     
     ctx.fillStyle = "#aaaaaa";
-    ctx.font = "20px Arial";
+    ctx.font = "22px Arial";
     ctx.textAlign = "right";
-    ctx.fillText(`Page ${currentPage} / ${Math.ceil(allImages.length / imagesPerPage)}`, canvasWidth - padding, 45);
-    ctx.textAlign = "left"; // Reset l'alignement
+    const totalPages = Math.ceil(allImages.length / imagesPerPage);
+    ctx.fillText(`Page ${currentPage} / ${totalPages}`, canvasWidth - padding, 50);
+    ctx.textAlign = "left"; 
 
     const downloadedPaths = [];
 
-    // 3. Boucle de rendu des images de la galerie
+    // Téléchargement et intégration des vignettes dans la grille
     for (let i = 0; i < pageImages.length; i++) {
       const imgUrl = pageImages[i];
-      const filePath = path.join(cache, `v_pin_${Date.now()}_p${currentPage}_${i}.jpg`);
+      const filePath = path.join(cache, `pin_thumb_${Date.now()}_p${currentPage}_${i}.jpg`);
 
-      // Calcul des positions X et Y sur la grille verticale
       const colIndex = i % cols;
       const rowIndex = Math.floor(i / cols);
       
@@ -121,19 +119,18 @@ module.exports = {
       const y = headerHeight + padding + rowIndex * (cellHeight + padding);
 
       try {
-        const response = await axios({ url: imgUrl, responseType: "stream", timeout: 6000 });
-        await new Promise((res, rej) => {
+        const res = await axios({ url: imgUrl, responseType: "stream", timeout: 5000 });
+        await new Promise((resolve, reject) => {
           const stream = fs.createWriteStream(filePath);
-          response.data.pipe(stream);
-          stream.on("finish", res);
-          stream.on("error", rej);
+          res.data.pipe(stream);
+          stream.on("finish", resolve);
+          stream.on("error", reject);
         });
 
         downloadedPaths.push(filePath);
-
         const img = await loadImage(filePath);
 
-        // Intégration intelligente (Découpe/Remplissage pour respecter le format vertical sans écraser la photo)
+        // Découpe intelligente centrée pour respecter le ratio vertical sans déformer l'image original
         ctx.save();
         ctx.beginPath();
         ctx.rect(x, y, cellWidth, cellHeight);
@@ -158,51 +155,42 @@ module.exports = {
         ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
         ctx.restore();
 
-        // Ajout d'une fine bordure grise pour délimiter proprement les cadres
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+        // Contour de délimitation de la case
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
         ctx.lineWidth = 2;
         ctx.strokeRect(x, y, cellWidth, cellHeight);
 
-        // Petit badge d'indexation (Numéro de l'image) en haut à gauche de chaque case
-        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-        ctx.fillRect(x + 5, y + 5, 45, 35);
+        // Badge du numéro
+        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.fillRect(x + 8, y + 8, 45, 45);
         
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 20px Arial";
-        ctx.fillText(`${i + 1}`, x + 15, y + 30);
+        ctx.font = "bold 24px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${i + 1}`, x + 30, y + 38);
+        ctx.textAlign = "left"; 
 
       } catch (err) {
-        console.log("Image ignorée ou inaccessible :", imgUrl);
         downloadedPaths.push(null);
-        
-        // Boîtier vide de secours si l'image plante
-        ctx.fillStyle = "#111111";
+        ctx.fillStyle = "#1c1c1c";
         ctx.fillRect(x, y, cellWidth, cellHeight);
         ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
         ctx.strokeRect(x, y, cellWidth, cellHeight);
-        ctx.fillStyle = "#555555";
-        ctx.font = "16px Arial";
-        ctx.fillText("Échec", x + cellWidth / 3, y + cellHeight / 2);
       }
     }
 
-    const outPath = path.join(cache, `vertical_grid_${Date.now()}.jpg`);
+    const outPath = path.join(cache, `pin_grid_p${currentPage}_${Date.now()}.jpg`);
     fs.writeFileSync(outPath, canvas.toBuffer("image/jpeg"));
 
-    const responseText = `📱 GALERIE PORTRAIT (DESSUS-DESSOUS)
-
-🔎 Terme : ${query}
-📄 Emplacement : Page ${currentPage}
-
-👉 Réponds avec le numéro [1-${pageImages.length}] pour extraire l'image seule en HD.
-👉 Réponds avec "page ${currentPage + 1}" pour faire défiler vers la suite !`;
+    const instructions = `📱 GALERIE PINTEREST\n━━━━━━━━━━━━━━━━━\n✨ Terme : ${query}\n📄 Emplacement : Page ${currentPage} / ${totalPages}\n\n👉 Répondez avec un numéro [1-${pageImages.length}] pour obtenir l'image seule.\n👉 Répondez avec "page ${currentPage + 1}" pour afficher les images suivantes.`;
 
     await message.reply({
-      body: responseText,
+      body: instructions,
       attachment: fs.createReadStream(outPath)
     }, (err, info) => {
       if (err) return;
 
+      // Sauvegarde de l'état dans la session globale de GoatBot pour capturer les réponses
       global.GoatBot.onReply.set(info.messageID, {
         commandName: this.config.name,
         author: event.senderID,
@@ -214,26 +202,27 @@ module.exports = {
     });
 
     if (loadingId) {
-      await message.unsend(loadingId);
+      try { await message.unsend(loadingId); } catch (_) {}
     }
   },
 
   onReply: async function ({ event, Reply, message, args }) {
+    // Seul l'auteur initial de la recherche peut interagir avec sa propre galerie
     if (event.senderID !== Reply.author) return;
 
     const input = args.join(" ").toLowerCase().trim();
 
-    // 1. Défilement vers une autre page (ex: "page 2")
+    // Gestion du changement de page (ex: "page 2")
     if (input.startsWith("page")) {
       const targetPage = parseInt(input.replace("page", "").trim());
 
       if (isNaN(targetPage) || targetPage < 1) {
-        return message.reply("❌ Spécifie un format de page correct.");
+        return message.reply("❌ Numéro de page invalide.");
       }
 
       const loading = await message.reply(`⏳ Chargement de la page ${targetPage}...`);
       
-      return this.sendVerticalGrid({
+      return this.sendGridPage({
         message,
         event,
         query: Reply.query,
@@ -243,22 +232,22 @@ module.exports = {
       });
     }
 
-    // 2. Extraction d'un chiffre précis
+    // Extraction d'un numéro d'image précis
     const index = parseInt(input) - 1;
 
     if (!isNaN(index) && Reply.currentPageImages && index >= 0 && index < Reply.currentPageImages.length) {
       const imagePath = Reply.currentPageImages[index];
 
       if (!imagePath || !fs.existsSync(imagePath)) {
-        return message.reply("❌ Impossible de récupérer cette photo ou le lien source a expiré.");
+        return message.reply("❌ Cette image n'est pas disponible ou son cache a expiré.");
       }
 
       return message.reply({
-        body: `✨ Voici la photo [${index + 1}] issue de la page ${Reply.currentPage}`,
+        body: `✨ Voici l'image [${index + 1}] demandée (Page ${Reply.currentPage})`,
         attachment: fs.createReadStream(imagePath)
       });
     }
 
-    return message.reply("💡 Commande inconnue. Tapez un chiffre (1-20) pour choisir une image ou 'page X' (ex: page 2) pour changer de vue.");
+    return message.reply("💡 Option non reconnue. Entrez un numéro (1-20) pour afficher une image ou 'page [numéro]' pour naviguer.");
   }
 };
