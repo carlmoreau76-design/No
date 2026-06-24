@@ -2,25 +2,17 @@ const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs-extra");
 const path = require("path");
 
-// 👑 Vos informations configurées
-const ownerInfo = {
-  name: "ヾ Kαɪ.夜",
-  facebook: "https://www.facebook.com/shade.userX",
-  instagram: "x.shade108",
-  supportGroup: "꒰ა 𝘚𝘶𝘱𝘱𝘰ʳᵗ 𝘣𝘪𝘦𝘯𝒕𝒐̂𝒕 𝘥𝘪𝘴𝘱𝘰𝘯𝘪𝘣𝘭𝑒 ໒꒱"
-};
-
 module.exports = {
   config: {
     name: "botjoin",
-    version: "2.2.0",
-    author: "Gemini & Angel System",
+    version: "2.1.0",
+    author: "Gemini",
     role: 0,
     description: "Génère une bannière de présentation graphique haut de gamme lorsque le bot est intégré à un groupe.",
     category: "events"
   },
 
-  // Évite l'erreur "Function onStart is missing!" lors du chargement
+  // 🔥 AJOUT CRUCIAL : Permet d'éviter l'erreur "Function onStart is missing!" lors du chargement
   onStart: async function () {},
 
   onEvent: async function ({ api, event, prefix }) {
@@ -34,55 +26,25 @@ module.exports = {
     const isBotAdded = logMessageData.addedParticipants.some(p => p.userFbId === botID);
     if (!isBotAdded) return;
 
-    const nickNameBot = global.GoatBot.config.nickNameBot || "Angel Bot ✨";
-
-    // Changement de pseudo automatique du Bot
-    try {
-      await api.changeNickname(nickNameBot, threadID, botID);
-    } catch (e) {
-      console.log("Impossible de changer le pseudo du bot :", e);
-    }
-
     try {
       // Collecte des données du salon
       const threadInfo = await api.getThreadInfo(threadID);
       const groupName = threadInfo.threadName || "Nouveau Secteur";
       const memberCount = threadInfo.participantIDs.length;
 
-      // Génération de la bannière technologique avec l'ATH Cyberpunk
+      // Génération de la bannière technologique
       const imagePath = await generateBotJoinBanner(groupName, memberCount, prefix, threadID);
-
-      // Message Premium incluant tes coordonnées d'owner
-      const msg = `╭ ◜◝ ͡ ◜◝ ͡ ◝╮
-♡ 𝘼𝙣𝙜𝙚𝙡 𝘽𝙤𝙩 ♡
-╰ ◟◞ ͜ ◟◞ ╯
-
-🎀 𝐓𝐡𝐚𝐧𝐤 𝐲𝐨υ 𝐟𝐨𝐫 𝐢𝐧𝐯𝐢𝐭𝐢𝐧𝐠 𝐦𝐞
-
-🔹 𝐏𝐫𝐞𝐟𝐢𝐱 : ${prefix}
-🔸 𝐔𝐬𝐞 : ${prefix}help
-
-💫 𝐈’𝐦 𝐀𝐧𝐠𝐞λ 𝐁𝐨𝐭
-
-╭══════════════╮
-👑 𝐎𝐰𝐧𝐞𝐫 : ${ownerInfo.name}
-🌐 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 : ${ownerInfo.facebook}
-✈️ 𝐈𝐧𝐬𝐭𝐚𝐠𝐫𝐚𝐦 : ${ownerInfo.instagram}
-🤖 𝐒𝐮𝐩𝐩𝐨𝐫𝐭 : ${ownerInfo.supportGroup}
-╰══════════════╯
-
-✨ 𝐀𝐥𝐰𝐚𝐲𝐬 𝐚𝐜𝐭𝐢𝐯𝐞 • 𝐒𝐭𝐚𝐲 𝐜𝐮𝐭𝐞 ✨`;
 
       // Envoi du message d'initialisation avec la pièce jointe
       await api.sendMessage({
-        body: msg,
+        body: `🤖 **[INITIALISATION DU SYSTÈME]**\n━━━━━━━━━━━━━━━━━━━━━\nBonjour à tous ! Merci de m'avoir configuré dans **${groupName}**.\n\n⚙️ **Statut :** En ligne et opérationnel\n📌 **Mon Préfixe actuel :** \`${prefix}\`\n💡 Tapez \`${prefix}help\` pour découvrir l'intégralité de mes modules administratifs et de divertissement.`,
         attachment: fs.createReadStream(imagePath)
       }, threadID);
 
       // Nettoyage instantané du cache
       setTimeout(() => {
         try { if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath); } catch (e) {}
-      }, 3500);
+      }, 3000);
 
     } catch (err) {
       console.error("[BOTJOIN SYSTEM ERR]", err);
@@ -208,4 +170,4 @@ async function generateBotJoinBanner(groupName, memberCount, prefix, threadID) {
   const pathSave = path.join(cacheDir, `botjoin_${threadID}_${Date.now()}.png`);
   await fs.writeFile(pathSave, canvas.toBuffer("image/png"));
   return pathSave;
-}
+  }
