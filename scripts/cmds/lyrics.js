@@ -1,136 +1,189 @@
 const axios = require("axios");
-const fs = require("fs");
+const fs = require("fs-extra");
 const path = require("path");
-const canvas = require("canvas");
+const { createCanvas, loadImage } = require("canvas");
 
 module.exports = {
   config: {
     name: "lyrics",
     aliases: ["paroles"],
-    version: "2.5 Premium",
-    author: "Aryan Chauhan & Shade × Gemini",
+    version: "4.0 Portrait",
+    author: "Shade × Gemini",
+    countDown: 5,
     role: 0,
+    shortDescription: "Affiche les paroles dans une carte au format portrait vertical.",
     category: "media",
-    longDescription: { fr: "Obtenir les paroles d'une chanson avec sa pochette d'album depuis l'API ZetBot." },
-    guide: { fr: "{pn} [nom de la chanson]" }
+    guide: "{p}lyrics [nom de la chanson]"
   },
 
-  onStart: async function ({ api, event, args, message }) {
+  onStart: async function ({ message, args, event }) {
+    const query = args.join(" ");
+
+    if (!query) {
+      return message.reply("⚠️ Veuillez spécifier un nom de chanson.\nExemple : !lyrics Eminem Lose Yourself");
+    }
+
+    const loading = await message.reply("⏳ Recherche et génération de la carte portrait...");
+
     try {
-      const songName = args.join(" ");
-      if (!songName) return message.reply("❌ Veuillez fournir un nom de chanson.");
-
-      const loading = await message.reply("⏳ Recherche des paroles sur votre API... 🎵");
-
-      // 🛰️ Intégration de ton API personnalisée
-      const monUrlApi = `https://zetbot-page.onrender.com/api/lyrics?query=${encodeURIComponent(songName)}`;
-      
-      const response = await axios.get(monUrlApi, { timeout: 8000 });
+      // Appel à ton API de paroles
+      const apiUrl = `https://zetbot-page.onrender.com/api/lyrics?query=${encodeURIComponent(query)}`;
+      const response = await axios.get(apiUrl, { timeout: 10000 });
       const data = response.data;
 
-      // Unsend du chargement
-      try { await message.unsend(loading.messageID); } catch(e) {}
-
-      // Vérification basique des données reçues
       if (!data || (!data.lyrics && !data.title)) {
-        return message.reply("❌ Aucune parole trouvée pour cette chanson.");
+        await message.unsend(loading.messageID);
+        return message.reply("❌ Aucune parole ou chanson trouvée pour cette recherche.");
       }
 
-      // Gestion de l'image de fond et de la pochette d'album
-      const bgUrl = "https://i.imgur.com/4M7QYqH.jpg";
-      let bg, img;
-      
-      try {
-        bg = await canvas.loadImage(bgUrl);
-      } catch(e) {
-        // Fond noir de secours si imgur est inaccessible
-        bg = canvas.createCanvas(800, 800);
-        const bgCtx = bg.getContext("2d");
-        bgCtx.fillStyle = "#121212";
-        bgCtx.fillRect(0, 0, 800, 800);
-      }
+      const cache = path.join(__dirname, "cache");
+      await fs.ensureDir(cache);
 
-      // Récupération de l'image de la pochette (souvent fournie sous "image", "thumbnail" ou "thumb")
+      // ==========================================
+      // 📐 CONFIGURATION STRICTEMENT PORTRAIT (DROIT)
+      // ==========================================
+      const canvasWidth = 500;   // Largeur fixe (format debout)
+      const canvasHeight = 850;  // Hauteur allongée pour contenir les paroles en dessous
+      const padding = 25;
+
+      const canvas = createCanvas(canvasWidth, canvasHeight);
+      const ctx = canvas.getContext("2d");
+
+      // 1. Fond arrière NOIR PUR
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // 2. Intégration de la pochette d'album (Carré droit et centré en haut)
       const coverUrl = data.image || data.thumbnail || data.thumb;
+      const coverSize = 300; 
+      const coverX = (canvasWidth - coverSize) / 2;
+      const coverY = 40;
+
       if (coverUrl) {
         try {
-          img = await canvas.loadImage(coverUrl);
-        } catch (e) {
-          coverUrl = null; // En cas d'erreur de chargement, on passe au fallback
+          // Téléchargement temporaire de la pochette
+          const tmpCoverPath = path.join(cache, `lyric_thumb_${Date.now()}.jpg`);
+          const resImg = await axios({ url: coverUrl, responseType: "stream", timeout: 5000 });
+          
+          await new Promise((resolve, reject) => {
+            const stream = fs.createWriteStream(tmpCoverPath);
+            resImg.data.pipe(stream);
+            stream.on("finish", resolve);
+            stream.on("error", reject);
+          });
+
+          const img = await loadImage(tmpCoverPath);
+
+          // Rendu de l'image droite (découpe centrée pour éviter toute déformation)
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(coverX, coverY, coverSize, coverSize);
+          ctx.clip();
+
+          const imgRatio = img.width / img.height;
+          let drawWidth, drawHeight, offsetX, offsetY;
+
+          if (imgRatio > 1) {
+            drawHeight = coverSize;
+            drawWidth = coverSize * imgRatio;
+            offsetX = coverX - (drawWidth - coverSize) / 2;
+            offsetY = coverY;
+          } else {
+            drawWidth = coverSize;
+            drawHeight = coverSize / imgRatio;
+            offsetX = coverX;
+            offsetY = coverY - (drawHeight - coverSize) / 2;
+          }
+
+          ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+          ctx.restore();
+
+          // Suppression du fichier temporaire de la pochette
+          try { fs.unlinkSync(tmpCoverPath); } catch (_) {}
+
+        } catch (err) {
+          // Fallback si la pochette échoue : rectangle gris neutre
+          ctx.fillStyle = "#1a1a1a";
+          ctx.fillRect(coverX, coverY, coverSize, coverSize);
         }
-      }
-
-      const c = canvas.createCanvas(800, 800);
-      const ctx = c.getContext("2d");
-
-      // Dessin des images sur le Canva
-      ctx.drawImage(bg, 0, 0, 800, 800);
-      
-      if (coverUrl && img) {
-        ctx.drawImage(img, 50, 50, 200, 200);
-        // Fine bordure blanche autour de la pochette
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(50, 50, 200, 200);
       } else {
-        // Carré gris par défaut si aucune image n'est disponible
-        ctx.fillStyle = "#282828";
-        ctx.fillRect(50, 50, 200, 200);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 20px Arial";
-        ctx.fillText("NO IMAGE", 90, 160);
+        // Pas d'image disponible : cadre vide
+        ctx.fillStyle = "#1a1a1a";
+        ctx.fillRect(coverX, coverY, coverSize, coverSize);
       }
 
-      // Texte : Titre et Artiste
+      // Cadre blanc très fin autour de la photo
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(coverX, coverY, coverSize, coverSize);
+
+      // 3. Zone de textes (Titre & Artiste)
+      ctx.textAlign = "center";
+      
+      // Titre
       ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 32px Arial";
-      const titleText = data.title || songName;
-      ctx.fillText(titleText.length > 25 ? titleText.substring(0, 22) + "..." : titleText, 280, 110);
+      ctx.font = "bold 26px Arial";
+      const titleText = data.title || query;
+      ctx.fillText(titleText.length > 30 ? titleText.substring(0, 27) + "..." : titleText, canvasWidth / 2, coverY + coverSize + 45);
 
-      ctx.fillStyle = "#1db954"; // Vert Spotify moderne pour l'artiste
-      ctx.font = "bold 24px Arial";
+      // Artiste
+      ctx.fillStyle = "#1db954"; // Vert style lecteur de musique
+      ctx.font = "bold 18px Arial";
       const artistText = data.artist || "Artiste Inconnu";
-      ctx.fillText(artistText.length > 30 ? artistText.substring(0, 27) + "..." : artistText, 280, 160);
+      ctx.fillText(artistText.length > 35 ? artistText.substring(0, 32) + "..." : artistText, canvasWidth / 2, coverY + coverSize + 75);
 
-      // Séparateur horizontal graphique
+      // Ligne de séparation droite
       ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(50, 275); ctx.lineTo(750, 275); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(padding, coverY + coverSize + 100);
+      ctx.lineTo(canvasWidth - padding, coverY + coverSize + 100);
+      ctx.stroke();
 
-      // Traitement et affichage des paroles (limitées pour éviter le débordement vertical)
-      const rawLyrics = data.lyrics || "Les paroles n'ont pas pu être chargées.";
-      const cleanLyrics = rawLyrics.replace(/\\n/g, "\n"); // Corrige les sauts de ligne échappés
-      const lyricsSnippet = cleanLyrics.length > 900 ? cleanLyrics.slice(0, 850) + "\n\n[...Paroles tronquées...]" : cleanLyrics;
-      
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "20px Arial";
-      wrapText(ctx, lyricsSnippet, 50, 315, 700, 28);
+      // 4. Rendu des Paroles (Affichage textuel droit et aligné sous la ligne)
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#e0e0e0";
+      ctx.font = "16px Arial";
 
-      // Création propre du fichier temporaire pour l'envoi
-      const cacheDir = path.join(__dirname, "cache");
-      if (!fs.existsSync(cacheDir)) {
-        fs.mkdirSync(cacheDir, { recursive: true });
-      }
-      const filePath = path.join(cacheDir, `lyrics_${event.senderID}_${Date.now()}.png`);
+      const rawLyrics = data.lyrics || "Aucune parole disponible.";
+      const cleanLyrics = rawLyrics.replace(/\\n/g, "\n");
+      // Tronquer si le texte est trop massif pour tenir dans la zone portrait basse
+      const maxCharacters = 600;
+      const lyricsSnippet = cleanLyrics.length > maxCharacters ? cleanLyrics.slice(0, maxCharacters) + "\n\n[...]" : cleanLyrics;
 
-      fs.writeFileSync(filePath, c.toBuffer("image/png"));
+      // Application du retour à la ligne automatique dans la zone dédiée
+      const startLyricsY = coverY + coverSize + 130;
+      wrapText(ctx, lyricsSnippet, padding, startLyricsY, canvasWidth - (padding * 2), 24);
 
-      // Envoi de la réponse avec suppression sécurisée
-      return message.reply({
-        body: `🎵 Paroles de « ${data.title || songName} » générées via votre API !`,
-        attachment: fs.createReadStream(filePath)
-      }, () => {
-        try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch(e) {}
+      // 5. Sauvegarde et envoi du rendu final
+      const outPath = path.join(cache, `lyrics_portrait_${Date.now()}.jpg`);
+      fs.writeFileSync(outPath, canvas.toBuffer("image/jpeg"));
+
+      await message.reply({
+        body: `🎵 Voici la fiche portrait de « ${data.title || query} »`,
+        attachment: fs.createReadStream(outPath)
       });
+
+      // Nettoyage de l'image finale générée
+      setTimeout(() => {
+        try { if (fs.existsSync(outPath)) fs.unlinkSync(outPath); } catch (_) {}
+      }, 3500);
+
+      if (loadingId) {
+        try { await message.unsend(loadingId); } catch (_) {}
+      }
 
     } catch (e) {
       console.error(e);
-      return message.reply("❌ Une erreur est survenue lors de la communication avec l'API : " + (e.response?.data?.error || e.message));
+      if (loadingId) {
+        try { await message.unsend(loadingId); } catch (_) {}
+      }
+      return message.reply("❌ Une erreur est survenue lors du traitement des paroles.");
     }
   }
 };
 
-// Fonction de retour à la ligne automatique améliorée prenant en charge les \n originaux
+// Fonction de gestion des retours à la ligne respectant les sauts d'origine (\n)
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   const lines = text.split("\n");
 
@@ -141,9 +194,8 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
     for (let n = 0; n < words.length; n++) {
       const testLine = currentLine + words[n] + " ";
       const metrics = ctx.measureText(testLine);
-      const testWidth = metrics.width;
 
-      if (testWidth > maxWidth && n > 0) {
+      if (metrics.width > maxWidth && n > 0) {
         ctx.fillText(currentLine, x, y);
         currentLine = words[n] + " ";
         y += lineHeight;
@@ -154,4 +206,4 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
     ctx.fillText(currentLine, x, y);
     y += lineHeight;
   }
-          }
+        }
