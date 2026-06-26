@@ -14,7 +14,7 @@ function extractUIDLocal(input) {
 
 module.exports = {
   config: {
-    name: "angeladd",
+    name: "add",
     aliases: ["aadd", "addmember"],
     version: "3.0.0",
     author: "Shade × Gemini",
@@ -26,7 +26,7 @@ module.exports = {
   langs: {
     fr: {
       notOwner: "⛔ **[ACCÈS REFUSÉ]** Terminal sécurisé. Seul le Fondateur Suprême possède les clés de contournement.",
-      usage: "💡 **[INFO TERMINAL]** Syntaxe requise : `angeladd [UID ou Lien du profil]`",
+      usage: "💡 **[INFO TERMINAL]** Syntaxe requise : `add [UID ou Lien du profil]`",
       processing: "⏳ **[INITIALISATION]** Connexion à la passerelle Facebook... Tentative d'injection des utilisateurs.",
       result: "⚡ **[RAPPORT DE TRANSIT CYBER]**\n━━━━━━━━━━━━━━━━━\n🟩 Membres injectés : %1\n🟥 Échecs / Rejets : %2"
     }
