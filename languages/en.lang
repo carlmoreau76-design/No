@@ -1,9 +1,9 @@
 # index.js
 
-Goat.newVersionDetected=Vous utilisez la version %1, la dernière version est %2. Veuillez mettre à jour pour mieux utiliser le bot en tapant dans la console/cmd la commande : %3
-Goat.autoRestart1=Le bot redémarrera automatiquement dans %1
-Goat.autoRestart2=Le bot redémarrera automatiquement via le cron job : %1
-Goat.googleApiTokenExpired=Le token de rafraîchissement Google API a expiré ou a été révoqué, veuillez en obtenir un nouveau à l'adresse https://developers.google.com/oauthplayground/
+Goat.newVersionDetected=📢 𝐇𝐞́, 𝐨𝐧 𝐚 𝐮𝐧𝐞 𝐧𝐨𝐮𝐯𝐞𝐥𝐥𝐞 𝐯𝐞𝐫𝐬𝐢𝐨𝐧 ! 𝐓𝐮 𝐚𝐬 𝐥𝐚 %1 𝐚𝐥𝐨𝐫𝐬 𝐪𝐮’𝐨𝐧 𝐞𝐬𝐭 𝐚̀ 𝐥𝐚 %2. 𝐁𝐨𝐮𝐠𝐞-𝐭𝐨𝐢 𝐞𝐭 𝐭𝐚𝐩𝐞 𝐜̧𝐚 𝐝𝐚𝐧𝐬 𝐭𝐚 𝐜𝐨𝐧𝐬𝐨𝐥𝐞 : %3 😤
+Goat.autoRestart1=🔄 𝐎𝐮𝐩𝐬, 𝐣𝐞 𝐝𝐨𝐢𝐬 𝐟𝐚𝐢𝐫𝐞 𝐮𝐧 𝐩𝐞𝐭𝐢𝐭 𝐛𝐫𝐞𝐚𝐤... 𝐑𝐞𝐝𝐞́𝐦𝐚𝐫𝐫𝐚𝐠𝐞 𝐚𝐮𝐭𝐨𝐦𝐚𝐭𝐢𝐪𝐮𝐞 𝐝𝐚𝐧𝐬 %1 ! ⏳
+Goat.autoRestart2=📅 𝐂’𝐞𝐬𝐭 𝐥’𝐡𝐞𝐮𝐫𝐞 𝐝𝐮 𝐜𝐡𝐚𝐧𝐠𝐞𝐦𝐞𝐧𝐭 ! 𝐑𝐞𝐝𝐞́𝐦𝐚𝐫𝐫𝐚𝐠𝐞 (𝐂𝐫𝐨𝐧) 𝐩𝐫𝐨𝐠𝐫𝐚𝐦𝐦𝐞́ 𝐚̀ : %1 ✨
+Goat.googleApiTokenExpired=⚠️ 𝐀𝐫𝐠𝐡, 𝐦𝐨𝐧 𝐭𝐨𝐤𝐞𝐧 𝐆𝐨𝐨𝐠𝐥𝐞 𝐀𝐏𝐈 𝐚 𝐞𝐱𝐩𝐢𝐫𝐞́ ! 𝐕𝐚 𝐦’𝐞𝐧 𝐜𝐡𝐞𝐫𝐜𝐡𝐞𝐫 𝐮𝐧 𝐧𝐨𝐮𝐯𝐞𝐚𝐮 𝐢𝐜𝐢, 𝐬’𝐢𝐥 𝐭𝐞 𝐩𝐥𝐚𝐢𝐭 : https://developers.google.com/oauthplayground/ 🤔
 
 # bot/login/login.js
 
