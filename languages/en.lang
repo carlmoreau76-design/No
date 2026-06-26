@@ -115,7 +115,9 @@ handlerEvents.errorOccurred=❌ [ %1 ] 𝐎𝐨𝐩𝐬, 𝐣'𝐚𝐢 𝐮𝐧 
 handlerEvents.cannotFindCommandName=❌ 𝐉𝐞 𝐧'𝐚𝐫𝐫𝐢𝐯𝐞 𝐩𝐚𝐬 𝐚̀ 𝐭𝐫𝐨𝐮𝐯𝐞𝐫 𝐥𝐞 𝐧𝐨𝐦 𝐝𝐞 𝐜𝐞𝐭𝐭𝐞 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐞.
 handlerEvents.cannotFindCommand=❌ 𝐈𝐦𝐩𝐨𝐬𝐬𝐢𝐛𝐥𝐞 𝐝𝐞 𝐭𝐫𝐨𝐮𝐯𝐞𝐫 " %1 " 𝐝𝐚𝐧𝐬 𝐦𝐨𝐧 𝐫𝐞𝐠𝐢𝐬𝐭𝐫𝐞.
 
-toUptimeTurnedOn=Mode AutoUptime activé
+#bot/autoUptime.js
+
+autoUptime.autoUptimeTurnedOn=🚀 𝐌𝐨𝐝𝐞 𝐀𝐮𝐭𝐨𝐔𝐩𝐭𝐢𝐦𝐞 𝐚𝐜𝐭𝐢𝐯𝐞́ ! 𝐉𝐞 𝐫𝐞𝐬𝐭𝐞 𝐞́𝐯𝐞𝐢𝐥𝐥𝐞́𝐞 𝐩𝐨𝐮𝐫 𝐭𝐨𝐢. ✨
 
 # database/controller/index.js
 
