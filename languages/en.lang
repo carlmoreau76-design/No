@@ -142,11 +142,11 @@ verifyfbid.sendCode=🔑 𝐓𝐢𝐞𝐧𝐬, 𝐯𝐨𝐢𝐜𝐢 𝐭𝐨𝐧
 
 # utils.js
 
-utils.errorOccurred=❌ Une erreur est survenue :\n\n%1
+utils.errorOccurred=❌ 𝐌𝐢𝐧𝐜𝐞, 𝐮𝐧𝐞 𝐞𝐫𝐫𝐞𝐮𝐫 𝐞𝐬𝐭 𝐚𝐫𝐫𝐢𝐯𝐞́𝐞 :\n\n%1 😤
 
 # for command
 
-command.restartedBot=Le bot a été redémarré
+command.restartedBot=🔄 𝐂'𝐞𝐬𝐭 𝐛𝐨𝐧, 𝐣𝐞 𝐦𝐞 𝐬𝐮𝐢𝐬 𝐫𝐞𝐝𝐞́𝐦𝐚𝐫𝐫𝐞́𝐞 ! 𝐉𝐞 𝐬𝐮𝐢𝐬 𝐞𝐧  pleine 𝐟𝐨𝐫𝐦𝐞. ✨
 
 # dashboard/app.js
 
