@@ -10,7 +10,7 @@ module.exports = {
 			fr: "Hori verrouille le bot pour que seuls les admins du groupe puissent l'utiliser.",
 			en: "Hori locks the bot so only group admins can use it."
 		},
-		category: "discussion de groupe",
+		category: "system",
 		guide: {
 			fr: "   {pn} [on | off] : Activer ou désactiver le mode admin unique."
 				+ "\n   {pn} noti [on | off] : Activer ou couper les notifications pour les non-admins.",
