@@ -150,9 +150,6 @@ command.restartedBot=🔄 𝐂'𝐞𝐬𝐭 𝐛𝐨𝐧, 𝐣𝐞 𝐦𝐞 𝐬
 
 # dashboard/app.js
 
-app.googleApiRefreshTokenExpired=Le token de rafraîchissement Google API a expiré ou a été révoqué, veuillez en obtenir un nouveau à https://developers.google.com/oauthplayground/
-app.tooManyRequests=Trop de requêtes dans la dernière minute. Veuillez réessayer plus tard.
-app.notPermissionChangeFbstate=Vous n’avez pas la permission de modifier fbstate !
-app.notFoundFbstate=Veuillez entrer fbstate !
-app.changedFbstateSuccess=fbstate modifié avec succès !
-app.serverError=Erreur du serveur, veuillez réessayer plus tard !
+app.tooManyRequests=🛑 𝐎𝐡𝐥𝐚𝐥𝐚 ! 𝐓𝐫𝐨𝐩 𝐝𝐞 𝐫𝐞𝐪𝐮𝐞̂𝐭𝐞𝐬 ! 𝐋𝐚𝐢𝐬𝐬𝐞-𝐦𝐨𝐢 𝐬𝐨𝐮𝐟𝐟𝐥𝐞𝐫 𝐞𝐭 𝐫𝐞́𝐞𝐬𝐬𝐚𝐢𝐞 𝐩𝐥𝐮𝐬 𝐭𝐚𝐫𝐝 ! 😤
+app.changedFbstateSuccess=📑 𝐟𝐛𝐬𝐭𝐚𝐭𝐞 𝐦𝐨𝐝𝐢𝐟𝐢𝐞́ ! 𝐂’𝐞𝐬𝐭 𝐩𝐚𝐫𝐟𝐚𝐢𝐭.
+app.serverError=💥 𝐄𝐫𝐫𝐞𝐮𝐫 𝐬𝐞𝐫𝐯𝐞𝐮𝐫 ! 𝐑𝐞́𝐞𝐬𝐬𝐚𝐲𝐞 𝐩𝐥𝐮𝐬 𝐭𝐚𝐫𝐝, 𝐧𝐞 𝐦𝐞 𝐛𝐥𝐚̂𝐦𝐞 𝐩𝐚𝐬 ! 😜
