@@ -7,7 +7,7 @@ const axios = require('axios');
 const mediaTypes = ["photo", "png", "animated_image", "video", "audio"];
 const TARGET_GROUP_ID = "1290457223176689"; 
 
-// Fonction pour récupérer les avatars (Utilisateur ou Groupe)
+// Récupération des avatars via Graph API
 async function getAvatarBuffer(id, type = "user") {
     try {
         const url = type === "user" 
@@ -17,142 +17,167 @@ async function getAvatarBuffer(id, type = "user") {
         const response = await axios.get(url, { responseType: 'arraybuffer' });
         return Buffer.from(response.data, 'binary');
     } catch (e) {
-        const fallbackCanvas = createCanvas(200, 200);
+        // En cas d'erreur, génération d'un rond coloré neutre
+        const fallbackCanvas = createCanvas(150, 150);
         const fCtx = fallbackCanvas.getContext('2d');
         fCtx.fillStyle = '#f43f5e';
-        fCtx.fillRect(0, 0, 200, 200);
+        fCtx.beginPath();
+        fCtx.arc(75, 75, 75, 0, Math.PI * 2);
+        fCtx.fill();
         return fallbackCanvas.toBuffer();
     }
 }
 
-// Canvas Style Hori
-async function createCustomCanvas(title, subText, mainContent, senderID, isGroup, threadID) {
+// 🎨 GÉNÉRATEUR CANVAS PUR : STYLE HORI SAKURA (Sans image externe)
+async function drawHoriCanvas(title, subText, mainContent, senderID, isGroup, threadID, groupName = "") {
     const width = 1000;
     const height = 580;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    try {
-        // Fond principal Hori Kyoko réutilisé de façon optimisée
-        const background = await loadImage("https://i.imgur.com/pUCStOk.jpeg");
-        
-        const imgRatio = background.width / background.height;
-        const canvasRatio = width / height;
-        let renderWidth, renderHeight, xOffset, yOffset;
-
-        if (imgRatio > canvasRatio) {
-            renderHeight = height;
-            renderWidth = background.width * (height / background.height);
-            xOffset = (width - renderWidth) / 2;
-            yOffset = 0;
-        } else {
-            renderWidth = width;
-            renderHeight = background.height * (width / background.width);
-            xOffset = 0;
-            yOffset = (height - renderHeight) / 2;
-        }
-        ctx.drawImage(background, xOffset, yOffset, renderWidth, renderHeight);
-    } catch (e) {
-        ctx.fillStyle = '#1a0f1e';
-        ctx.fillRect(0, 0, width, height);
-    }
-
-    // Overlay d'assombrissement fluide
-    ctx.fillStyle = "rgba(15, 10, 22, 0.72)";
+    // 1. Fond dégradé principal (Style Hori : Prune profond à corail/rose)
+    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+    bgGrad.addColorStop(0, '#4c0519'); // Prune / Bordeaux foncé
+    bgGrad.addColorStop(0.5, '#881337'); 
+    bgGrad.addColorStop(1, '#f43f5e'); // Rose Hori lumineux
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Boîte centrale effet Glassmorphic
-    const boxX = 50;
-    const boxY = 40;
-    const boxWidth = 900;
-    const boxHeight = 500;
-    const radius = 20;
+    // Helper pour dessiner des silhouettes de fleurs de cerisier (Sakura) en arrière-plan
+    function drawSakuraPetal(cx, cy, r) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.translate(cx, cy);
+        for (let i = 0; i < 5; i++) {
+            ctx.rotate(Math.PI * 2 / 5);
+            ctx.moveTo(0, 0);
+            ctx.bezierCurveTo(-r/2, -r, -r, -r*1.5, 0, -r*1.2);
+            ctx.bezierCurveTo(r, -r*1.5, r/2, -r, 0, 0);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(boxX, boxY, boxWidth, boxHeight, radius) : ctx.rect(boxX, boxY, boxWidth, boxHeight);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(244, 63, 94, 0.35)";
+    // Dessin des décors Sakuras abstraits en fond
+    ctx.fillStyle = 'rgba(251, 113, 133, 0.15)';
+    drawSakuraPetal(100, 100, 45);
+    drawSakuraPetal(880, 120, 50);
+    drawSakuraPetal(150, 480, 35);
+    drawSakuraPetal(900, 460, 40);
+
+    // 2. Double bordure fine néon asymétrique (Rose / Cyan doux)
+    ctx.strokeStyle = '#22d3ee'; // Touche cyan électrique
+    ctx.lineWidth = 3;
+    ctx.strokeRect(15, 15, width - 30, height - 30);
+
+    ctx.strokeStyle = '#f43f5e'; // Bordure rose principale
     ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
+    ctx.strokeRect(22, 22, width - 44, height - 44);
 
-    // Insertion Avatar de gauche (Expéditeur)
+    // 3. Zone d'en-tête vitrée (Glassmorphism supérieure)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.beginPath();
+    if (ctx.roundRect) {
+        ctx.roundRect(50, 40, 900, 160, 16);
+    } else {
+        ctx.rect(50, 40, 900, 160);
+    }
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.stroke();
+
+    // 4. Intégration de la photo de profil (Avatar Expéditeur)
     try {
         const avatarBuffer = await getAvatarBuffer(senderID, "user");
         const img = await loadImage(avatarBuffer);
         ctx.save();
         ctx.beginPath();
-        ctx.arc(140, 140, 55, 0, Math.PI * 2, true);
-        ctx.closePath();
+        ctx.arc(140, 120, 55, 0, Math.PI * 2);
         ctx.clip();
-        ctx.drawImage(img, 85, 85, 110, 110);
+        ctx.drawImage(img, 85, 65, 110, 110);
         ctx.restore();
 
+        // Cadre de l'avatar brillant
         ctx.strokeStyle = '#f43f5e';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(140, 140, 55, 0, Math.PI * 2, true);
+        ctx.arc(140, 120, 55, 0, Math.PI * 2);
         ctx.stroke();
     } catch (_) {}
 
-    // Si c'est un groupe, insertion de l'avatar du Groupe à droite
+    // Si groupe actif, affichage du badge du groupe
     if (isGroup && threadID) {
         try {
             const groupBuffer = await getAvatarBuffer(threadID, "group");
             const gImg = await loadImage(groupBuffer);
             ctx.save();
             ctx.beginPath();
-            ctx.arc(width - 140, 140, 55, 0, Math.PI * 2, true);
-            ctx.closePath();
+            ctx.arc(880, 120, 40, 0, Math.PI * 2);
             ctx.clip();
-            ctx.drawImage(gImg, width - 195, 85, 110, 110);
+            ctx.drawImage(gImg, 840, 80, 80, 80);
             ctx.restore();
 
             ctx.strokeStyle = '#fb923c';
             ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.arc(width - 140, 140, 55, 0, Math.PI * 2, true);
+            ctx.arc(880, 120, 40, 0, Math.PI * 2);
             ctx.stroke();
         } catch (_) {}
     }
 
-    // Titres & En-tête
+    // Textes de l'en-tête (Titre principal)
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     
     const titleGrad = ctx.createLinearGradient(220, 0, 600, 0);
-    titleGrad.addColorStop(0, "#f43f5e");
-    titleGrad.addColorStop(1, "#fb923c");
-
+    titleGrad.addColorStop(0, '#ffffff');
+    titleGrad.addColorStop(0.5, '#f43f5e');
+    titleGrad.addColorStop(1, '#fb923c');
+    
     ctx.fillStyle = titleGrad;
-    ctx.font = 'bold 36px Arial';
-    ctx.fillText(title, 220, 115);
+    ctx.font = 'bold 38px Arial';
+    ctx.fillText(`🌸 ${title}`, 220, 85);
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.font = 'italic 20px Arial';
-    ctx.fillText(subText, 220, 160);
+    ctx.fillStyle = '#fecdd3';
+    ctx.font = 'italic 18px Arial';
+    ctx.fillText(subText, 220, 135);
 
-    // Séparateur horizontal
-    ctx.strokeStyle = 'rgba(244, 63, 94, 0.2)';
-    ctx.lineWidth = 2;
+    if (isGroup && groupName) {
+        ctx.fillStyle = '#99f6e4';
+        ctx.font = '14px Arial';
+        ctx.fillText(`📍 Origin: ${groupName}`, 220, 165);
+    }
+
+    // 5. Boîte de dialogue inférieure asymétrique (Contenu du message)
+    const msgBoxX = 50;
+    const msgBoxY = 225;
+    const msgBoxW = 900;
+    const msgBoxH = 260;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
     ctx.beginPath();
-    ctx.moveTo(80, 220);
-    ctx.lineTo(width - 80, 220);
+    if (ctx.roundRect) {
+        ctx.roundRect(msgBoxX, msgBoxY, msgBoxW, msgBoxH, [0, 24, 24, 24]);
+    } else {
+        ctx.rect(msgBoxX, msgBoxY, msgBoxW, msgBoxH);
+    }
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Contenu du message
+    // Insertion du texte utilisateur avec retour à la ligne automatique
     ctx.fillStyle = '#ffffff';
-    ctx.font = '24px Arial';
+    ctx.font = 'bold 24px Arial';
     ctx.textBaseline = 'top';
     
     const words = mainContent.split(' ');
     let line = '';
-    let x = 90;
+    let x = 80;
     let y = 260;
-    const maxWidth = 820;
-    const lineHeight = 40;
+    const maxWidth = 840;
+    const lineHeight = 38;
 
     for (let n = 0; n < words.length; n++) {
         let testLine = line + words[n] + ' ';
@@ -167,16 +192,17 @@ async function createCustomCanvas(title, subText, mainContent, senderID, isGroup
     }
     ctx.fillText(line, x, y);
 
-    // Footer de marque de la carte
+    // 6. Pied de page (Footer)
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(244, 63, 94, 0.8)';
-    ctx.font = 'bold 14px Arial';
-    ctx.fillText('🌸 HORI ASSISTANT NETWORK OPERATOR 🌸', width / 2, height - 65);
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.font = 'bold 13px Arial';
+    ctx.fillText('🌸 HORI-STYLE SYSTEM SUPPORT • CHAT BOT 🌸', width / 2, height - 50);
 
     const cacheDir = path.join(__dirname, 'cache');
     if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
 
-    const cachePath = path.join(cacheDir, `hori_call_${Date.now()}.png`);
+    const cachePath = path.join(cacheDir, `hori_canvas_${Date.now()}.png`);
     fs.writeFileSync(cachePath, canvas.toBuffer('image/png'));
     
     return cachePath;
@@ -185,27 +211,27 @@ async function createCustomCanvas(title, subText, mainContent, senderID, isGroup
 module.exports = {
     config: {
         name: "callad",
-        version: "4.0.0",
+        version: "4.5.0",
         author: "Shade × Gemini",
         countDown: 5,
         role: 0,
-        description: { fr: "Envoyer un rapport stylisé Hori directement aux administrateurs." },
+        description: { fr: "Envoie un rapport haut de gamme aux administrateurs sous forme de carte vectorielle Hori." },
         category: "contacts admin",
         guide: { fr: "{pn} <votre message>" }
     },
 
     langs: {
         fr: {
-            missingMessage: "🌸 Veuillez entrer le message que vous souhaitez transmettre.",
+            missingMessage: "🌸 Écris le message que tu souhaites transmettre à l'administration.",
             sendByGroup: "\n» Groupe émetteur : %1\n» ID Groupe : %2",
             sendByUser: "\n» Envoyé depuis les messages privés",
-            content: "\n\n━━━━━━━━━━━━━━━━━━━━━━\n📬 **MESSAGE ENTRANT** :\n%1\n━━━━━━━━━━━━━━━━━━━━━━\n\n💡 _Répondez directement à ce message pour lui renvoyer votre décision._",
-            success: "✨ Votre message a été transmis avec succès au réseau d'administration !",
-            failed: "❌ Une erreur est survenue lors de la transmission du signal.",
-            reply: "✨ 🌸 **[ NOTIFICATION DE L'ADMINISTREUR ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n💬 **L'administrateur %1 vous répond :**\n\n%2\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n💡 _Vous pouvez répondre à ce message pour continuer l'échange._",
-            replySuccess: "✨ Votre décision a été transmise avec succès à l'utilisateur !",
-            feedback: "✨ 🌸 **[ NOUVEAU RETOUR UTILISATEUR ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n» **De :** %1\n» **ID :** %2%3\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n📬 **Contenu :**\n%4",
-            replyUserSuccess: "✨ Message utilisateur actualisé sur le terminal de l'admin."
+            content: "\n\n━━━━━━━━━━━━━━━━━━━━━━\n📬 **RAPPORT ENTRANT** :\n%1\n━━━━━━━━━━━━━━━━━━━━━━\n\n💡 _Répondez à ce message pour notifier l'utilisateur de votre décision._",
+            success: "✨ Message converti et transmis avec succès sur le terminal admin !",
+            failed: "❌ Échec de la liaison vers le groupe de support.",
+            reply: "✨ 🌸 **[ RÉPONSE DE L'ADMINISTRATION ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n💬 **L'administrateur %1 vous répond :**\n\n%2\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n💡 _Tu peux répondre à ce message si tu as besoin de rajouter des précisions._",
+            replySuccess: "✨ Ta décision a été renvoyée à l'utilisateur !",
+            feedback: "✨ 🌸 **[ RELANCE DE L'UTILISATEUR ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n» **De :** %1\n» **ID :** %2%3\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n📬 **Nouveau message :**\n%4",
+            replyUserSuccess: "✨ Terminal mis à jour avec le nouveau rapport utilisateur."
         }
     },
 
@@ -215,15 +241,23 @@ module.exports = {
             const { senderID, threadID, isGroup } = event;
             
             const senderName = await usersData.getName(senderID);
-            const locationText = isGroup ? getLang("sendByGroup", (await threadsData.get(threadID)).threadName, threadID) : getLang("sendByUser");
+            let groupName = "";
+            let locationText = getLang("sendByUser");
+
+            if (isGroup) {
+                const threadInfo = await threadsData.get(threadID);
+                groupName = threadInfo.threadName || `Groupe #${threadID}`;
+                locationText = getLang("sendByGroup", groupName, threadID);
+            }
+
             const mainMsg = args.join(" ");
 
-            // Génération du Canvas Style Hori (Incorpore profil utilisateur + groupe)
-            const canvasImagePath = await createCustomCanvas("📬 SIGNAL ENTRANT", `Émis par : ${senderName}`, mainMsg, senderID, isGroup, threadID);
+            // Génération de la carte vectorielle Hori en pur code Canvas
+            const canvasImagePath = await drawHoriCanvas("CALL ADMIN", `Par : ${senderName} (ID: ${senderID})`, mainMsg, senderID, isGroup, threadID, groupName);
 
-            const msg = "✨ 🌸 **[ SYSTEM CALL AD ]** 🌸 ✨"
+            const msg = "✨ 🌸 **[ ALERTE SYSTÈME ]** 🌸 ✨"
                 + `\n» Utilisateur : ${senderName}`
-                + `\n» ID Unique : ${senderID}`
+                + `\n» ID : ${senderID}`
                 + locationText;
 
             const attachments = await getStreamsFromAttachment(
@@ -253,7 +287,7 @@ module.exports = {
                 return message.reply(getLang("failed"));
             }
         } catch (error) {
-            return message.reply("❌ Une erreur interne est survenue sur le serveur.");
+            return message.reply("❌ Une erreur interne est survenue.");
         }
     },
 
@@ -264,18 +298,18 @@ module.exports = {
             const { isGroup, senderID } = event;
             const replyMsg = args.join(" ");
 
-            // 🛡️ SÉCURITÉ DE VÉRIFICATION : Seuls les admins du bot peuvent répondre aux messages d'alerte
+            // 🛡️ SÉCURITÉ ADMIN : Seule la liste d'administration configurée peut répondre au rapport
             const { config } = global.GoatBot;
             const isBotAdmin = config.adminBot.includes(senderID);
 
             switch (type) {
                 case "userCallAdmin": {
-                    // Si l'utilisateur qui répond n'est PAS un admin du bot, on rejette l'appel
                     if (!isBotAdmin) {
-                        return api.sendMessage("⛔ Accès refusé : Seuls les administrateurs officiels du système peuvent répondre à cette alerte.", event.threadID, event.messageID);
+                        return api.sendMessage("⛔ Accès refusé : Tu n'as pas l'autorisation d'administrateur pour répondre à ce ticket.", event.threadID, event.messageID);
                     }
 
-                    const canvasImagePath = await createCustomCanvas("⌖ RÉPONSE ADMIN", `Validé par : ${senderName}`, replyMsg, event.senderID, isGroup, event.threadID);
+                    // Canvas Hori personnalisé dédié à la réponse de l'admin
+                    const canvasImagePath = await drawHoriCanvas("RÉPONSE ADMINISTRATEUR", `Rédigée par : ${senderName}`, replyMsg, event.senderID, isGroup, event.threadID);
                     const attachments = await getStreamsFromAttachment(event.attachments.filter(item => mediaTypes.includes(item.type)));
                     if (fs.existsSync(canvasImagePath)) attachments.push(fs.createReadStream(canvasImagePath));
 
@@ -296,20 +330,22 @@ module.exports = {
                             threadID: event.threadID,
                             type: "adminReply"
                         });
-					}, messageIDSender);
+                    }, messageIDSender);
                     break;
                 }
                 case "adminReply": {
-                    // Ici, l'utilisateur d'origine a le droit de répondre pour envoyer un nouveau rapport
+                    // L'utilisateur renvoie un retour à l'admin
                     let sendByGroup = "";
+                    let groupName = "";
                     if (isGroup) {
                         try {
                             const threadInfo = await api.getThreadInfo(event.threadID);
-                            sendByGroup = getLang("sendByGroup", threadInfo.threadName, event.threadID);
+                            groupName = threadInfo.threadName;
+                            sendByGroup = getLang("sendByGroup", groupName, event.threadID);
                         } catch(_) {}
                     }
 
-                    const canvasImagePath = await createCustomCanvas("✎ RETOUR SIGNAL", `Par : ${senderName}`, replyMsg, event.senderID, isGroup, event.threadID);
+                    const canvasImagePath = await drawHoriCanvas("NOUVEAU RETOUR", `Soumis par : ${senderName}`, replyMsg, event.senderID, isGroup, event.threadID, groupName);
                     const attachments = await getStreamsFromAttachment(event.attachments.filter(item => mediaTypes.includes(item.type)));
                     if (fs.existsSync(canvasImagePath)) attachments.push(fs.createReadStream(canvasImagePath));
 
