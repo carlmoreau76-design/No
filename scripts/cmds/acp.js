@@ -43,7 +43,7 @@ module.exports = {
         return api.sendMessage("🌸 Aucune demande d'ami en attente 💖", threadID, messageID);
       }
 
-      let msg = "╔═══ 💖 𝗔𝗡𝗚𝗘𝗟 𝗔𝗖𝗖𝗘𝗣𝗧 💖 ═══╗\n\n";
+      let msg = "╔═══ 🪐 𝗛𝗢𝗥𝗜 𝗔𝗖𝗖𝗘𝗣𝗧 🪐 ═══╗\n\n";
       listRequest.forEach((u, i) => {
         const timeStr = u.time ? moment(u.time * 1000).tz("Africa/Kinshasa").format("DD/MM/YYYY HH:mm:ss") : "Inconnu";
         msg += `💠 ${i + 1}. ${u.node?.name || "Utilisateur Facebook"}\n`;
@@ -67,7 +67,7 @@ module.exports = {
         }, 120000) // S'efface automatiquement après 2 minutes
       });
 
-      try { api.setMessageReaction("💖", messageID, () => {}, true); } catch(e){}
+      try { api.setMessageReaction("🪐", messageID, () => {}, true); } catch(e){}
 
     } catch (e) {
       console.error(e);
@@ -170,7 +170,7 @@ module.exports = {
       try { api.setMessageReaction("✅", messageID, () => {}, true); } catch(e){}
       try { api.unsendMessage(replyMsgID); } catch(e){} // Nettoie le menu d'invitation initial
 
-      let msg = "🌸💖 𝗔𝗡𝗚𝗘𝗟 𝗔𝗖𝗖𝗘𝗣𝗧 𝗥𝗘𝗦𝗨𝗟𝗧 💖🌸\n\n";
+      let msg = "🪐 𝗛𝗢𝗥𝗜 𝗔𝗖𝗖𝗘𝗣𝗧 𝗥𝗘𝗦𝗨𝗟𝗧 🪐\n\n";
       if (success.length) {
         msg += `✅ **Action réussie pour ${success.length} personne(s) :**\n${success.join("\n")}\n\n`;
       }
