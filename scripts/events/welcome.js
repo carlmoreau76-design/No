@@ -5,7 +5,7 @@ const path = require("path");
 module.exports = {
   config: {
     name: "welcome",
-    version: "2.5 Premium",
+    version: "2.6 Hori Style",
     author: "Angel System & Gemini",
     category: "events"
   },
@@ -17,7 +17,6 @@ module.exports = {
     const newUsers = logMessageData.addedParticipants;
     const botID = api.getCurrentUserID();
 
-    // Ignorer si c'est le bot lui-même qui rejoint le groupe
     if (newUsers.some(u => u.userFbId === botID)) return;
 
     try {
@@ -30,7 +29,6 @@ module.exports = {
         const fullName = user.fullName;
 
         try {
-          // Formatage de la date et de l'heure locale
           const timeStr = new Date().toLocaleString("fr-FR", {
             hour: "2-digit",
             minute: "2-digit",
@@ -42,12 +40,10 @@ module.exports = {
             hour12: false,
           });
 
-          // Récupération dynamique de la photo de profil en Haute Définition
+          // Récupération de l'avatar et utilisation de l'API externe d'origine
           const userAvatar = `https://graph.facebook.com/${userId}/picture?width=400&height=400&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
-          // Image de fond par défaut (celle spécifiée dans votre exemple)
           const backgroundUrl = "https://i.ibb.co/4YBNyvP/images-76.jpg";
 
-          // Construction de l'URL pour votre nouvelle API
           const apiUrl = `https://zetbot-page.onrender.com/api/welcome?username=${encodeURIComponent(fullName)}&avatarUrl=${encodeURIComponent(userAvatar)}&groupname=${encodeURIComponent(groupName)}&bg=${encodeURIComponent(backgroundUrl)}&memberCount=${memberCount}`;
 
           const tmp = path.join(__dirname, "..", "cache");
@@ -55,33 +51,30 @@ module.exports = {
 
           const imagePath = path.join(tmp, `welcome_${userId}_${Date.now()}.png`);
 
-          // Téléchargement de la carte d'accueil
+          // Téléchargement via ton API habituelle
           const response = await axios.get(apiUrl, { responseType: "arraybuffer", timeout: 10000 });
           fs.writeFileSync(imagePath, response.data);
 
+          // Nouveau look textuel Hori Style
           const msg =
-`╭ ◜◝ ͡ ◜◝ ͡ ◝╮
-♡ 𝘼𝙣𝙜𝙚𝙡 𝘽𝙤𝙩 ♡
-╰ ◟◞ ͜ ◟◞ ╯
+`✨ 🌸 **[ NOUVEAU SIGNAL D'ARRIVÉE ]** 🌸 ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+꒰ა ✦ **WELCOME PROTOCOL** ✦ ໒꒱
 
-꒰ა ✦ 𝐖𝐞𝐥𝐜𝐨𝐦𝐞 ✦ ໒꒱
+» 👤 **Utilisateur :** ${fullName}
+» 💬 **Bienvenue dans :** ${groupName}
+» 📊 **Index de présence :** Membre n° ${memberCount}
 
-✧ 𝐇𝐞𝐥𝐥𝐨 ${fullName}
-✧ 𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐭𝐨 ${groupName}
-✧ 𝐌e𝐦𝐛𝐞𝐫 𝐍𝐨: ${memberCount}
+✦ _Installe-toi confortablement et respecte les règles du groupe !_ ✦
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ Synchronisé le : ${timeStr}`;
 
-✦ 𝐄𝐧𝐣𝐨𝐲 𝐭𝐡𝐞 𝐠𝐫𝐨υ𝐩 ✦
-━━━━━━━━━━━━━━
-⏰ ${timeStr}`;
-
-          // Envoi de l'image d'accueil avec une mention
           await api.sendMessage({
             body: msg,
             attachment: fs.createReadStream(imagePath),
             mentions: [{ tag: fullName, id: userId }]
           }, threadID);
 
-          // Nettoyage du fichier temporaire du cache
           try { if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath); } catch (e) {}
 
         } catch (err) {
