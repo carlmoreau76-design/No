@@ -17,7 +17,7 @@ function formatCategory(cat) {
     admin: "🛡️ ADMINISTRATION",
     economy: "💰 ÉCONOMIE",
     ai: "🤖 IA",
-    system: "⭐ ANGEL SYSTEM",
+    system: "🪐 HORI SYSTEM",
     image: "🎨 IMAGES",
     media: "🎵 MÉDIA",
     game: "🎮 GAMES",
@@ -44,7 +44,7 @@ module.exports = {
 
   onStart: async function ({ message, args }) {
 
-    const imageURL = "https://files.catbox.moe/ihbb9m.png";
+    const imageURL = "https://files.catbox.moe/al5kmm.gif";
     let streamData;
 
     try {
