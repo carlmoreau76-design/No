@@ -83,8 +83,8 @@ loadScripts.NOT_MATCH=❌ 𝐍𝐄 𝐂𝐎𝐑𝐑𝐄𝐒𝐏𝐎𝐍𝐃 𝐏
 
 # bot/login/socketIO.js
 
-socketIO.connected=Connecté au serveur socket.io
-socketIO.error=Une erreur est survenue lors de la connexion au serveur socket.io
+socketIO.connected=🌐 𝐂𝐨𝐧𝐧𝐞𝐜𝐭𝐞́𝐞 𝐚𝐮 𝐬𝐞𝐫𝐯𝐞𝐮𝐫 𝐬𝐨𝐜𝐤𝐞𝐭.𝐢𝐨 ! 𝐎𝐧 𝐫𝐞𝐬𝐭𝐞 𝐞𝐧 𝐜𝐨𝐧𝐭𝐚𝐜𝐭.
+socketIO.error=❌ 𝐌𝐢𝐧𝐜𝐞, 𝐞𝐫𝐫𝐞𝐮𝐫 𝐝𝐞 𝐜𝐨𝐧𝐧𝐞𝐱𝐢𝐨𝐧 𝐬𝐨𝐜𝐤𝐞𝐭.𝐢𝐨...
 
 # bot/handler/handlerCheckData.js
 
