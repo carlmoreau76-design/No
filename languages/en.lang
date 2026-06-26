@@ -121,12 +121,10 @@ autoUptime.autoUptimeTurnedOn=🚀 𝐌𝐨𝐝𝐞 𝐀𝐮𝐭𝐨𝐔𝐩𝐭
 
 # database/controller/index.js
 
-indexController.connectingMongoDB=Connexion à une base de données MONGODB
-indexController.connectMongoDBSuccess=Connexion à la base de données MongoDB réussie !
-indexController.connectMongoDBError=Une erreur est survenue lors de la connexion à la base de données MongoDB :
-indexController.connectingMySQL=Connexion à une base de données SQLITE
-indexController.connectMySQLSuccess=Connexion à la base de données SQLITE réussie !
-indexController.connectMySQLError=Une erreur est survenue lors de la connexion à la base de données SQLITE :
+indexController.connectingMongoDB=🔄 𝐂𝐨𝐧𝐧𝐞𝐱𝐢𝐨𝐧 𝐚̀ 𝐌𝐨𝐧𝐠𝐨𝐃𝐁 𝐞𝐧 𝐜𝐨𝐮𝐫𝐬...
+indexController.connectMongoDBSuccess=🍃 𝐂𝐨𝐧𝐧𝐞𝐱𝐢𝐨𝐧 𝐌𝐨𝐧𝐠𝐨𝐃𝐁 𝐫𝐞́𝐮𝐬𝐬𝐢𝐞 ! 𝐓𝐨𝐮𝐭 𝐞𝐬𝐭 𝐩𝐫𝐞̂𝐭.
+indexController.connectingMySQL=🔄 𝐂𝐨𝐧𝐧𝐞𝐱𝐢𝐨𝐧 𝐚̀ 𝐒𝐐𝐋𝐈𝐓𝐄...
+indexController.connectMySQLSuccess=📁 𝐂𝐨𝐧𝐧𝐞𝐱𝐢𝐨𝐧 𝐒𝐐𝐋𝐈𝐓𝐄 𝐫é𝐮𝐬𝐬𝐢𝐞 ! ✨
 
 # updater.js
 
