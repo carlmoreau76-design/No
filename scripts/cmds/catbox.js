@@ -7,13 +7,13 @@ module.exports = {
   config: {
     name: "catbox",
     aliases: ["cb"],
-    version: "Angel-2.1",
-    author: "Shade ✨ Angel Edition",
+    version: "2.2.0 Hori Edition",
+    author: "Shade × Gemini",
     role: 0,
     category: "download",
-    description: "☁️ Upload tes médias sur Catbox et récupère un lien magique ✨",
+    description: "☁️ Upload tes médias sur Catbox et récupère un lien permanent.",
     guide: {
-      fr: "Réponds à une image, vidéo ou audio puis utilise : catbox 🌸"
+      fr: "Réponds à une image, vidéo ou audio avec : {pn} 🌸"
     }
   },
 
@@ -21,22 +21,29 @@ module.exports = {
     const attachment = event.messageReply?.attachments?.[0];
     const attachmentUrl = attachment?.url;
 
-    // ❌ NO FILE
+    // ❌ SÉCURITÉ : Aucun média détecté
     if (!attachmentUrl) {
       return api.sendMessage(
-`🌸💔 𝐀𝐍𝐆𝐄𝐋 𝐂𝐀𝐓𝐁𝐎𝐗 💔🌸
-
-✨ Réponds à une image, vidéo ou audio
-pour que les anges puissent l’envoyer ☁️💖`,
+`✨ 🌸 **[ UPLOAD TERMINAL ]** 🌸 ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ Action requise : Réponds à une image, une vidéo ou un fichier audio pour l'envoyer vers le serveur d'hébergement.`,
         event.threadID,
         event.messageID
       );
     }
 
-    const ext = path.extname(attachmentUrl.split("?")[0]) || ".bin";
-    const filename = "upload" + ext;
+    // 🛠️ Correction : Détermination dynamique et sécurisée de l'extension via le type de pièce jointe Messenger
+    let ext = ".bin";
+    if (attachment.type === "photo") ext = ".png";
+    else if (attachment.type === "video") ext = ".mp4";
+    else if (attachment.type === "audio") ext = ".mp3";
+    else {
+      ext = path.extname(attachmentUrl.split("?")[0]) || ".bin";
+    }
 
-    // ⏳ PROCESS START
+    const filename = `hori_upload_${Date.now()}${ext}`;
+
+    // ⏳ Début du traitement
     api.setMessageReaction("⏳", event.messageID, async () => {
       try {
         const fileRes = await axios.get(attachmentUrl, {
@@ -56,18 +63,18 @@ pour que les anges puissent l’envoyer ☁️💖`,
           { headers: form.getHeaders() }
         );
 
-        // 📩 SUCCESS REACTION
+        // ✅ Réaction Réussite
         api.setMessageReaction("📩", event.messageID, () => {}, true);
 
         return api.sendMessage(
-`🌸☁️ 𝐀𝐍𝐆𝐄𝐋 𝐂𝐀𝐓𝐁𝐎𝐗 ☁️🌸
+`✨ 🌸 **[ CLOUD STORAGE SUCCESS ]** 🌸 ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 **Statut :** Hébergement terminé [ 100% ]
 
-✨ Upload terminé avec succès
-
-🔗 Lien magique :
+🔗 **Lien permanent généré :**
 ${data}
-
-💖 Ton fichier est maintenant dans les nuages des anges ☁️`,
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 _Le fichier est désormais stocké en ligne de façon définitive._`,
           event.threadID,
           event.messageID
         );
@@ -75,15 +82,15 @@ ${data}
       } catch (err) {
         console.error("Catbox error:", err.message);
 
-        // 💔 ERROR REACTION
-        api.setMessageReaction("💔", event.messageID, () => {}, true);
+        // ❌ Réaction Échec
+        api.setMessageReaction("❌", event.messageID, () => {}, true);
 
         return api.sendMessage(
-`💔☁️ 𝐀𝐍𝐆𝐄𝐋 𝐂𝐀𝐓𝐁𝐎𝐗 ☁️💔
+`✨ 🌸 **[ TRANSFER PROTOCOL FAILED ]** 🌸 ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ Impossible de transférer le composant vers la base de données.
 
-Les anges n’ont pas pu envoyer ton fichier...
-
-✨ Vérifie le média et réessaie`,
+💡 _Vérifie la taille ou le format de ton média, puis réessaie._`,
           event.threadID,
           event.messageID
         );
