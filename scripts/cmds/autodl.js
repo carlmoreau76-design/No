@@ -15,28 +15,27 @@ const supportedDomains = [
   "drive.google.com",
   "soundcloud.com",
   "ndown.app",
-  "pinterest.com", "pin.it"
-  "suno.com",
+  "pinterest.com", "pin.it", // 🛠️ Correction : Virgule ajoutée ici
+  "suno.com"
 ];
 
 module.exports = {
   config: {
     name: "autodl",
-    version: "2.0",
-    author: "Christus ✦ Angel Edit",
+    version: "2.1.0 Hori Edition",
+    author: "Christus × Shade × Gemini",
     role: 0,
-    shortDescription: "🌸 Angel Auto Media Downloader",
-    longDescription:
-      "👼 Télécharge automatiquement des médias depuis les plateformes supportées",
+    shortDescription: "🌸 Auto Media Downloader Hori Style",
+    longDescription: "👼 Télécharge automatiquement des médias depuis les plateformes supportées avec une interface stylisée.",
     category: "download",
     guide: {
-      fr: "🌸 Envoie simplement un lien https:// et le bot te répondra automatiquement"
+      fr: "🌸 Envoie simplement un lien https:// et le bot le téléchargera automatiquement."
     }
   },
 
   onStart: async function ({ api, event }) {
     api.sendMessage(
-      "👼🌸 𝑨𝑵𝑮𝑬𝑳 𝑨𝑼𝑻𝑶 𝑫𝑶𝑾𝑵𝑳𝑶𝑨𝑫𝑬𝑹 ✧\n\n💖 Envoie un lien (YouTube, TikTok, Facebook, Instagram...) et je le téléchargerai pour toi ✨",
+      "✨ 🌸 **[ AUTOMATIC DOWNLOADER ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n💖 Envoie un lien valide (YouTube, TikTok, Facebook, Instagram...) et je m'occupe de le récupérer instantanément !",
       event.threadID,
       event.messageID
     );
@@ -55,16 +54,16 @@ module.exports = {
       const API = `https://xsaim8x-xxx-api.onrender.com/api/auto?url=${encodeURIComponent(content)}`;
       const res = await axios.get(API);
 
-      if (!res.data) throw new Error("No response");
+      if (!res.data) throw new Error("No response from server API");
 
       const mediaURL = res.data.high_quality || res.data.low_quality;
-      const mediaTitle = res.data.title || "🌸 Angel Media";
-      if (!mediaURL) throw new Error("No media found");
+      const mediaTitle = res.data.title || "Média Sans Titre";
+      if (!mediaURL) throw new Error("No download link found");
 
       const extension = mediaURL.includes(".mp3") ? "mp3" : "mp4";
       const buffer = (await axios.get(mediaURL, { responseType: "arraybuffer" })).data;
 
-      const filePath = path.join(__dirname, "cache", `angel_${Date.now()}.${extension}`);
+      const filePath = path.join(__dirname, "cache", `hori_dl_${Date.now()}.${extension}`);
 
       await fs.ensureDir(path.dirname(filePath));
       fs.writeFileSync(filePath, Buffer.from(buffer));
@@ -72,15 +71,17 @@ module.exports = {
       api.setMessageReaction("✅", event.messageID, () => {}, true);
 
       const domain = supportedDomains.find(d => content.includes(d)) || "Unknown";
-      const platformName = domain.replace(/(\.com|\.app|\.video|\.net)/, "").toUpperCase();
+      const platformName = domain.replace(/(\.com|\.app|\.video|\.net|\.it)/, "").toUpperCase();
 
+      // Nouveau visuel textuel Hori Style
       const infoMsg =
-`👼🌸 𝑨𝑵𝑮𝑬𝑳 𝑫𝑶𝑾𝑵𝑳𝑶𝑨𝑫 ✧
-
-✨ Title     : ${mediaTitle}
-🌍 Platform  : ${platformName}
-💖 Status    : Success
-👼 Powered by Angel Bot`;
+`✨ 🌸 **[ EXTRACTION RÉUSSIE ]** 🌸 ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎬 **Titre :** ${mediaTitle}
+🌍 **Plateforme :** ${platformName}
+📈 **Statut :** Opérationnel [ 100% ]
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 _Fichier converti et traité par le système._`;
 
       api.sendMessage(
         {
@@ -88,18 +89,21 @@ module.exports = {
           attachment: fs.createReadStream(filePath)
         },
         event.threadID,
-        () => fs.unlinkSync(filePath),
+        () => {
+          try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {}
+        },
         event.messageID
       );
 
     } catch (e) {
+      console.error(e);
       api.setMessageReaction("❌", event.messageID, () => {}, true);
 
       api.sendMessage(
-        "💔🌸 Angel Bot n’a pas pu télécharger ce média...\n✨ Vérifie ton lien ou réessaie plus tard",
+        "✨ 🌸 **[ SYNC FLOP / INTERRUMPUR ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n❌ Impossible de récupérer le contenu de ce terminal.\n\n💡 _Vérifie la validité de ton URL ou réessaie ultérieurement._",
         event.threadID,
         event.messageID
       );
     }
-  }
+  } // 🛠️ Correction : Fermeture correcte de la fonction onChat incluse
 };
