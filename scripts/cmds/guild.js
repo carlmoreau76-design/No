@@ -93,3 +93,204 @@ const UI = {
   boxEnd: () => `╰───────────────────────────────────────╯`,
   field: (label, val) => `│ 🔹 ${label} : ${val}`
 };
+
+// --- MOTEUR DE GUERRE AUTOMATIQUE (GUILD WAR ENGINE) ---
+function checkAndManageWarCycle() {
+  const currentWar = readJSON(WAR_FILE);
+  const now = Date.now();
+  const guilds = readJSON(GUILDS_FILE);
+
+  // Si aucune guerre n'est configurée ou si le cycle complet de 18 heures est dépassé, on relance une guerre
+  if (!currentWar.nextWarTime || now >= currentWar.nextWarTime) {
+    const guildIds = Object.keys(guilds);
+    if (guildIds.length < 2) return; // Il faut au moins 2 guildes enregistrées sur le bot
+
+    // Tirage au sort de deux guildes différentes (en évitant la dernière confrontation si possible)
+    let g1 = guildIds[Math.floor(Math.random() * guildIds.length)];
+    let g2 = guildIds[Math.floor(Math.random() * guildIds.length)];
+    while (g1 === g2) {
+      g2 = guildIds[Math.floor(Math.random() * guildIds.length)];
+    }
+
+    if (currentWar.lastMatch && ((currentWar.lastMatch.includes(g1) && currentWar.lastMatch.includes(g2)))) {
+      // Re-tirage secondaire pour casser la récurrence directe
+      g1 = guildIds[Math.floor(Math.random() * guildIds.length)];
+      g2 = guildIds[Math.floor(Math.random() * guildIds.length)];
+    }
+
+    // Configuration des phases : 30 min d'inscription, 30 min de combat
+    currentWar.guildA = g1;
+    currentWar.guildB = g2;
+    currentWar.phase = "registration"; 
+    currentWar.startedAt = now;
+    currentWar.phaseEndTime = now + (30 * 60 * 1000); // 30 minutes
+    currentWar.nextWarTime = now + (18 * 60 * 60 * 1000); // Prochaine guerre dans 18h
+    currentWar.participantsA = [];
+    currentWar.participantsB = [];
+    currentWar.scores = { [g1]: 0, [g2]: 0 };
+    currentWar.damageDealt = {}; // Suivi individuel des dégâts pour le MVP
+    currentWar.attacksCount = {};
+    currentWar.lastMatch = [g1, g2];
+
+    writeJSON(WAR_FILE, currentWar);
+    return;
+  }
+
+  // Passage automatique de la phase d'inscription à la phase de combat
+  if (currentWar.phase === "registration" && now >= currentWar.phaseEndTime) {
+    // Si l'une des deux guildes n'a aucun inscrit : déclaration de forfait
+    const hasA = currentWar.participantsA.length > 0;
+    const hasB = currentWar.participantsB.length > 0;
+
+    if (!hasA || !hasB) {
+      resolveWarForfeit(currentWar, hasA, hasB);
+      return;
+    }
+
+    currentWar.phase = "battle";
+    currentWar.phaseEndTime = now + (30 * 60 * 1000); // 30 minutes de combat
+    writeJSON(WAR_FILE, currentWar);
+    return;
+  }
+
+  // Clôture et calcul des résultats à la fin du temps de combat
+  if (currentWar.phase === "battle" && now >= currentWar.phaseEndTime) {
+    resolveWarEnd(currentWar);
+    return;
+  }
+}
+
+// --- GESTION DU FORFAIT (SANS RETRAIT D'ARGENT PERSONNEL) ---
+function resolveWarForfeit(currentWar, hasA, hasB) {
+  const guilds = readJSON(GUILDS_FILE);
+  
+  if (!hasA && hasB) {
+    applyForfeitPenalties(guilds[currentWar.guildA], guilds[currentWar.guildB]);
+  } else if (hasA && !hasB) {
+    applyForfeitPenalties(guilds[currentWar.guildB], guilds[currentWar.guildA]);
+  } else {
+    // Les deux guildes font forfait
+    if (guilds[currentWar.guildA]) applyForfeitPenalties(guilds[currentWar.guildA], null);
+    if (guilds[currentWar.guildB]) applyForfeitPenalties(guilds[currentWar.guildB], null);
+  }
+
+  currentWar.phase = "ended";
+  writeJSON(WAR_FILE, currentWar);
+  writeJSON(GUILDS_FILE, guilds);
+}
+
+function applyForfeitPenalties(loserGuild, winnerGuild) {
+  if (!loserGuild) return;
+  // Perte de 5% du coffre de guilde (plafonné à 2,000,000$) - L'argent personnel n'est JAMAIS touché
+  const lossAmount = Math.min(2000000, Math.floor(loserGuild.bank * 0.05));
+  loserGuild.bank -= lossAmount;
+  loserGuild.xp = Math.max(0, loserGuild.xp - 500);
+  loserGuild.trophies = Math.max(0, loserGuild.trophies - 15);
+  loserGuild.losses += 1;
+  logGuildAction(loserGuild, ` Forfait en Guild War. -${lossAmount}$ du coffre, -15 Trophées.`);
+
+  if (winnerGuild) {
+    winnerGuild.bank += lossAmount;
+    winnerGuild.xp += 1000;
+    winnerGuild.trophies += 25;
+    winnerGuild.wins += 1;
+    logGuildAction(winnerGuild, `Victoire par forfait de l'adversaire. +${lossAmount}$ récupérés, +25 Trophées.`);
+  }
+}
+
+// --- CLÔTURE DE LA BATAILLE ET DÉSIGNATION DU MVP ---
+function resolveWarEnd(currentWar) {
+  const guilds = readJSON(GUILDS_FILE);
+  const gA = guilds[currentWar.guildA];
+  const gB = guilds[currentWar.guildB];
+
+  if (!gA || !gB) return;
+
+  const scoreA = currentWar.scores[gA.id] || 0;
+  const scoreB = currentWar.scores[gB.id] || 0;
+
+  let winner = null;
+  let loser = null;
+
+  if (scoreA > scoreB) { winner = gA; loser = gB; }
+  else if (scoreB > scoreA) { winner = gB; loser = gA; }
+
+  // Enregistrement des résultats et distribution des récompenses de guilde
+  if (winner && loser) {
+    winner.wins += 1;
+    winner.xp += 3000;
+    winner.trophies += 50;
+    winner.bank += 1500000; // Bonus financier au coffre
+
+    loser.losses += 1;
+    loser.xp += 500;
+    loser.trophies = Math.max(0, loser.trophies - 20);
+
+    logGuildAction(winner, `Victoire éclatante contre ${loser.name} (${scoreA} vs ${scoreB}). +1.5M$, +50 Trophées.`);
+    logGuildAction(loser, `Défaite contre ${winner.name} (${scoreB} vs ${scoreA}). -20 Trophées.`);
+
+    // Conquête de territoire : Transfert aléatoire d'une zone possédée par le perdant
+    if (loser.territories.length > 0 && Math.random() < 0.40) {
+      const lostTerritoryId = loser.territories.splice(Math.floor(Math.random() * loser.territories.length), 1)[0];
+      winner.territories.push(lostTerritoryId);
+      logGuildAction(winner, `Conquête territoriale ! Nous avons capturé le territoire [${lostTerritoryId.toUpperCase()}] à l'ennemi.`);
+      logGuildAction(loser, `Désastre ! L'ennemi a annexé notre territoire [${lostTerritoryId.toUpperCase()}].`);
+    }
+  }
+
+  // Sauvegarde du rapport final de guerre pour affichage
+  currentWar.phase = "ended";
+  currentWar.finalResults = {
+    scoreA, scoreB,
+    winnerName: winner ? winner.name : "Égalité parfaite",
+    mvp: findWarMVP(currentWar)
+  };
+
+  writeJSON(WAR_FILE, currentWar);
+  writeJSON(GUILDS_FILE, guilds);
+}
+
+function findWarMVP(currentWar) {
+  let maxDmg = -1;
+  let mvpId = "Aucun";
+  for (const [uid, dmg] of Object.entries(currentWar.damageDealt)) {
+    if (dmg > maxDmg) {
+      maxDmg = dmg;
+      mvpId = uid;
+    }
+  }
+  return {
+    uid: mvpId,
+    damage: maxDmg,
+    attacks: currentWar.attacksCount[mvpId] || 0
+  };
+}
+
+// --- COLLECTE AUTOMATIQUE DES TERRITOIRES (TOUTES LES 12 HEURES) ---
+function processTerritoryEarnings(guild) {
+  const now = Date.now();
+  if (!guild.lastTerritoryCollect) guild.lastTerritoryCollect = 0;
+  
+  // 12 heures en millisecondes = 43200000
+  if (now - guild.lastTerritoryCollect >= 43200000) {
+    let totalMoney = 0;
+    let totalXp = 0;
+
+    guild.territories.forEach(tId => {
+      const dbConfig = TERRITORIES_DB[tId];
+      if (dbConfig) {
+        totalMoney += dbConfig.moneyReward;
+        totalXp += dbConfig.xpReward;
+      }
+    });
+
+    if (totalMoney > 0) {
+      guild.bank += totalMoney;
+      guild.xp += totalXp;
+      guild.lastTerritoryCollect = now;
+      logGuildAction(guild, `Récolte des territoires : +${totalMoney}$ dans le coffre, +${totalXp} XP Guilde.`);
+      return { money: totalMoney, xp: totalXp };
+    }
+  }
+  return null;
+}
