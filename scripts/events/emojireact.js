@@ -1,10 +1,13 @@
 module.exports = {
   config: {
     name: "emojireact",
-    version: "2.0",
+    version: "2.5",
     author: "Shade × Gemini",
     category: "events"
   },
+
+  // Variable pour stocker l'état d'activation du module (ON par défaut)
+  isActive: true,
 
   // 📥 Requis par GoatBot pour valider le chargement du script
   onStart: async function ({ api, event }) {
@@ -16,6 +19,29 @@ module.exports = {
     if (!event.body || event.senderID === api.getCurrentUserID()) return;
 
     const messageText = event.body.trim();
+    const lowerMessage = messageText.toLowerCase();
+
+    // ⚙️ Gestion des commandes ON / OFF
+    if (lowerMessage === "emojireact off") {
+      this.isActive = false;
+      return api.sendMessage(
+        "🔴 Le système de réaction aux émojis a été désactivé.",
+        event.threadID,
+        event.messageID
+      );
+    }
+
+    if (lowerMessage === "emojireact on") {
+      this.isActive = true;
+      return api.sendMessage(
+        "🟢 Le système de réaction aux émojis a été activé.",
+        event.threadID,
+        event.messageID
+      );
+    }
+
+    // Si le module est sur OFF, on stoppe l'exécution ici
+    if (!this.isActive) return;
 
     // 1. Émoji regard 👀
     if (messageText.includes("👀")) {
@@ -98,7 +124,7 @@ module.exports = {
       );
     }
 
-    // 10. Émoji argent / riche 🤑 / 💰 [NOUVEAU]
+    // 10. Émoji argent / riche 🤑 / 💰
     if (messageText.includes("🤑") || messageText.includes("💰")) {
       return api.sendMessage(
         "Ça parle d'argent alors que le compte est à découvert... 💳📉",
@@ -107,7 +133,7 @@ module.exports = {
       );
     }
 
-    // 11. Émoji sommeil / dodo 😴 / 💤 [NOUVEAU]
+    // 11. Émoji sommeil / dodo 😴 / 💤
     if (messageText.includes("😴") || messageText.includes("💤")) {
       return api.sendMessage(
         "Éteins ton téléphone et va dormir au lieu de forcer ici ! 🛏️🛌",
@@ -116,7 +142,7 @@ module.exports = {
       );
     }
 
-    // 12. Émoji diable 😈 / 👿 [NOUVEAU]
+    // 12. Émoji diable 😈 / 👿
     if (messageText.includes("😈") || messageText.includes("👿")) {
       return api.sendMessage(
         "Calme tes plans machiavéliques, tu ne fais peur à personne ici ! 🕊️🛡️",
@@ -125,7 +151,7 @@ module.exports = {
       );
     }
 
-    // 13. Émoji coeur brisé 💔 [NOUVEAU]
+    // 13. Émoji coeur brisé 💔
     if (messageText.includes("💔")) {
       return api.sendMessage(
         "Encore un chagrin d'amour... Viens, on va te trouver quelqu'un de mieux ! 🥺🩹",
@@ -134,7 +160,7 @@ module.exports = {
       );
     }
 
-    // 14. Émoji muscles / force 💪 [NOUVEAU]
+    // 14. Émoji muscles / force 💪
     if (messageText.includes("💪")) {
       return api.sendMessage(
         "Ça montre ses muscles mais ça ne peut pas soulever une bouteille d'eau ! 🍼😂",
@@ -143,7 +169,7 @@ module.exports = {
       );
     }
 
-    // 15. Émoji feu / chaud 🔥 [NOUVEAU]
+    // 15. Émoji feu / chaud 🔥
     if (messageText.includes("🔥")) {
       return api.sendMessage(
         "Appelez les pompiers, l'ambiance devient trop chaude là ! 🧯💨",
