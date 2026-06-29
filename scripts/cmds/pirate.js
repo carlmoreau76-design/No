@@ -210,3 +210,164 @@ module.exports = {
       writeJSON(COOLDOWNS_FILE, cdData);
       return 0;
                           }
+
+  // ==========================================
+    // 🛠️ SUB-COMMAND: CREW (Gestion Équipage)
+    // ==========================================
+    if (subCommand === "crew") {
+      const crews = readJSON(CLANS_FILE);
+
+      if (action === "create") {
+        if (player.crewId) return message.reply("🏴‍☠️ | Vous faites déjà partie d'un équipage ! Quittez-le d'abord.");
+        const crewName = args.slice(2).join(" ");
+        if (!crewName || crewName.length < 3) return message.reply("❌ | Spécifiez un nom d'équipage valide (3 caractères min).");
+
+        const nameExists = Object.values(crews).some(c => c.name.toLowerCase() === crewName.toLowerCase());
+        if (nameExists) return message.reply("❌ | Ce nom d'équipage est déjà déposé par un autre capitaine.");
+
+        if (userMoney < 10000) return message.reply("💰 | Créer un équipage coûte **10 000$**. Vous n'avez pas les fonds nécessaires.");
+
+        userMoney -= 10000;
+        await usersData.set(senderID, { money: userMoney });
+
+        const newCrewId = "crew_" + Date.now();
+        crews[newCrewId] = {
+          id: newCrewId,
+          name: crewName,
+          emoji: "🏴‍☠️",
+          captain: senderID,
+          officers: [],
+          members: [senderID],
+          level: 1,
+          xp: 0,
+          vault: 0,
+          ship: "barque",
+          wins: 0,
+          losses: 0,
+          created: new Date().toLocaleDateString('fr-FR')
+        };
+
+        writeJSON(CLANS_FILE, crews);
+        player.crewId = newCrewId;
+        player.rank = "Capitaine";
+        updatePlayer(senderID, player);
+
+        return message.reply(`🎉 | **Félicitations Capitaine !** L'équipage **[${crews[newCrewId].emoji}] ${crewName}** est officiellement né.`);
+      }
+
+      if (action === "invite") {
+        if (!player.crewId) return message.reply("❌ | Vous n'avez pas d'équipage.");
+        const crew = crews[player.crewId];
+        if (crew.captain !== senderID && !crew.officers.includes(senderID)) {
+          return message.reply("❌ | Seuls le Capitaine ou les Officiers peuvent recruter.");
+        }
+
+        const mentionID = Object.keys(event.mentions)[0];
+        if (!mentionID) return message.reply("👤 | Veuillez mentionner (@) le joueur à inviter.");
+
+        const targetPlayer = getPlayer(mentionID);
+        if (targetPlayer.crewId) return message.reply("❌ | Ce joueur fait déjà partie d'un équipage.");
+
+        const shipLimit = SHIPS_DB[crew.ship].maxMembers;
+        if (crew.members.length >= shipLimit) return message.reply(`🚢 | Votre bateau actuel est plein ! Améliorez votre navire.`);
+
+        activeInvites.set(mentionID, crew.id);
+        const targetName = event.mentions[mentionID].replace("@", "");
+        return message.reply(`✉️ | **${targetName}**, vous êtes invité à rejoindre l'équipage **${crew.name}** !\nTapez \`pirate crew accept\`.`);
+      }
+
+      if (action === "accept") {
+        if (!activeInvites.has(senderID)) return message.reply("❌ | Vous n'avez aucune invitation active.");
+        const cId = activeInvites.get(senderID);
+        const crew = crews[cId];
+
+        if (!crew) {
+          activeInvites.delete(senderID);
+          return message.reply("❌ | Cet équipage n'existe plus.");
+        }
+
+        player.crewId = cId;
+        player.rank = "Pirate";
+        updatePlayer(senderID, player);
+
+        crew.members.push(senderID);
+        writeJSON(CLANS_FILE, crews);
+        activeInvites.delete(senderID);
+
+        return message.reply(`⚓ | Bienvenue à bord matelot ! Vous avez rejoint l'équipage de **${crew.name}**.`);
+      }
+
+      if (action === "leave") {
+        if (!player.crewId) return message.reply("❌ | Vous n'êtes dans aucun équipage.");
+        const crew = crews[player.crewId];
+        if (crew.captain === senderID) return message.reply("👑 | Un capitaine ne peut pas quitter sans dissoudre ou transférer.");
+
+        crew.members = crew.members.filter(m => m !== senderID);
+        crew.officers = crew.officers.filter(o => o !== senderID);
+        writeJSON(CLANS_FILE, crews);
+
+        player.crewId = null;
+        player.rank = "Mousse";
+        updatePlayer(senderID, player);
+
+        return message.reply(`🏃‍♂️ | Vous avez quitté l'équipage **${crew.name}**.`);
+      }
+
+      if (action === "promote") {
+        if (!player.crewId) return message.reply("❌ | Aucun équipage.");
+        const crew = crews[player.crewId];
+        if (crew.captain !== senderID) return message.reply("❌ | Seul le Capitaine peut promouvoir.");
+
+        const mentionID = Object.keys(event.mentions)[0];
+        if (!mentionID || !crew.members.includes(mentionID)) return message.reply("❌ | Mentionnez un membre valide.");
+        if (mentionID === senderID) return message.reply("❌ | Action impossible.");
+
+        if (crew.officers.includes(mentionID)) return message.reply("❌ | Déjà Officier.");
+
+        crew.officers.push(mentionID);
+        writeJSON(CLANS_FILE, crews);
+
+        const targetPlayer = getPlayer(mentionID);
+        targetPlayer.rank = "Officier";
+        updatePlayer(mentionID, targetPlayer);
+
+        return message.reply(`⚔️ | Ce pirate s'est distingué. Il est promu au rang d'**Officier** !`);
+      }
+
+      if (action === "donate") {
+        if (!player.crewId) return message.reply("❌ | Rejoignez un équipage d'abord.");
+        const amount = parseInt(args[2]);
+        if (isNaN(amount) || amount <= 0) return message.reply("❌ | Montant du don invalide.");
+
+        if (userMoney < amount) return message.reply("❌ | Vous ne possédez pas cette somme.");
+
+        userMoney -= amount;
+        await usersData.set(senderID, { money: userMoney });
+
+        const crew = crews[player.crewId];
+        crew.vault += amount;
+        writeJSON(CLANS_FILE, crews);
+
+        return message.reply(`💰 | Vous déposez **${amount}$** dans le coffre commun. Solde actuel : **${crew.vault}$**.`);
+      }
+
+      if (action === "dissolve") {
+        if (!player.crewId) return message.reply("❌ | Aucun équipage.");
+        const crew = crews[player.crewId];
+        if (crew.captain !== senderID) return message.reply("❌ | Seul le capitaine peut faire cela.");
+
+        crew.members.forEach(mUid => {
+          const mPlayer = getPlayer(mUid);
+          mPlayer.crewId = null;
+          mPlayer.rank = "Mousse";
+          updatePlayer(mUid, mPlayer);
+        });
+
+        delete crews[player.crewId];
+        writeJSON(CLANS_FILE, crews);
+
+        return message.reply(`💥 | L'équipage **${crew.name}** a été dissous.`);
+      }
+
+      return message.reply("💡 | Menus Équipages :\n• `pirate crew create <nom>`\n• `pirate crew invite @user`\n• `pirate crew accept`\n• `pirate crew donate <somme>`\n• `pirate crew leave`\n• `pirate crew dissolve`");
+    }
