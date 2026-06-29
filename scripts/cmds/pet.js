@@ -430,3 +430,290 @@ function getActivePetBonus(uid, hookType) {
 
   return null;
     }
+
+module.exports = {
+  config: {
+    name: "pet",
+    version: "2.5.0",
+    author: "Gemini Engine RPG",
+    countDown: 2,
+    role: 0,
+    description: "Système de familiers (Pets) MMORPG interconnecté à tout le serveur.",
+    category: "game",
+    guide: {
+      fr: "{p}pet info | {p}pet shop | {p}pet adopt <oeuf> | {p}pet hatch <oeuf> | {p}pet feed <slot> <nourriture> | {p}pet equip <slot> | {p}pet list | {p}pet evolve <slot> | {p}pet rename <slot> <nom>",
+      en: "{p}pet info | {p}pet shop | {p}pet adopt <egg> | {p}pet hatch <egg> | {p}pet feed <slot> <food> | {p}pet equip <slot> | {p}pet list | {p}pet evolve <slot> | {p}pet rename <slot> <name>"
+    }
+  },
+
+  onStart: async function ({ api, event, args, usersData, message }) {
+    const { senderID } = event;
+    const playerData = getPlayerPets(senderID);
+    
+    let uData = await usersData.get(senderID);
+    let userMoney = uData.money || 0;
+
+    const subCommand = args[0]?.toLowerCase();
+
+    // ==========================================
+    // 📊 BASE : FICHE TECHNIQUE COMPAGNON ACTIF
+    // ==========================================
+    if (!subCommand || subCommand === "info") {
+      if (!playerData.activePetId) {
+        return message.reply("🐾 | Vous n'avez aucun familier équipé actuellement. Utilisez `{p}pet list` puis `{p}pet equip <slot>`.");
+      }
+
+      const activePet = playerData.collection.find(p => p.id === playerData.activePetId || p.customName === playerData.activePetId);
+      if (!activePet) return message.reply("❌ | Votre familier équipé est introuvable dans votre ménagerie.");
+
+      try {
+        const cardTitle = activePet.customName ? `${activePet.customName} (${activePet.name})` : activePet.name;
+        const cardBuffer = await drawPetCard(cardTitle, activePet, senderID);
+        const cachePath = path.join(DATA_DIR, `pet_${senderID}.png`);
+        fs.writeFileSync(cachePath, cardBuffer);
+
+        return message.reply({
+          body: `🔮 | **[STATUT DE VOTRE COMPAGNON DE ROUTE]**\n» Utilisez \`pet play\` ou \`pet feed\` pour vous en occuper.`,
+          attachment: fs.createReadStream(cachePath)
+        });
+      } catch (err) {
+        return message.reply(`🐾 **${activePet.customName || activePet.name}** (Niv. ${activePet.level})\n❤️ HP: ${activePet.hp} | ⚔️ ATK: ${activePet.atk}\n🍖 Faim: ${activePet.hunger}% | 😊 Joie: ${activePet.joy}%`);
+      }
+    }
+
+    // ==========================================
+    // 🥚 COUVOIR / BOUTIQUE DES OEUFS (SHOP)
+    // ==========================================
+    if (subCommand === "shop") {
+      let shopMsg = `🛒 **[MARCHÉ AUX OEUFS ET NOURRITURE POUR FAMILIERS]**\n\n🔹 **NIDS D'OEUFS DISPONIBLES :**\n`;
+      for (const [key, egg] of Object.entries(EGGS_DB)) {
+        shopMsg += `${egg.emoji} \`pet adopt ${key}\` ➔ **${egg.name}** : ${egg.cost}$\n`;
+      }
+      shopMsg += `\n🔹 **RATIONS DE NOURRITURE :**\n`;
+      for (const [key, food] of Object.entries(PET_FOOD)) {
+        shopMsg += `🍖 \`pet buy food ${key}\` ➔ **${food.name}** : ${food.cost}$ (+${food.restore} Faim)\n`;
+      }
+      return message.reply(shopMsg);
+    }
+
+    // ==========================================
+    // 🥚 ADOPTION & ACHATS (ADOPT / BUY)
+    // ==========================================
+    if (subCommand === "adopt" || subCommand === "buy") {
+      const type = args[1]?.toLowerCase();
+      if (!type) return message.reply("❌ | Précisez ce que vous désirez acquérir. Exemple : `pet adopt common`.");
+
+      // Achat Nourriture
+      if (type === "food") {
+        const foodKey = args[2]?.toLowerCase();
+        const foodItem = PET_FOOD[foodKey];
+        if (!foodItem) return message.reply("❌ | Cet aliment n'existe pas.");
+
+        if (userMoney < foodItem.cost) return message.reply(`💰 | Fonds insuffisants. Il vous faut ${foodItem.cost}$.`);
+
+        userMoney -= foodItem.cost;
+        await usersData.set(senderID, { money: userMoney });
+
+        playerData.foodStorage[foodKey] = (playerData.foodStorage[foodKey] || 0) + 1;
+        updatePlayerPets(senderID, playerData);
+
+        return message.reply(`🍱 | Vous achetez : **${foodItem.name}** pour **${foodItem.cost}$**.`);
+      }
+
+      // Achat et éclosion immédiate d'un œuf
+      const eggTemplate = EGGS_DB[type];
+      if (!eggTemplate) return message.reply("❌ | Cet œuf n'est pas disponible au couvoir.");
+
+      if (userMoney < eggTemplate.cost) return message.reply(`💰 | Fonds insuffisants. Prix de cet œuf : **${eggTemplate.cost}$.**`);
+
+      userMoney -= eggTemplate.cost;
+      await usersData.set(senderID, { money: userMoney });
+
+      // Éclosion
+      const newPet = generatePetFromEgg(type);
+      playerData.collection.push(newPet);
+
+      // Si c'est le premier familier, on l'équipe automatiquement
+      if (!playerData.activePetId) {
+        playerData.activePetId = newPet.customName || newPet.name;
+      }
+
+      updatePlayerPets(senderID, playerData);
+
+      try {
+        const rarOpt = RARITIES[newPet.rarity] || RARITIES.commune;
+        const hatchBuffer = await drawHatchCard(eggTemplate.name, newPet, rarOpt.color);
+        const cacheHatchPath = path.join(DATA_DIR, `hatch_${senderID}.png`);
+        fs.writeFileSync(cacheHatchPath, hatchBuffer);
+
+        return message.reply({
+          body: `✨ | L'œuf éclate sous vos yeux !`,
+          attachment: fs.createReadStream(cacheHatchPath)
+        });
+      } catch (e) {
+        return message.reply(`🥚 | **ÉCLOSION :** Félicitations ! Votre ${eggTemplate.name} donne naissance à un **${newPet.name}** de rareté **[${newPet.rarity.toUpperCase()}]** !`);
+      }
+    }
+
+    // ==========================================
+    // 📜 LISTE DE LA MENAGERIE (COLLECTION)
+    // ==========================================
+    if (subCommand === "list") {
+      if (playerData.collection.length === 0) return message.reply("🐾 | Votre ménagerie est vide. Achetez votre premier œuf via `pet shop` !");
+
+      let listMsg = `📜 **[MÉNAGERIE DE FAMILIERS ET CRÉATURES]**\n\n`;
+      playerData.collection.forEach((p, idx) => {
+        const isEquipped = (p.id === playerData.activePetId || p.customName === playerData.activePetId) ? "👑 [ÉQUIPÉ]" : "";
+        listMsg += `\`[Slot ${idx + 1}]\` ${p.emoji} **${p.customName || p.name}** (Niv. ${p.level}) — ${p.rarity.toUpperCase()} ${isEquipped}\n`;
+      });
+      listMsg += `\n👉 _Équipez un familier en faisant : \`pet equip <num_slot>\`_`;
+      return message.reply(listMsg);
+    }
+
+    // ==========================================
+    // 👑 ÉQUIPER UN FAMILIER (EQUIP)
+    // ==========================================
+    if (subCommand === "equip") {
+      const slot = parseInt(args[1]) - 1;
+      if (isNaN(slot) || slot < 0 || slot >= playerData.collection.length) return message.reply("❌ | Numéro de slot invalide.");
+
+      const selectedPet = playerData.collection[slot];
+      playerData.activePetId = selectedPet.customName || selectedPet.name;
+      updatePlayerPets(senderID, playerData);
+
+      return message.reply(`👑 | Compagnon assigné ! **${selectedPet.customName || selectedPet.name}** combat désormais à vos côtés.`);
+    }
+
+    // ==========================================
+    // 🍖 ALIMENTATION (FEED)
+    // ==========================================
+    if (subCommand === "feed") {
+      if (!playerData.activePetId) return message.reply("❌ | Équipez d'abord un familier pour le nourrir.");
+      const activePet = playerData.collection.find(p => p.id === playerData.activePetId || p.customName === playerData.activePetId);
+
+      const foodKey = args[1]?.toLowerCase();
+      if (!foodKey || !PET_FOOD[foodKey]) return message.reply("❌ | Indiquez une nourriture valide : `croquette`, `paté`, `delice`, `ambroisie`.");
+
+      if ((playerData.foodStorage[foodKey] || 0) <= 0) return message.reply(`❌ | Vous ne possédez pas de **${PET_FOOD[foodKey].name}** en réserve.`);
+
+      playerData.foodStorage[foodKey] -= 1;
+      activePet.hunger = Math.min(100, activePet.hunger + PET_FOOD[foodKey].restore);
+      activePet.joy = Math.min(100, activePet.joy + PET_FOOD[foodKey].joy);
+
+      // Petite injection d'XP bonus lors d'un repas de qualité
+      gainPetExperience(playerData, playerData.collection.indexOf(activePet), 40, message);
+      updatePlayerPets(senderID, playerData);
+
+      return message.reply(`🍖 | **${activePet.customName || activePet.name}** déguste sa ration avec joie ! (+${PET_FOOD[foodKey].restore} Faim).`);
+    }
+
+    // ==========================================
+    // 😊 JOUER ET DIVERTIR (PLAY)
+    // ==========================================
+    if (subCommand === "play") {
+      if (!playerData.activePetId) return message.reply("❌ | Aucun familier actif.");
+      const activePet = playerData.collection.find(p => p.id === playerData.activePetId || p.customName === playerData.activePetId);
+
+      activePet.joy = Math.min(100, activePet.joy + 25);
+      activePet.hunger = Math.max(10, activePet.hunger - 10); // Jouer donne faim !
+
+      gainPetExperience(playerData, playerData.collection.indexOf(activePet), 60, message);
+      updatePlayerPets(senderID, playerData);
+
+      return message.reply(`🎾 | Vous lancez une balle magique. **${activePet.customName || activePet.name}** s'amuse comme un fou ! (+25% Bonheur / +60 XP).`);
+    }
+
+    // ==========================================
+    // 🧬 ENTRAÎNEMENT AU MANEGE (TRAIN)
+    // ==========================================
+    if (subCommand === "train") {
+      if (!playerData.activePetId) return message.reply("❌ | Aucun familier actif.");
+      const activePet = playerData.collection.find(p => p.id === playerData.activePetId || p.customName === playerData.activePetId);
+
+      if (userMoney < 800) return message.reply("💰 | Une séance d'entraînement au dojo des bêtes requiert **800$**.");
+      if (activePet.hunger <= 25) return message.reply("⏳ | Votre familier est trop exténué ou affamé pour s'entraîner. Nourrissez-le.");
+
+      userMoney -= 800;
+      await usersData.set(senderID, { money: userMoney });
+
+      activePet.hunger -= 20;
+      activePet.joy -= 10;
+      
+      // Gain massif d'XP
+      gainPetExperience(playerData, playerData.collection.indexOf(activePet), 250, message);
+      updatePlayerPets(senderID, playerData);
+
+      return message.reply(`⚔️ | **ENTRAÎNEMENT INTENSIF :** Votre familier s'exerce au combat ! (+250 XP / -800$).`);
+    }
+
+    // ==========================================
+    // 🧬 RECONSTRUIRE ET MUTATION (EVOLVE)
+    // ==========================================
+    if (subCommand === "evolve") {
+      const slot = parseInt(args[1]) - 1;
+      if (isNaN(slot) || slot < 0 || slot >= playerData.collection.length) return message.reply("❌ | Veuillez indiquer un numéro de slot valide.");
+
+      const targetPet = playerData.collection[slot];
+      const evolutionResult = executePetEvolution(targetPet);
+
+      if (!evolutionResult.success) {
+        return message.reply(`❌ | Évolution impossible : ${evolutionResult.reason}`);
+      }
+
+      // Si l'animal possédait un ancien nom customisé, on adapte l'identifiant actif
+      if (playerData.activePetId === evolutionResult.oldName) {
+        playerData.activePetId = targetPet.customName || targetPet.name;
+      }
+
+      updatePlayerPets(senderID, playerData);
+      return message.reply(`🔥 | **MÉTAMORPHOSE RPG !** Votre ancien **${evolutionResult.oldName}** accumule une force titanesque et évolue en un puissant **${evolutionResult.newName}** !`);
+    }
+
+    // ==========================================
+    // 🏷️ BAPTÊME / RENOMMER LE COMPAGNON (RENAME)
+    // ==========================================
+    if (subCommand === "rename") {
+      const slot = parseInt(args[1]) - 1;
+      const newName = args.slice(2).join(" ");
+
+      if (isNaN(slot) || slot < 0 || slot >= playerData.collection.length) return message.reply("❌ | Slot invalide.");
+      if (!newName || newName.length > 20) return message.reply("❌ | Veuillez spécifier un nom (20 caractères max).");
+
+      const targetPet = playerData.collection[slot];
+      const wasActive = (playerData.activePetId === targetPet.customName || playerData.activePetId === targetPet.name);
+
+      targetPet.customName = newName;
+      if (wasActive) playerData.activePetId = newName;
+
+      updatePlayerPets(senderID, playerData);
+      return message.reply(`🏷️ | Votre familier au slot #${slot + 1} s'appelle désormais : **${newName}** !`);
+    }
+    
+    // ==========================================
+    // 🏆 CLASSEMENT DES FAUNES (LEADERBOARD)
+    // ==========================================
+    if (subCommand === "leaderboard" || subCommand === "lb") {
+      const allData = readJSON(PETS_FILE);
+      const leaders = [];
+
+      Object.entries(allData).forEach(([uid, pObj]) => {
+        if (pObj.collection && pObj.collection.length > 0) {
+          pObj.collection.forEach(pet => {
+            leaders.push({ uid, name: pet.name, cName: pet.customName, lvl: pet.level });
+          });
+        }
+      });
+
+      const sorted = leaders.sort((a, b) => b.lvl - a.lvl).slice(0, 10);
+      if (sorted.length === 0) return message.reply("🏁 | Aucun familier n'a encore foulé les terres de ce serveur.");
+
+      let lbText = `🏆 **[CLASSEMENT DES FAMILIERS LES PLUS SAGE ET PUISSANTS]**\n\n`;
+      for (let i = 0; i < sorted.length; i++) {
+        const uName = (await usersData.get(sorted[i].uid)).name || "Aventurier";
+        const displayName = sorted[i].cName ? `${sorted[i].cName} (${sorted[i].name})` : sorted[i].name;
+        lbText += `${i + 1}. **${displayName}** — Propriétaire : ${uName} [Niv. ${sorted[i].lvl}]\n`;
+      }
+      return message.reply(lbText);
+    }
+  }
+};
