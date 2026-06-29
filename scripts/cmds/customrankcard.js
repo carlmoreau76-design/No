@@ -1,209 +1,182 @@
-// 🌸 Angel Kawaii Custom Rank Card 🌸
-// url check image
+// 🌸 Hori Custom Rank Card Terminal 🌸
 const checkUrlRegex = /https?:\/\/.*\.(?:png|jpg|jpeg|gif)/gi;
 const regExColor = /#([0-9a-f]{6})|rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)|rgba\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3}),\s*(\d+\.?\d*)\)/gi;
 const { uploadImgbb } = global.utils;
 
 module.exports = {
-	config: {
-		name: "customrankcard",
-		aliases: ["crc", "customrank", "angelrank"],
-		version: "💖 1.0 Angel",
-		author: "NTKhang ✨ Angel Edit by Shade",
-		countDown: 5,
-		role: 0,
-		description: {
-			vi: "Thiết kế thẻ rank theo ý bạn 🌸",
-			en: "Design your kawaii angel rank card 💖✨"
-		},
-		category: "utility",
-		guide: {
-			vi: "🌸 {pn} maincolor #ffb6c1",
-			en: "💖 {pn} maincolor #ffb6c1"
-		}
-	},
+  config: {
+    name: "customrankcard",
+    aliases: ["crc", "customrank", "horirank"],
+    version: "2.0.0 Hori Pro",
+    author: "NTKhang × Shade × Gemini",
+    countDown: 5,
+    role: 0,
+    description: {
+      vi: "Thiết kế thẻ rank theo ý bạn 🌸",
+      en: "Design your custom dynamic rank card interface."
+    },
+    category: "utility",
+    guide: {
+      vi: "🌸 {pn} maincolor #f43f5e",
+      en: "🌸 {pn} maincolor #f43f5e"
+    }
+  },
 
-	langs: {
-		vi: {
-			invalidImage: "💔 Ảnh không hợp lệ rồi angel ơi ~",
-			invalidAttachment: "💔 File này không phải hình đâu nè",
-			invalidColor: "🌸 Màu không hợp lệ rồi đó",
-			notSupportImage: "💫 Không hỗ trợ ảnh cho \"%1\"",
-			success: "💖 Đã lưu rồi nè angel ~ xem preview bên dưới ✨",
-			reseted: "🌸 Đã reset về trạng thái ban đầu rồi đó",
-			invalidAlpha: "💔 Chỉ số phải từ 0 → 1 nha"
-		},
-		en: {
-			invalidImage: "💔 Invalid image angel ~",
-			invalidAttachment: "💔 This is not an image file",
-			invalidColor: "🌸 Invalid color code",
-			notSupportImage: "💫 Image not supported for \"%1\"",
-			success: "💖 Saved successfully angel ~ preview below ✨",
-			reseted: "🌸 Reset completed ✨",
-			invalidAlpha: "💔 Value must be 0 → 1"
-		}
-	},
+  langs: {
+    vi: {
+      invalidImage: "❌ Đường dẫn hình ảnh không hợp lệ.",
+      invalidAttachment: "❌ Tệp được gửi không phải là hình ảnh.",
+      invalidColor: "❌ Mã màu không đúng định dạng.",
+      notSupportImage: "❌ Không hỗ trợ định dạng hình ảnh cho \"%1\".",
+      success: "🌸 Cấu hình đã được lưu thành công.",
+      reseted: "🌸 Đã đặt lại cấu hình giao diện mặc định.",
+      invalidAlpha: "❌ Chỉ số độ trong suốt (Alpha) phải nằm trong khoảng từ 0 đến 1."
+    },
+    en: {
+      invalidImage: "❌ Invalid target image URL link.",
+      invalidAttachment: "❌ The provided component is not a valid image file.",
+      invalidColor: "❌ Invalid hexa or RGB color code dynamic format.",
+      notSupportImage: "❌ Image format background is not supported for parameters \"%1\".",
+      success: "🌸 Parameters saved successfully. Checking preview interface below...",
+      reseted: "🌸 Interface configuration restored to factory default parameters.",
+      invalidAlpha: "❌ Opacity transparency value must be range between 0 ⟶ 1."
+    }
+  },
 
-	onStart: async function ({ message, threadsData, event, args, getLang, usersData, envCommands }) {
+  onStart: async function ({ message, threadsData, event, args, getLang, usersData, envCommands }) {
+    if (!args[0]) return message.SyntaxError();
 
-		if (!args[0])
-			return message.SyntaxError();
+    const customRankCard = await threadsData.get(event.threadID, "data.customRankCard", {});
+    const key = args[0].toLowerCase();
+    let value = args.slice(1).join(" ");
 
-		const customRankCard = await threadsData.get(event.threadID, "data.customRankCard", {});
-		const key = args[0].toLowerCase();
-		let value = args.slice(1).join(" ");
+    const supportImage = ["maincolor", "background", "bg", "subcolor", "expbarcolor", "progresscolor", "linecolor"];
+    const notSupportImage = ["textcolor", "namecolor", "expcolor", "rankcolor", "levelcolor", "lvcolor"];
 
-		const supportImage = ["maincolor", "background", "bg", "subcolor", "expbarcolor", "progresscolor", "linecolor"];
-		const notSupportImage = ["textcolor", "namecolor", "expcolor", "rankcolor", "levelcolor", "lvcolor"];
+    if ([...notSupportImage, ...supportImage].includes(key)) {
+      const attachmentsReply = event.messageReply?.attachments;
+      const attachments = [
+        ...event.attachments.filter(({ type }) => ["photo", "animated_image"].includes(type)),
+        ...attachmentsReply?.filter(({ type }) => ["photo", "animated_image"].includes(type)) || []
+      ];
 
-		if ([...notSupportImage, ...supportImage].includes(key)) {
+      if (value === "reset") {
+        // Mode reset géré dans le switch inférieur
+      } else if (value.match(/^https?:\/\//)) {
+        const matchUrl = value.match(checkUrlRegex);
+        if (!matchUrl) return message.reply(getLang("invalidImage"));
 
-			const attachmentsReply = event.messageReply?.attachments;
-			const attachments = [
-				...event.attachments.filter(({ type }) => ["photo", "animated_image"].includes(type)),
-				...attachmentsReply?.filter(({ type }) => ["photo", "animated_image"].includes(type)) || []
-			];
+        const infoFile = await uploadImgbb(matchUrl[0], "url");
+        value = infoFile.image.url;
+      } else if (attachments.length > 0) {
+        if (!["photo", "animated_image"].includes(attachments[0].type)) {
+          return message.reply(getLang("invalidAttachment"));
+        }
 
-			if (value == "reset") {
-				// 🌸 reset mode
-			}
+        const url = attachments[0].url;
+        const infoFile = await uploadImgbb(url, "url");
+        value = infoFile.image.url;
+      } else {
+        const colors = value.match(regExColor);
+        if (!colors) return message.reply(getLang("invalidColor"));
 
-			else if (value.match(/^https?:\/\//)) {
-				const matchUrl = value.match(checkUrlRegex);
-				if (!matchUrl)
-					return message.reply(getLang("invalidImage"));
+        value = colors.length === 1 ? colors[0] : colors;
+      }
 
-				const infoFile = await uploadImgbb(matchUrl[0], "url");
-				value = infoFile.image.url;
-			}
+      if (value !== "reset" && notSupportImage.includes(key) && value.startsWith?.("http")) {
+        return message.reply(getLang("notSupportImage", key));
+      }
 
-			else if (attachments.length > 0) {
-				if (!["photo", "animated_image"].includes(attachments[0].type))
-					return message.reply(getLang("invalidAttachment"));
+      switch (key) {
+        case "maincolor":
+        case "background":
+        case "bg":
+          value === "reset" ? delete customRankCard.main_color : customRankCard.main_color = value;
+          break;
+        case "subcolor":
+          value === "reset" ? delete customRankCard.sub_color : customRankCard.sub_color = value;
+          break;
+        case "linecolor":
+          value === "reset" ? delete customRankCard.line_color : customRankCard.line_color = value;
+          break;
+        case "progresscolor":
+          value === "reset" ? delete customRankCard.exp_color : customRankCard.exp_color = value;
+          break;
+        case "expbarcolor":
+          value === "reset" ? delete customRankCard.expNextLevel_color : customRankCard.expNextLevel_color = value;
+          break;
+        case "textcolor":
+          value === "reset" ? delete customRankCard.text_color : customRankCard.text_color = value;
+          break;
+        case "namecolor":
+          value === "reset" ? delete customRankCard.name_color : customRankCard.name_color = value;
+          break;
+        case "rankcolor":
+          value === "reset" ? delete customRankCard.rank_color : customRankCard.rank_color = value;
+          break;
+        case "levelcolor":
+        case "lvcolor":
+          value === "reset" ? delete customRankCard.level_color : customRankCard.level_color = value;
+          break;
+        case "expcolor":
+          value === "reset" ? delete customRankCard.exp_text_color : customRankCard.exp_text_color = value;
+          break;
+      }
 
-				const url = attachments[0].url;
-				const infoFile = await uploadImgbb(url, "url");
-				value = infoFile.image.url;
-			}
+      try {
+        await threadsData.set(event.threadID, customRankCard, "data.customRankCard");
 
-			else {
-				const colors = value.match(regExColor);
-				if (!colors)
-					return message.reply(getLang("invalidColor"));
+        message.reply({
+          body: `✨ 🌸 **[ INTERFACE DE RENDU MISE À JOUR ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 **Modification :** Définition de l'attribut [ ${key} ] effectuée.\n📈 **Statut :** Changements sauvegardés dans la base de données du salon.`,
+          attachment: await global.client.makeRankCard(
+            event.senderID,
+            usersData,
+            threadsData,
+            event.threadID,
+            envCommands["rank"]?.deltaNext || 5
+          ).then(stream => {
+            stream.path = "hori_rankcard.png";
+            return stream;
+          })
+        });
+      } catch (err) {
+        message.err(err);
+      }
+    } else if (["alphasubcolor", "alphasubcard"].includes(key)) {
+      if (parseFloat(value) < 0 || parseFloat(value) > 1) {
+        return message.reply(getLang("invalidAlpha"));
+      }
 
-				value = colors.length == 1 ? colors[0] : colors;
-			}
+      customRankCard.alpha_subcard = parseFloat(value);
 
-			if (value != "reset" && notSupportImage.includes(key) && value.startsWith?.("http"))
-				return message.reply(getLang("notSupportImage", key));
+      try {
+        await threadsData.set(event.threadID, customRankCard, "data.customRankCard");
 
-			switch (key) {
-				case "maincolor":
-				case "background":
-				case "bg":
-					value == "reset" ? delete customRankCard.main_color : customRankCard.main_color = value;
-					break;
-
-				case "subcolor":
-					value == "reset" ? delete customRankCard.sub_color : customRankCard.sub_color = value;
-					break;
-
-				case "linecolor":
-					value == "reset" ? delete customRankCard.line_color : customRankCard.line_color = value;
-					break;
-
-				case "progresscolor":
-					value == "reset" ? delete customRankCard.exp_color : customRankCard.exp_color = value;
-					break;
-
-				case "expbarcolor":
-					value == "reset" ? delete customRankCard.expNextLevel_color : customRankCard.expNextLevel_color = value;
-					break;
-
-				case "textcolor":
-					value == "reset" ? delete customRankCard.text_color : customRankCard.text_color = value;
-					break;
-
-				case "namecolor":
-					value == "reset" ? delete customRankCard.name_color : customRankCard.name_color = value;
-					break;
-
-				case "rankcolor":
-					value == "reset" ? delete customRankCard.rank_color : customRankCard.rank_color = value;
-					break;
-
-				case "levelcolor":
-				case "lvcolor":
-					value == "reset" ? delete customRankCard.level_color : customRankCard.level_color = value;
-					break;
-
-				case "expcolor":
-					value == "reset" ? delete customRankCard.exp_text_color : customRankCard.exp_text_color = value;
-					break;
-			}
-
-			try {
-				await threadsData.set(event.threadID, customRankCard, "data.customRankCard");
-
-				message.reply({
-					body: "💖✨ Angel Rank Card updated successfully ~ 🌸",
-					attachment: await global.client.makeRankCard(
-						event.senderID,
-						usersData,
-						threadsData,
-						event.threadID,
-						envCommands["rank"]?.deltaNext || 5
-					).then(stream => {
-						stream.path = "angel_rankcard.png";
-						return stream;
-					})
-				});
-
-			} catch (err) {
-				message.err(err);
-			}
-		}
-
-		else if (["alphasubcolor", "alphasubcard"].includes(key)) {
-
-			if (parseFloat(value) < 0 || parseFloat(value) > 1)
-				return message.reply(getLang("invalidAlpha"));
-
-			customRankCard.alpha_subcard = parseFloat(value);
-
-			try {
-				await threadsData.set(event.threadID, customRankCard, "data.customRankCard");
-
-				message.reply({
-					body: "💖 Angel transparency updated ~",
-					attachment: await global.client.makeRankCard(
-						event.senderID,
-						usersData,
-						threadsData,
-						event.threadID,
-						envCommands["rank"]?.deltaNext || 5
-					).then(stream => {
-						stream.path = "angel_rankcard.png";
-						return stream;
-					})
-				});
-
-			} catch (err) {
-				message.err(err);
-			}
-		}
-
-		else if (key == "reset") {
-			try {
-				await threadsData.set(event.threadID, {}, "data.customRankCard");
-				message.reply("🌸💖 Reset completed ~ angel mode restored ✨");
-			} catch (err) {
-				message.err(err);
-			}
-		}
-
-		else {
-			message.SyntaxError();
-		}
-	}
+        message.reply({
+          body: `✨ 🌸 **[ OPACITY INTERFACE OPTIMIZED ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🛡️ Opacité de transparence mise à jour avec succès [ ${value} ]. Calibrage du visuel en cours.`,
+          attachment: await global.client.makeRankCard(
+            event.senderID,
+            usersData,
+            threadsData,
+            event.threadID,
+            envCommands["rank"]?.deltaNext || 5
+          ).then(stream => {
+            stream.path = "hori_rankcard.png";
+            return stream;
+          })
+        });
+      } catch (err) {
+        message.err(err);
+      }
+    } else if (key === "reset") {
+      try {
+        await threadsData.set(event.threadID, {}, "data.customRankCard");
+        message.reply(`✨ 🌸 **[ ARCHITECTURE INITIALISÉE ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Configuration réinitialisée. Les calques d'origine de la carte de niveau ont été restaurés.`);
+      } catch (err) {
+        message.err(err);
+      }
+    } else {
+      message.SyntaxError();
+    }
+  }
 };
