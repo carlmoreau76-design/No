@@ -77,3 +77,136 @@ function updateCrew(crewId, data) {
     writeJSON(CLANS_FILE, crews);
   }
 }
+
+function drawRoundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+// Génération d'une interface néon premium avec intégration du token sécurisé
+async function generatePremiumCard(title, subtitle, stats = [], uid = null) {
+  const canvas = createCanvas(700, 450);
+  const ctx = canvas.getContext('2d');
+
+  // Fond Sombre Cyber-Pirate
+  ctx.fillStyle = '#0b0c10';
+  ctx.fillRect(0, 0, 700, 450);
+
+  // Grille de fond subtile
+  ctx.strokeStyle = 'rgba(255, 0, 0, 0.03)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 700; i += 30) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 450); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(700, i); ctx.stroke();
+  }
+
+  // Cadre Néon Rouge / Or Éclatant
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#ff0055';
+  ctx.shadowColor = '#ff0055';
+  ctx.shadowBlur = 15;
+  drawRoundRect(ctx, 20, 20, 660, 410, 20);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Titre principal
+  ctx.fillStyle = '#ffd700'; 
+  ctx.font = 'bold 32px sans-serif';
+  ctx.fillText(title.toUpperCase(), 50, 70);
+
+  // Sous-titre
+  ctx.fillStyle = '#66fcf1';
+  ctx.font = 'italic 18px sans-serif';
+  ctx.fillText(subtitle, 50, 105);
+
+  // Ligne de séparation
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(50, 125); ctx.lineTo(650, 125); ctx.stroke();
+
+  // Affichage des statistiques structurées
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '18px sans-serif';
+  let posY = 170;
+  stats.forEach(stat => {
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText(stat.label + " :", 50, posY);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(stat.value, 220, posY);
+    posY += 35;
+  });
+
+  // Gestion et affichage de l'avatar avec le Token fourni
+  if (uid) {
+    try {
+      const avatarUrl = `https://graph.facebook.com/${uid}/picture?width=512&height=512&access_token=${encodeURIComponent(FB_TOKEN)}`;
+      const avatar = await loadImage(avatarUrl);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(540, 240, 80, 0, Math.PI * 2, true);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(avatar, 460, 160, 160, 160);
+      ctx.restore();
+
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffd700';
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(540, 240, 80, 0, Math.PI * 2, true);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } catch (e) {
+      // Évite le crash si l'API Facebook ou le token rencontre un problème réseau
+    }
+  }
+
+  return canvas.toBuffer();
+}
+
+module.exports = {
+  config: {
+    name: "pirate",
+    version: "3.1.0",
+    author: "Gemini Engine",
+    countDown: 3,
+    role: 0,
+    description: "Système de simulation de piraterie RPG premium multi-équipages.",
+    category: "game",
+    guide: {
+      fr: "{p}pirate crew create <nom> | explore | battle | war <nom_equipage> | info | upgrade",
+      en: "{p}pirate crew create <name> | explore | battle | war <crew_name> | info | upgrade"
+    }
+  },
+
+  onStart: async function ({ api, event, args, usersData, message }) {
+    const { threadID, messageID, senderID } = event;
+    const subCommand = args[0]?.toLowerCase();
+    const action = args[1]?.toLowerCase();
+
+    let player = getPlayer(senderID);
+    let uData = await usersData.get(senderID);
+    let userMoney = uData.money || 0;
+
+    const cdData = readJSON(COOLDOWNS_FILE);
+    const now = Date.now();
+
+    function checkCooldown(type, timeLimit) {
+      const key = `${senderID}_${type}`;
+      if (cdData[key] && now < cdData[key] + timeLimit) {
+        return Math.ceil((cdData[key] + timeLimit - now) / 1000);
+      }
+      cdData[key] = now;
+      writeJSON(COOLDOWNS_FILE, cdData);
+      return 0;
+                          }
