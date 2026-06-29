@@ -1,113 +1,127 @@
+/**
+ * @file ignoreonlyad.js
+ * @description Permet à l'owner de gérer les commandes qui contournent le mode adminOnly.
+ */
+
 const OWNER_UID = "61573867120837";
-const ignoreList = global.GoatBot.config.adminOnly.ignoreCommand;
 const fs = require("fs-extra");
 
 module.exports = {
 	config: {
 		name: "ignoreonlyad",
 		aliases: ["ignoreadonly", "ignoreonlyadmin", "ign"],
-		version: "✨ 2.0 angel kawaii",
-		author: "Shade ✨ Angel Edit",
+		version: "2.1.0",
+		author: "Shade & Gemini",
 		countDown: 5,
 		role: 0,
-		shortDescription: "🌸 Autoriser des commandes en adminOnly",
-		category: "security",
-		description: {
-			en: "Manage commands that bypass adminOnly mode 💫"
+		shortDescription: {
+			en: "Manage commands that bypass adminOnly mode",
+			fr: "Gérer les commandes qui contournent le mode adminOnly"
 		},
+		category: "security",
 		guide: {
-			en:
-				"🌸 {pn} add <command>\n" +
-				"❌ {pn} del <command>\n" +
-				"📜 {pn} list"
+			en: "{pn} add <command>\n{pn} del <command>\n{pn} list",
+			fr: "{pn} add <commande>\n{pn} del <commande>\n{pn} list"
 		}
 	},
 
 	langs: {
 		en: {
-			denied: "❌✨ Access denied... only owner can use this 💔",
-			missingAdd: "🌸✨ Please enter a command to add 💔",
-			missingDel: "💔✨ Please enter a command to remove",
-			notFound: "❌✨ Command \"%1\" not found",
-			already: "💖✨ \"%1\" is already in the angel ignore list",
-			added: "🌸✨ Command \"%1\" is now FREE from adminOnly 💖",
-			notIn: "💔✨ \"%1\" is not in the list",
-			removed: "🧹✨ Command \"%1\" removed from angel list 💖",
-			list: "🌸✨ IGNORE LIST (adminOnly bypass):\n\n%1"
+			denied: "❌ Access denied. Only the bot owner can use this command.",
+			missingAdd: "⚠️ Please specify a command name to add to the ignore list.",
+			missingDel: "⚠️ Please specify a command name to remove from the ignore list.",
+			notFound: "❌ Command \"%1\" does not exist in the system.",
+			already: "ℹ️ Command \"%1\" is already in the bypass list.",
+			added: "✅ Command \"%1\" successfully added to the adminOnly bypass list.",
+			notIn: "❌ Command \"%1\" is not in the bypass list.",
+			removed: "🧹 Command \"%1\" successfully removed from the bypass list.",
+			listEmpty: "📜 The adminOnly bypass list is currently empty.",
+			list: "📜 ── [ BYPASS LIST ] ──\n\n%1\n\nThese commands can be used by anyone even if adminOnly is active."
+		},
+		fr: {
+			denied: "❌ Accès refusé. Seul le propriétaire du bot peut utiliser cette commande.",
+			missingAdd: "⚠️ Veuillez spécifier le nom d'une commande à ajouter.",
+			missingDel: "⚠️ Veuillez spécifier le nom d'une commande à retirer.",
+			notFound: "❌ La commande \"%1\" n'existe pas dans le système.",
+			already: "ℹ️ La commande \"%1\" est déjà dans la liste d'exception.",
+			added: "✅ La commande \"%1\" ignore désormais le mode adminOnly.",
+			notIn: "❌ La commande \"%1\" n'est pas dans la liste d'exception.",
+			removed: "🧹 La commande \"%1\" a été retirée de la liste d'exception.",
+			listEmpty: "📜 La liste d'exception adminOnly est actuellement vide.",
+			list: "📜 ── [ LISTE D'EXCEPTION ] ──\n\n%1\n\nCes commandes sont accessibles à tous même si adminOnly est activé."
 		}
 	},
 
 	onStart: async function ({ args, message, getLang, event, api }) {
+		const { senderID, messageID } = event;
 
-		// 💖 UID CHECK (OWNER ONLY)
-		if (event.senderID !== OWNER_UID) {
+		// 👑 Vérification stricte du Propriétaire (Owner)
+		if (senderID !== OWNER_UID) {
 			return message.reply(getLang("denied"));
 		}
 
+		// Récupération dynamique de la configuration globale
+		const configPath = global.client.dirConfig;
+		const currentConfig = global.GoatBot.config;
+		
+		if (!currentConfig.adminOnly || !Array.isArray(currentConfig.adminOnly.ignoreCommand)) {
+			return message.reply("❌ Error: GoatBot config structure for 'adminOnly.ignoreCommand' is invalid.");
+		}
+
+		const ignoreList = currentConfig.adminOnly.ignoreCommand;
+		const action = args[0]?.toLowerCase();
+
 		try {
-			const action = args[0];
+			switch (action) {
+				case "add": {
+					if (!args[1]) return message.reply(getLang("missingAdd"));
+					
+					const cmd = args[1].toLowerCase();
+					const commandExists = global.GoatBot.commands.has(cmd);
 
-			// 🌸 ADD
-			if (action === "add") {
-				api.setMessageReaction("⏳", event.messageID);
+					if (!commandExists) return message.reply(getLang("notFound", cmd));
+					if (ignoreList.includes(cmd)) return message.reply(getLang("already", cmd));
 
-				if (!args[1])
-					return message.reply(getLang("missingAdd"));
+					// Ajout et sauvegarde synchrone de la référence réelle
+					ignoreList.push(cmd);
+					fs.writeFileSync(configPath, JSON.stringify(currentConfig, null, 4));
 
-				const cmd = args[1].toLowerCase();
-				const command = global.GoatBot.commands.get(cmd);
+					api.setMessageReaction("✅", messageID);
+					return message.reply(getLang("added", cmd));
+				}
 
-				if (!command)
-					return message.reply(getLang("notFound", cmd));
+				case "del":
+				case "remove":
+				case "rm": {
+					if (!args[1]) return message.reply(getLang("missingDel"));
 
-				if (ignoreList.includes(cmd))
-					return message.reply(getLang("already", cmd));
+					const cmd = args[1].toLowerCase();
+					const index = ignoreList.indexOf(cmd);
 
-				ignoreList.push(cmd);
-				fs.writeFileSync(global.client.dirConfig, JSON.stringify(global.GoatBot.config, null, 2));
+					if (index === -1) return message.reply(getLang("notIn", cmd));
 
-				api.setMessageReaction("✅", event.messageID);
-				return message.reply(getLang("added", cmd));
+					// Retrait et sauvegarde synchrone de la référence réelle
+					ignoreList.splice(index, 1);
+					fs.writeFileSync(configPath, JSON.stringify(currentConfig, null, 4));
+
+					api.setMessageReaction("✅", messageID);
+					return message.reply(getLang("removed", cmd));
+				}
+
+				case "list": {
+					if (ignoreList.length === 0) return message.reply(getLang("listEmpty"));
+					
+					const formattedList = ignoreList.map(item => `  • ${item}`).join("\n");
+					return message.reply(getLang("list", formattedList));
+				}
+
+				default: {
+					return message.SyntaxError();
+				}
 			}
-
-			// 🧹 DELETE
-			if (action === "del" || action === "remove" || action === "rm") {
-				api.setMessageReaction("⏳", event.messageID);
-
-				if (!args[1])
-					return message.reply(getLang("missingDel"));
-
-				const cmd = args[1].toLowerCase();
-				const command = global.GoatBot.commands.get(cmd);
-
-				if (!command)
-					return message.reply(getLang("notFound", cmd));
-
-				if (!ignoreList.includes(cmd))
-					return message.reply(getLang("notIn", cmd));
-
-				ignoreList.splice(ignoreList.indexOf(cmd), 1);
-				fs.writeFileSync(global.client.dirConfig, JSON.stringify(global.GoatBot.config, null, 2));
-
-				api.setMessageReaction("✅", event.messageID);
-				return message.reply(getLang("removed", cmd));
-			}
-
-			// 📜 LIST
-			if (action === "list") {
-				if (!ignoreList.length)
-					return message.reply("🌸✨ Empty angel list 💔");
-
-				return message.reply(
-					getLang("list", ignoreList.map(e => "✨ " + e).join("\n"))
-				);
-			}
-
-			return message.SyntaxError();
-
-		} catch (e) {
-			console.error(e);
-			return message.reply("💔✨ An error occurred in angel system...");
+		} catch (error) {
+			console.error("[ERROR ignoreonlyad]:", error);
+			return message.reply("❌ An error occurred while updating the configuration file.");
 		}
 	}
 };
