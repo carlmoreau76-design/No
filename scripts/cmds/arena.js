@@ -15,7 +15,7 @@ module.exports = {
     countDown: 5,
     role: 0, // 0: Tous les utilisateurs, 1: Admins, etc.
     description: "Affrontez un monstre dans l'arène RPG et tentez de multiplier votre mise !",
-    category: "jeux",
+    category: "game",
     guide: {
       en: "{p}arena <mise> - Lance un combat dans l'arène.",
       vi: "{p}arena <mise> - Trận đấu đấu trường."
