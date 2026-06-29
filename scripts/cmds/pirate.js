@@ -371,3 +371,278 @@ module.exports = {
 
       return message.reply("💡 | Menus Équipages :\n• `pirate crew create <nom>`\n• `pirate crew invite @user`\n• `pirate crew accept`\n• `pirate crew donate <somme>`\n• `pirate crew leave`\n• `pirate crew dissolve`");
     }
+
+    // ==========================================
+    // 🗺️ SUB-COMMAND: EXPLORE (Exploration)
+    // ==========================================
+    if (subCommand === "explore") {
+      const cdTime = checkCooldown("explore", 60000); 
+      if (cdTime > 0) return message.reply(`⏳ | Cooldown actif ! Revenez dans **${cdTime}s**.`);
+
+      const roll = Math.random();
+      let logResult = "";
+      let rewardsText = "";
+
+      if (roll < 0.30) {
+        const goldGain = Math.floor(Math.random() * 8000) + 2000;
+        const rubisGain = Math.random() < 0.4 ? 1 : 0;
+        
+        userMoney += goldGain;
+        await usersData.set(senderID, { money: userMoney });
+
+        if (rubisGain > 0) player.rubis += rubisGain;
+        player.totalTreasure += 1;
+        updatePlayer(senderID, player);
+
+        logResult = `🏝️ **Découverte !** Vous accostez sur une île vierge et déterrez un vieux coffre espagnol !`;
+        rewardsText = `💰 +${goldGain}$` + (rubisGain > 0 ? ` 💎 +${rubisGain} Rubis` : "");
+      } 
+      else if (roll < 0.55) {
+        logResult = `⛈️ **Tempête !** Les éclairs frappent vos mâts. Votre équipage subit des avaries.`;
+        const repairCost = Math.min(userMoney, Math.floor(Math.random() * 3000) + 500);
+        
+        userMoney -= repairCost;
+        await usersData.set(senderID, { money: userMoney });
+        rewardsText = `💸 Réparations : -${repairCost}$`;
+      } 
+      else if (roll < 0.80) {
+        logResult = `🚢 **Marchand Ambulant !** Contre un peu d'or, il accepte de vous céder des perles rares.`;
+        if (userMoney >= 5000) {
+          userMoney -= 5000;
+          player.perles += 2;
+          await usersData.set(senderID, { money: userMoney });
+          updatePlayer(senderID, player);
+          rewardsText = `💸 Achat : -5000$ | 🔮 +2 Perles des Mers`;
+        } else {
+          rewardsText = `Fonds insuffisants (5000$).`;
+        }
+      } 
+      else {
+        const winChance = player.level * 0.1 + 0.5;
+        if (Math.random() < winChance) {
+          const loot = Math.floor(Math.random() * 12000) + 4000;
+          userMoney += loot;
+          player.xp += 150;
+          if (player.xp >= player.level * 1000) {
+            player.level += 1;
+          }
+          await usersData.set(senderID, { money: userMoney });
+          updatePlayer(senderID, player);
+
+          logResult = `⚔️ **Bataille Navale !** Un brick renégat est envoyé par le fond !`;
+          rewardsText = `💰 +${loot}$ | 📈 +150 XP`;
+        } else {
+          const loss = Math.floor(userMoney * 0.1);
+          userMoney -= loss;
+          await usersData.set(senderID, { money: userMoney });
+          logResult = `⚔️ **Défaite navale !** Des pirates d'élite vous pillent.`;
+          rewardsText = `💸 Pertes : -${loss}$`;
+        }
+      }
+
+      const statsCard = [
+        { label: "Événement maritime", value: "Exploration Libre" },
+        { label: "Bilan financier", value: rewardsText },
+        { label: "Niveau Pirate", value: `${player.level} (${player.xp} XP)` }
+      ];
+
+      const imgBuffer = await generatePremiumCard("Rapport d'Exploration", logResult, statsCard, senderID);
+      const cachePath = path.join(DATA_DIR, `explore_${senderID}.png`);
+      fs.writeFileSync(cachePath, imgBuffer);
+
+      return message.reply({ body: `🏴‍☠️ [JOURNAL DE BORD]\n${logResult}\n\n👉 Résultats : ${rewardsText}`, attachment: fs.createReadStream(cachePath) });
+    }
+
+    // ==========================================
+    // 👹 SUB-COMMAND: BATTLE (Boss de Raid)
+    // ==========================================
+    if (subCommand === "battle") {
+      const cdTime = checkCooldown("battle", 300000); 
+      if (cdTime > 0) return message.reply(`👹 | Canons en surchauffe ! Attendez **${Math.ceil(cdTime/60)} min**.`);
+
+      const boss = BOSS_DB[Math.floor(Math.random() * BOSS_DB.length)];
+      
+      let playerHp = 300 + (player.level * 50);
+      let playerAtk = 40 + (player.level * 10);
+      let playerDef = 20;
+
+      if (player.crewId) {
+        const crew = getCrew(player.crewId);
+        if (crew) {
+          const shipStats = SHIPS_DB[crew.ship];
+          playerHp += shipStats.hp;
+          playerDef += shipStats.def;
+        }
+      }
+
+      let bossHp = boss.hp;
+      let turn = 1;
+
+      while (playerHp > 0 && bossHp > 0 && turn <= 10) {
+        let dmg = Math.max(10, playerAtk - boss.def + Math.floor(Math.random() * 20));
+        bossHp -= dmg;
+        if (bossHp > 0) {
+          let bDmg = Math.max(10, boss.atk - playerDef + Math.floor(Math.random() * 20));
+          playerHp -= bDmg;
+        }
+        turn++;
+      }
+
+      let outcomeTitle = "";
+      let outcomeSummary = "";
+      if (bossHp <= 0) {
+        userMoney += boss.reward;
+        player.xp += boss.xp;
+        player.diamants += 1;
+        await usersData.set(senderID, { money: userMoney });
+        updatePlayer(senderID, player);
+
+        outcomeTitle = "🚨 VICTOIRE LÉGENDAIRE 🚨";
+        outcomeSummary = `Vous avez terrassé ${boss.name} !\n🎁 +${boss.reward}$ | +${boss.xp} XP | 💎 +1 Diamant`;
+      } else {
+        const lossCost = Math.floor(userMoney * 0.05);
+        userMoney -= lossCost;
+        await usersData.set(senderID, { money: userMoney });
+
+        outcomeTitle = "💀 NAUFRAGE COMPLET 💀";
+        outcomeSummary = `L'entité ${boss.name} a pulvérisé votre navire.\n💸 Sauvetage : -${lossCost}$`;
+      }
+
+      const statsCard = [
+        { label: "Boss maritime", value: `${boss.emoji} ${boss.name}` },
+        { label: "Tours de combat", value: `${turn - 1} rounds` },
+        { label: "Statut final", value: bossHp <= 0 ? "Vainqueur" : "Échoué" }
+      ];
+
+      const imgBuffer = await generatePremiumCard(outcomeTitle, outcomeSummary, statsCard, senderID);
+      const cachePath = path.join(DATA_DIR, `boss_${senderID}.png`);
+      fs.writeFileSync(cachePath, imgBuffer);
+
+      return message.reply({ body: `⚔️ [RAID BOSS]\n${outcomeSummary}`, attachment: fs.createReadStream(cachePath) });
+    }
+
+    // ==========================================
+    // 🏴 SUB-COMMAND: WAR (Guerre des Équipages)
+    // ==========================================
+    if (subCommand === "war") {
+      if (!player.crewId) return message.reply("❌ | Vous devez posséder un équipage !");
+      const myCrew = getCrew(player.crewId);
+
+      if (myCrew.captain !== senderID) return message.reply("👑 | Seul le capitaine déclare les guerres.");
+
+      const targetInput = args.slice(1).join(" ");
+      if (!targetInput) return message.reply("🏴 | Entrez l'équipage cible : \`pirate war <Nom>\`");
+
+      const allCrews = readJSON(CLANS_FILE);
+      const enemyCrew = Object.values(allCrews).find(c => c.name.toLowerCase() === targetInput.toLowerCase());
+
+      if (!enemyCrew) return message.reply("❌ | Équipage cible introuvable.");
+      if (enemyCrew.id === myCrew.id) return message.reply("❌ | Action invalide.");
+
+      const myPower = (myCrew.level * 300) + SHIPS_DB[myCrew.ship].hp + (SHIPS_DB[myCrew.ship].canons * 50);
+      const enemyPower = (enemyCrew.level * 300) + SHIPS_DB[enemyCrew.ship].hp + (SHIPS_DB[enemyCrew.ship].canons * 50);
+
+      const winChance = myPower / (myPower + enemyPower);
+      let warResultTitle = "";
+      let warDesc = "";
+
+      if (Math.random() < winChance) {
+        const stolenVault = Math.floor(enemyCrew.vault * 0.30);
+        enemyCrew.vault -= stolenVault;
+        myCrew.vault += stolenVault;
+        myCrew.wins += 1;
+        enemyCrew.losses += 1;
+        myCrew.xp += 500;
+
+        warResultTitle = "🏆 GUERRE REMPORTÉE !";
+        warDesc = `Victoire éclatante face à ${enemyCrew.name} !\n💰 Coffre d'équipage : +${stolenVault}$`;
+      } else {
+        const lostVault = Math.floor(myCrew.vault * 0.20);
+        myCrew.vault -= lostVault;
+        enemyCrew.vault += lostVault;
+        myCrew.losses += 1;
+        enemyCrew.wins += 1;
+
+        warResultTitle = "🔥 DÉFAITE NAVALE";
+        warDesc = `Votre flotte a sombré face à ${enemyCrew.name}.\n💸 Indemnités : -${lostVault}$`;
+      }
+
+      updateCrew(myCrew.id, myCrew);
+      updateCrew(enemyCrew.id, enemyCrew);
+
+      const statsCard = [
+        { label: "Puissance Alliée", value: `${myPower} PTS` },
+        { label: "Puissance Ennemie", value: `${enemyPower} PTS` },
+        { label: "Statistiques globales", value: "Bataille d'armadas simulée" }
+      ];
+
+      const imgBuffer = await generatePremiumCard(warResultTitle, warDesc, statsCard, null);
+      const cachePath = path.join(DATA_DIR, `war_${myCrew.id}.png`);
+      fs.writeFileSync(cachePath, imgBuffer);
+
+      return message.reply({ body: `🏴 [CONFLIT] ${warDesc}`, attachment: fs.createReadStream(cachePath) });
+    }
+
+    // ==========================================
+    // 🚢 SUB-COMMAND: UPGRADE (Amélioration Navire)
+    // ==========================================
+    if (subCommand === "upgrade") {
+      if (!player.crewId) return message.reply("❌ | Vous n'avez pas d'équipage.");
+      const crews = readJSON(CLANS_FILE);
+      const crew = crews[player.crewId];
+
+      if (crew.captain !== senderID) return message.reply("👑 | Réservé au capitaine.");
+
+      const shipKeys = Object.keys(SHIPS_DB);
+      const currentIdx = shipKeys.indexOf(crew.ship);
+      const nextIdx = currentIdx + 1;
+
+      if (nextIdx >= shipKeys.length) return message.reply("👑 | Vous possédez déjà le navire ultime !");
+
+      const nextShip = SHIPS_DB[shipKeys[nextIdx]];
+
+      if (crew.vault < nextShip.cost) {
+        return message.reply(`💰 | Le chantier naval réclame **${nextShip.cost}$** dans le coffre commun pour un **${nextShip.name}**.\nSolde actuel : **${crew.vault}$**.`);
+      }
+
+      crew.vault -= nextShip.cost;
+      crew.ship = shipKeys[nextIdx];
+      writeJSON(CLANS_FILE, crews);
+
+      return message.reply(`🎉 | Navire amélioré avec succès : **${nextShip.emoji} ${nextShip.name}** !`);
+    }
+
+    // ==========================================
+    // 📊 SUB-COMMAND: INFO / PROFILE (Fiche d'identité)
+    // ==========================================
+    if (!subCommand || subCommand === "info" || subCommand === "profile") {
+      let crewNameText = "Pirate Solitaire";
+      let shipText = "Aucun";
+      let vaultText = "0$";
+
+      if (player.crewId) {
+        const myCrew = getCrew(player.crewId);
+        if (myCrew) {
+          crewNameText = `[${myCrew.emoji}] ${myCrew.name} (${player.rank})`;
+          shipText = `${SHIPS_DB[myCrew.ship].emoji} ${SHIPS_DB[myCrew.ship].name}`;
+          vaultText = `${myCrew.vault}$`;
+        }
+      }
+
+      const statsCard = [
+        { label: "Grade Pirate", value: `${player.rank} (Niv. ${player.level})` },
+        { label: "Équipage Actuel", value: crewNameText },
+        { label: "Navire équipé", value: shipText },
+        { label: "Coffre de Clan", value: vaultText },
+        { label: "Trésors Trouvés", value: `${player.totalTreasure} coffres` },
+        { label: "Joyaux précieux", value: `🔮 ${player.perles} P | 💎 ${player.diamants} D | 🩸 ${player.rubis} R` }
+      ];
+
+      const imgBuffer = await generatePremiumCard(`Profil de ${uData.name || "Pirate"}`, "Fiche d'identité numérique des Caraïbes", statsCard, senderID);
+      const cachePath = path.join(DATA_DIR, `profile_${senderID}.png`);
+      fs.writeFileSync(cachePath, imgBuffer);
+
+      return message.reply({ body: `🏴‍☠️ [INFORMATIONS PIRATE]\n• Niveau : ${player.level}\n• Équipage : ${crewNameText}\n• Navire : ${shipText}`, attachment: fs.createReadStream(cachePath) });
+    }
+  }
+};
