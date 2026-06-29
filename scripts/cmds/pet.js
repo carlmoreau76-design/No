@@ -113,3 +113,183 @@ function updatePlayerPets(uid, obj) {
   data[uid] = obj;
   writeJSON(PETS_FILE, data);
     }
+
+// --- UTILITAIRE DE TRACÉ DES COINS ARRONDIS AVEC EFFET NÉON ---
+function drawRoundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+// --- RENDU CANVAS : INTERFACE INDIVIDUELLE DU FAMILIER (PET INFO) ---
+async function drawPetCard(title, pet, uid) {
+  const canvas = createCanvas(800, 500);
+  const ctx = canvas.getContext('2d');
+  const rarOpt = RARITIES[pet.rarity] || RARITIES.commune;
+
+  // Fond d'écran MMORPG Cyber-Gothique Sombre
+  ctx.fillStyle = '#0b0c10';
+  ctx.fillRect(0, 0, 800, 500);
+
+  // Tracé d'une grille technologique subtile
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.015)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 800; i += 25) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 500); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(800, i); ctx.stroke();
+  }
+
+  // Double cadre d'interface : Lueur néon calée sur la rareté de la créature
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = rarOpt.color;
+  ctx.shadowColor = rarOpt.color;
+  ctx.shadowBlur = 15;
+  drawRoundRect(ctx, 25, 25, 750, 450, 16);
+  ctx.stroke();
+  ctx.shadowBlur = 0; // Reset ombre pour ne pas impacter les textes
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#ffd700';
+  drawRoundRect(ctx, 32, 32, 736, 436, 12);
+  ctx.stroke();
+
+  // --- EN-TÊTE ---
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 36px sans-serif';
+  ctx.fillText(title.toUpperCase(), 60, 85);
+
+  ctx.fillStyle = rarOpt.color;
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillText(`CLASSIFICATION : RARETÉ ${rarOpt.name.toUpperCase()} (x${rarOpt.mult.toFixed(1)})`, 60, 120);
+
+  // Séparateur horizontal ornemental
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.25)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(60, 138); ctx.lineTo(740, 138); ctx.stroke();
+
+  // --- STATISTIQUES VITAUX ET CARACTÉRISTIQUES DE COMBAT ---
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText(`📊 ATTRIBUTS RPG :`, 60, 180);
+
+  ctx.font = '18px sans-serif';
+  ctx.fillText(`• Niveau Évolutif : ${pet.level} (XP : ${pet.xp} / ${pet.level * 500})`, 80, 215);
+  ctx.fillText(`• ❤️ Énergie Vitale (HP) : ${pet.hp}`, 80, 245);
+  ctx.fillText(`• ⚔️ Puissance d'Attaque : ${pet.atk}`, 80, 275);
+  ctx.fillText(`• 🛡️ Résistance / Défense : ${pet.def}`, 80, 305);
+  ctx.fillText(`• 🔥 Taux Critique : ${pet.crit}%  |  💨 Esquive : ${pet.dodge}%`, 80, 335);
+
+  // --- TALENT ET COMPÉTENCE UNIQUE ---
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 18px sans-serif';
+  const talentDesc = TALENTS_EFFECTS[pet.talent]?.desc || "Aucun bonus passif détecté.";
+  ctx.fillText(`✨ TALENT PASSIF : ${pet.talent}`, 60, 385);
+  
+  ctx.fillStyle = '#a0a0ab';
+  ctx.font = 'italic 16px sans-serif';
+  ctx.fillText(`↳ Effet : ${talentDesc}`, 80, 410);
+
+  ctx.fillStyle = '#ff003c';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText(`💥 Compétence Spéciale Arène : ${pet.skill}`, 60, 445);
+
+  // --- BARRES DE PROGRESSION ÉNERGÉTIQUES (DROITE) ---
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText(`🍖 SATIÉTÉ : ${pet.hunger}/100`, 500, 330);
+  ctx.fillStyle = '#1a1a24';
+  drawRoundRect(ctx, 500, 340, 240, 15, 4);
+  ctx.fill();
+  ctx.fillStyle = pet.hunger > 30 ? '#00cf64' : '#ff003c';
+  drawRoundRect(ctx, 500, 340, 240 * (pet.hunger / 100), 15, 4);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(`😊 BONHEUR : ${pet.joy}/100`, 500, 380);
+  ctx.fillStyle = '#1a1a24';
+  drawRoundRect(ctx, 500, 390, 240, 15, 4);
+  ctx.fill();
+  ctx.fillStyle = '#00bfff';
+  drawRoundRect(ctx, 500, 390, 240 * (pet.joy / 100), 15, 4);
+  ctx.fill();
+
+  // --- CADRE PHOTO ET INTEGRATION AVATAR SÉCURISÉ ---
+  if (uid) {
+    try {
+      const avatarUrl = `https://graph.facebook.com/${uid}/picture?width=512&height=512&access_token=${encodeURIComponent(FB_TOKEN)}`;
+      const avatar = await loadImage(avatarUrl);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(620, 210, 75, 0, Math.PI * 2, true);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(avatar, 545, 135, 150, 150);
+      ctx.restore();
+
+      // Halo protecteur ornemental
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#ffd700';
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(620, 210, 75, 0, Math.PI * 2, true);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } catch (e) {
+      // Contour neutre si défaillance de la passerelle Facebook graph API
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(620, 210, 75, 0, Math.PI * 2, true);
+      ctx.stroke();
+    }
+  }
+
+  return canvas.toBuffer();
+}
+
+// --- RENDU CANVAS : SPECTACLE DE L'ÉCLOSION D'UN OEUF (HATCH ANIMATION) ---
+async function drawHatchCard(eggName, pet, rarColor) {
+  const canvas = createCanvas(650, 350);
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#07080c';
+  ctx.fillRect(0, 0, 650, 350);
+
+  // Cadre néon d'éclosion
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = rarColor;
+  ctx.shadowColor = rarColor;
+  ctx.shadowBlur = 18;
+  drawRoundRect(ctx, 20, 20, 610, 310, 14);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`⚡ ÉCLOSION MAGIQUE DE L'${eggName.toUpperCase()} ⚡`, 325, 70);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '22px sans-serif';
+  ctx.fillText(`La coquille se brise... Un compagnon légendaire s'éveille !`, 325, 125);
+
+  ctx.fillStyle = rarColor;
+  ctx.font = 'bold 32px sans-serif';
+  ctx.fillText(`${pet.emoji} ${pet.name.toUpperCase()} ${pet.emoji}`, 325, 200);
+
+  ctx.fillStyle = '#a0a0ab';
+  ctx.font = '18px sans-serif';
+  ctx.fillText(`Talent d'héritage : [${pet.talent}] | Spécialité : ${pet.skill}`, 325, 260);
+  ctx.textAlign = 'start';
+
+  return canvas.toBuffer();
+    }
