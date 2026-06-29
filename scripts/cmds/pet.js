@@ -293,3 +293,140 @@ async function drawHatchCard(eggName, pet, rarColor) {
 
   return canvas.toBuffer();
     }
+
+// --- GÉNÉRATEUR INDIVIDUEL DE FAMILIER (LOGIQUE D'ÉCLOSION) ---
+function generatePetFromEgg(eggKey) {
+  const egg = EGGS_DB[eggKey];
+  if (!egg) return null;
+
+  // 1. Détermination de la rareté finale selon les probabilités de l'œuf
+  const roll = Math.random();
+  let selectedRarity = "commune";
+  let cumulative = 0;
+
+  for (const [rarityKey, rate] of Object.entries(egg.rates)) {
+    cumulative += rate;
+    if (roll <= cumulative) {
+      selectedRarity = rarityKey;
+      break;
+    }
+  }
+
+  // 2. Sélection d'un modèle de familier correspondant à la rareté obtenue
+  const matchingTemplates = Object.values(PETS_DB).filter(p => p.rarity === selectedRarity && p.id.indexOf("loup_domestique") === -1 && p.id.indexOf("lynx_furtif") === -1 && p.id.indexOf("renard_mystique") === -1 && p.id.indexOf("ours_grizzly") === -1 && p.id.indexOf("aigle_imperial") === -1 && p.id.indexOf("dragon_royal") === -1 && p.id.indexOf("dragon_divin") === -1 && p.id.indexOf("licorne_cosmique") === -1);
+  
+  // Repli de sécurité si aucune créature directe n'est filtrée
+  const template = matchingTemplates.length > 0 
+    ? matchingTemplates[Math.floor(Math.random() * matchingTemplates.length)]
+    : PETS_DB.chien;
+
+  // 3. Attribution aléatoire d'un Talent Passif MMORPG parmi la base de données
+  const talentsList = Object.keys(TALENTS_EFFECTS);
+  const randomTalent = talentsList[Math.floor(Math.random() * talentsList.length)];
+
+  const rarOpt = RARITIES[selectedRarity] || RARITIES.commune;
+
+  // 4. Indexation et instanciation des statistiques de combat sur la rareté
+  return {
+    id: template.id,
+    name: template.name,
+    customName: null,
+    rarity: selectedRarity,
+    level: 1,
+    xp: 0,
+    hp: Math.floor(template.hp * rarOpt.mult),
+    atk: Math.floor(template.atk * rarOpt.mult),
+    def: Math.floor(template.def * rarOpt.mult),
+    crit: template.crit,
+    dodge: template.dodge,
+    hunger: 100,
+    joy: 100,
+    age: 0,
+    talent: randomTalent,
+    skill: template.skill
+  };
+}
+
+// --- SYSTÈME AUTOMATISÉ D'INJECTION EXP (MONTER DE NIVEAU) ---
+function gainPetExperience(playerData, petIndex, amount, message) {
+  const pet = playerData.collection[petIndex];
+  if (!pet) return;
+
+  // Malus d'expérience si le familier est affamé (Faim <= 20)
+  let actualXp = amount;
+  if (pet.hunger <= 20) {
+    actualXp = Math.floor(amount * 0.4);
+  }
+
+  pet.xp += actualXp;
+  const xpRequired = pet.level * 500;
+
+  if (pet.xp >= xpRequired) {
+    pet.xp -= xpRequired;
+    pet.level += 1;
+    pet.age += 1;
+
+    // Augmentation organique des statistiques de combat à chaque niveau (+8%)
+    pet.hp = Math.floor(pet.hp * 1.08);
+    pet.atk = Math.floor(pet.atk * 1.08);
+    pet.def = Math.floor(pet.def * 1.08);
+
+    message.reply(`✨ | **UPGRADE COMPAGNON :** Votre familier **${pet.customName || pet.name}** passe au **Niveau ${pet.level}** ! Ses statistiques augmentent.`);
+  }
+}
+
+// --- LOGIQUE TRANSFORMATIONNELLE (ÉVOLUTION) ---
+function executePetEvolution(pet) {
+  const template = PETS_DB[pet.id];
+  if (!template || !template.next) return { success: false, reason: "Ce familier a atteint sa forme d'évolution maximale." };
+
+  if (pet.level < template.levelReq) {
+    return { success: false, reason: `Niveau insuffisant. Votre familier doit être **Niveau ${template.levelReq}** (Actuel : Niv. ${pet.level}).` };
+  }
+
+  const nextTemplate = PETS_DB[template.next];
+  if (!nextTemplate) return { success: false, reason: "L'arbre d'évolution supérieure est introuvable." };
+
+  // Mutation structurelle de la créature en conservant le niveau et le talent
+  const oldName = pet.customName || pet.name;
+  pet.id = nextTemplate.id;
+  pet.name = nextTemplate.name;
+  pet.rarity = nextTemplate.rarity;
+  pet.skill = nextTemplate.skill;
+
+  // Recalcul des attributs physiques indexés sur le nouveau rang de rareté
+  const rarOpt = RARITIES[pet.rarity] || RARITIES.commune;
+  pet.hp = Math.floor(nextTemplate.hp * rarOpt.mult * (1 + pet.level * 0.05));
+  pet.atk = Math.floor(nextTemplate.atk * rarOpt.mult * (1 + pet.level * 0.05));
+  pet.def = Math.floor(nextTemplate.def * rarOpt.mult * (1 + pet.level * 0.05));
+
+  return { success: true, oldName: oldName, newName: pet.name };
+}
+
+// --- PASSERELLE INTER-COMMANDES (HOOKS ÉCOSYSTÈME) ---
+// Cette fonction permet à vos autres fichiers (arena.js, pirate.js etc.) de lire les bonus passifs du familier actif du joueur.
+function getActivePetBonus(uid, hookType) {
+  const pData = getPlayerPets(uid);
+  if (!pData.activePetId) return null;
+
+  const activePet = pData.collection.find(p => p.id === pData.activePetId || (p.customName && p.customName === pData.activePetId));
+  if (!activePet) return null;
+
+  // Si l'animal meurt de faim ou de tristesse, ses passifs s'annulent
+  if (activePet.hunger <= 10 || activePet.joy <= 10) return null;
+
+  const talentConfig = TALENTS_EFFECTS[activePet.talent];
+  if (!talentConfig) return null;
+
+  // Association des hooks avec les fonctionnalités demandées
+  if (hookType === "arena" && ["Berserker", "Tank", "Guardian", "Healer"].includes(activePet.talent)) {
+    return { talent: activePet.talent, bonus: talentConfig.bonus, pet: activePet };
+  }
+  if (hookType === "pirate" && activePet.talent === "Pirate") return talentConfig.bonus;
+  if (hookType === "casino" && activePet.talent === "Lucky") return talentConfig.bonus;
+  if (hookType === "treasure" && activePet.talent === "Treasure Hunter") return talentConfig.bonus;
+  if (hookType === "bank" && activePet.talent === "Banker") return talentConfig.bonus;
+  if (hookType === "ranch" && activePet.talent === "Farmer") return talentConfig.bonus;
+
+  return null;
+    }
