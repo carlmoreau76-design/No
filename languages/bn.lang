@@ -1,160 +1,164 @@
 # index.js
-Goat.newVersionDetected=❌ | Vous utilisez la version %1. La version actuelle est la %2. Mettez à jour le bot en tapant %3 dans votre console.
-Goat.autoRestart1=🔄 | Le bot va redémarrer automatiquement dans %1.
-Goat.autoRestart2=🔄 | Redémarrage automatique planifié via Cron Job : %1
-Goat.googleApiTokenExpired=⚠️ | Le jeton d'accès Google API a expiré. Veuillez générer un nouveau token sur : https://developers.google.com/oauthplayground/
+Goat.newVersionDetected=আপনি %1 ভার্সন ব্যবহার করছেন, লেটেস্ট ভার্সন হলো %2। আরও ভালোভাবে বট ব্যবহার করার জন্য কনসোল/সিএমডি কমান্ডে %3 লিখে আপডেট করুন
+Goat.autoRestart1=বটটি %1 এর মধ্যে অটো রিস্টার্ট হবে
+Goat.autoRestart2=বটটি ক্রন জবের মাধ্যমে অটো রিস্টার্ট হবে: %1
+Goat.googleApiTokenExpired=Google API রিফ্রেশ টোকেন মেয়াদ উত্তীর্ণ হয়েছে অথবা বাতিল করা হয়েছে, অনুগ্রহ করে নতুন টোকেন নিন: https://developers.google.com/oauthplayground/ থেকে
 
 # bot/login/login.js
-login.currentlyLogged=⚙️ | Connexion au serveur de messagerie en cours...
-login.notFoundDirAccount=📁 | Impossible de localiser le fichier requis : %1
-login.loginToken=🔑 | Authentification établie via Access Token.
-login.loginCookieString=🍪 | Authentification établie via Cookie String.
-login.loginCookieNetscape=🍪 | Authentification établie via Cookie Netscape.
-login.loginCookieArray=🍪 | Authentification établie via Cookie Array.
-login.loginPassword=🔐 | Authentification en cours via Identifiants (Email/Mot de passe)...
-login.accountError=⚠️ | Format de connexion invalide. Veuillez fournir un token d'accès au format %1 ou un cookie valide (%2 ou %3) dans le fichier %7.
-login.cannotFindAccount=👤 | Aucun compte Facebook détecté. Veuillez sélectionner une option de secours (Saisissez le numéro correspondant) :
-login.chooseAccount=1. Connexion via Email & Mot de passe
-login.chooseToken=2. Connexion via Access Token complet (EAAAA...)
-login.chooseCookieString=3. Connexion via chaîne de texte Cookie (Cookie String)
-login.chooseCookieArray=4. Connexion via tableau de données Cookie (Cookie Array)
-login.loginWith=🛰️ | Initialisation de la méthode sélectionnée : %1
-login.inputEmail=> Veuillez saisir l'adresse e-mail ou le numéro de téléphone du compte :
-login.inputPassword=> Veuillez saisir le mot de passe :
-login.input2FA=> Saisissez votre code de sécurité 2FA (Laissez vide si désactivé) :
-login.inputToken=> Saisissez votre jeton d'accès complet (Doit débuter par EAAAA) :
-login.inputCookieString=> Saisissez votre chaîne de Cookie :
-login.inputCookieArray=> Saisissez votre tableau de données Cookie :
-login.refreshCookie=🔄 | Actualisation des cookies de session en cours...
-login.refreshCookieError=❌ | Échec du renouvellement des cookies.
-login.refreshCookieSuccess=🟩 | Cookies actualisés avec succès ! Veuillez redémarrer le bot pour appliquer les modifications.
-login.refreshCookieWarning=⚠️ | Le mode de rafraîchissement automatique est actif, mais vos identifiants ne sont pas configurés dans votre fichier config.json.
-login.tokenError=❌ | Le jeton d'accès fourni est corrompu ou expiré. Veuillez mettre à jour le fichier %2 au format %1.
-login.cookieError=❌ | Les données du cookie sont invalides ou la session Facebook a expiré.
-login.loginPasswordError=❌ | Échec de l'authentification automatique via le fichier config.json.
-login.loginSuccess=🟩 | Connexion établie avec succès. Terminal synchronisé.
-login.loginError=❌ | Une erreur critique est survenue lors de la phase d'authentification.
-login.openDashboardSuccess=🖥️ | Le panneau de contrôle web (Dashboard) a été déployé avec succès.
-login.openDashboardError=❌ | Impossible d'ouvrir ou d'accéder au panneau de contrôle web.
-login.changeGbanData=🔒 | Les données globales de sécurité ont été modifiées. Lancement immédiat suspendu.
-login.errorNoti=❌ | Une erreur est survenue lors du rafraîchissement des flux de réception.
-login.refreshFbstateSuccess=🟩 | Le fichier d'état de session %1 a été mis à jour avec succès.
-login.refreshFbstateError=❌ | Échec de l'écriture ou de l'actualisation du fichier %1.
-login.youAreBanned=⛔ | Votre profil a été définitivement banni de l'infrastructure centrale Goat-Bot.
-login.checkGbanError=🛡️ | Erreur lors de la vérification du pare-feu de sécurité (GBAN). Veuillez taper 'node update' pour corriger votre version.
-login.gbanMessage=⛔ | Exclusion Globale : Votre accès au projet a été révoqué le %1.\n» Motif : %2\n» ID Système : %3
-login.gbanMessageToDate=⛔ | Exclusion Temporaire : Votre accès au projet est suspendu depuis le %1.\n» Motif : %2\n» ID Système : %3\n» Fin de la sanction : %4
-login.gbanAdminMessage=⚡ | [SÉCURITÉ] L'utilisateur %1 a été banni du projet global le %2. Motif : %3
-login.openServerUptimeSuccess=🚀 | Serveur Web d'Uptime activé sur : %1
-login.openServerUptimeError=❌ | Déploiement du serveur d'Uptime impossible. Le port d'écoute est inaccessible.
-login.restartListenMessage=🔄 | Cycles de redémarrage automatique du récepteur MQTT configurés toutes les %1.
-login.stopRestartListenMessage=🛑 | Redémarrage automatique du module d'écoute MQTT désactivé.
-login.restartListenMessageError=❌ | Erreur technique lors du rafraîchissement de l'écouteur MQTT.
-login.restartListenMessage2=⚡ | Le protocole d'écoute MQTT a été redémarré avec succès.
-login.refreshCookieAfter=🔄 | Processus automatique de renouvellement de session programmé dans %1.
-login.listenMqttClose=🛑 | Connexion avec l'écouteur de messagerie interrompue.
-login.listenMqttCloseByUser=🛑 | L'écouteur de messagerie a été volontairement coupé par l'administrateur.
-login.retryCheckLiveCookie=🔄 | Vérification de la validité de la session en cours... Tentative n°%1
-login.startBotSuccess=🟩 | Le bot est entièrement fonctionnel. Traitement des messages entrant activé.
+login.currentlyLogged=লগইন প্রক্রিয়া চলছে
+login.notFoundDirAccount=ফাইলটি খুঁজে পাওয়া যাচ্ছে না %1
+login.loginToken=অ্যাক্সেস টোকেন দিয়ে লগইন
+login.loginCookieString=কুকি স্ট্রিং দিয়ে লগইন
+login.loginCookieNetscape=কুকি নেটস্কেপ দিয়ে লগইন
+login.loginCookieArray=কুকি অ্যারে দিয়ে লগইন
+login.loginPassword=ইমেল এবং পাসওয়ার্ড দিয়ে লগইন...
+login.accountError=অনুগ্রহ করে %1 ফর্ম্যাটে সম্পূর্ণ পারমিশন টোকেন বা স্ট্রিং ফর্ম্যাটে কুকি %2 বা অ্যারে ফর্ম্যাটে কুকি দিন:\n[\n  { name: %3, value: %4 },\n  { name: %5, value: %6 }\n]\n অথবা\n[\n  { key: %3, value: %4 },\n  { key: %5, value: %6 }\n]\n ফাইলটির মধ্যে %7
+login.cannotFindAccount=ফেসবুক অ্যাকাউন্ট খুঁজে পাওয়া যাচ্ছে না, নিচের অপশনগুলির মধ্যে একটি বেছে নিন (সংখ্যা টাইপ করুন বা উপরে ও নিচে প্রেস করে বেছে নিয়ে এন্টার প্রেস করুন):
+login.chooseAccount=ইমেল এবং পাসওয়ার্ড দিয়ে লগইন করুন
+login.chooseToken=সম্পূর্ণ পারমিশন টোকেন দিয়ে লগইন করুন
+login.chooseCookieString=কুকি স্ট্রিং দিয়ে লগইন করুন
+login.chooseCookieArray=কুকি অ্যারে দিয়ে লগইন করুন
+login.loginWith=আপনি %1 করতে বেছে নিয়েছেন
+login.inputEmail=> অনুগ্রহ করে আপনার ফেসবুক অ্যাকাউন্টের ইমেল (আইডি) বা ফোন নম্বর লিখুন:
+login.inputPassword=> অনুগ্রহ করে আপনার পাসওয়ার্ড লিখুন:
+login.input2FA=> অনুগ্রহ করে 2FA কোড লিখুন (যদি 2FA চালু না থাকে তবে খালি রাখুন):
+login.inputToken=> অনুগ্রহ করে আপনার সম্পূর্ণ পারমিশন টোকেন লিখুন (শুরু হবে EAAAA দিয়ে):
+login.inputCookieString=> অনুগ্রহ করে আপনার কুকি স্ট্রিং লিখুন:
+login.inputCookieArray=> অনুগ্রহ করে আপনার কুকি অ্যারে লিখুন:
+login.refreshCookie=কুকি রিফ্রেশ করা হচ্ছে...
+login.refreshCookieError=কুকি রিফ্রেশ করার সময় একটি ত্রুটি হয়েছে
+login.refreshCookieSuccess=কুকি সফলভাবে রিফ্রেশ করা হয়েছে, নতুন কুকি ব্যবহার করতে বটটি রিস্টার্ট করুন
+login.refreshCookieWarning=আপনি অটো রিফ্রেশ কুকি মোড চালু করেছেন, কিন্তু config.json ফাইলটিতে ইমেল এবং পাসওয়ার্ড কনফিগার করেননি
+login.tokenError=টোকেনটি অবৈধ বা মেয়াদ উত্তীর্ণ হয়েছে। অনুগ্রহ করে %1 ফর্ম্যাটে সম্পূর্ণ পারমিশন টোকেনটি %2 ফাইলটিতে লিখুন
+login.cookieError=কুকিটি অবৈধ বা মেয়াদ উত্তীর্ণ হয়েছে।
+login.loginPasswordError=config.json ফাইলে ইমেল ও পাসওয়ার্ড দিয়ে লগইন করার সময় ত্রুটি হয়েছে
+login.loginSuccess=সফল লগইন
+login.loginError=লগইন করার সময় একটি ত্রুটি হয়েছে
+login.openDashboardSuccess=বট ম্যানেজমেন্ট পেজ সফলভাবে খোলা হয়েছে
+login.openDashboardError=বট ম্যানেজমেন্ট পেজ খোলার সময় একটি ত্রুটি হয়েছে
+login.changeGbanData=ডেটা পরিবর্তন করা হয়েছে, বর্তমানে বট চালু করা অসম্ভব
+login.errorNoti=বার্তা পুনরুদ্ধার করার সময় একটি ত্রুটি হয়েছে
+login.refreshFbstateSuccess=%1 ফাইলটি সফলভাবে রিফ্রেশ করা হয়েছে
+login.refreshFbstateError=%1 ফাইলটি রিফ্রেশ করার সময় একটি ত্রুটি হয়েছে
+login.youAreBanned=আপনাকে Goat-Bot প্রোজেক্ট থেকে নিষিদ্ধ করা হয়েছে
+login.checkGbanError=GBAN চেক করার সময় একটি ত্রুটি হয়েছে, সোর্স কোড লেটেস্ট ভার্সনে আপডেট করার চেষ্টা করুন (cmd খুলে টাইপ করুন: node update)
+login.gbanMessage=আপনাকে Goat-Bot প্রোজেক্ট থেকে %1 তারিখে এই কারণে নিষিদ্ধ করা হয়েছে: %2\n» সময়: %3
+login.gbanMessageToDate=আপনাকে Goat-Bot প্রোজেক্ট থেকে %1 তারিখে এই কারণে নিষিদ্ধ করা হয়েছে: %2\n» সময়: %3\n» তারিখ পর্যন্ত: %4
+login.gbanAdminMessage=ব্যবহারকারী %1 কে Goat-Bot প্রোজেক্ট থেকে %2 তারিখে এই কারণে নিষিদ্ধ করা হয়েছে: %3
+login.openServerUptimeSuccess=🚀 আপটাইম সার্ভার খোলা হয়েছে: %1
+login.openServerUptimeError=একটি ত্রুটি হয়েছে, আপটাইম সার্ভার খোলা যাচ্ছে না
+login.restartListenMessage=ListenMQTT রিস্টার্ট প্রতি %1 এ সক্রিয় করা হয়েছে
+login.stopRestartListenMessage=ListenMQTT রিস্টার্ট নিষ্ক্রিয় করা হয়েছে
+login.restartListenMessageError=ListenMQTT রিস্টার্ট করার সময় একটি ত্রুটি হয়েছে
+login.restartListenMessage2=ListenMQTT সফলভাবে রিস্টার্ট করা হয়েছে
+login.refreshCookieAfter=%1 এর পরে কুকি রিফ্রেশ করা হচ্ছে
+login.listenMqttClose=ListenMQTT বন্ধ করা হয়েছে
+login.listenMqttCloseByUser=ব্যবহারকারী দ্বারা ListenMQTT বন্ধ করা হয়েছে
+login.retryCheckLiveCookie=কুকি চেক করার জন্য পুনরায় চেষ্টা করা হচ্ছে... %1
+login.startBotSuccess=বট সফলভাবে শুরু হয়েছে, ব্যবহারকারীদের কাছ থেকে মেসেজ আসা শুরু হবে
 
-version.tooOldVersion=⚠️ | Votre version de Goat-Bot est obsolète. Veuillez mettre à jour le système via votre terminal en tapant : %1
+version.tooOldVersion=আপনি Goat-Bot এর একটি অনেক পুরোনো ভার্সন ব্যবহার করছেন, অনুগ্রহ করে cmd/console/terminal/shell এ এই কমান্ডটি টাইপ করে লেটেস্ট ভার্সনে আপডেট করুন: %1
 
 # bot/custom.js
-custom.refreshedFb_dtsg=🟩 | Les paramètres de sécurité fb_dtsg et jazoest ont été synchronisés avec succès.
-custom.refreshedFb_dtsgError=❌ | Échec du rafraîchissement des paramètres internes fb_dtsg et jazoest.
+custom.refreshedFb_dtsg=fb_dtsg এবং jazoest সফলভাবে রিফ্রেশ করা হয়েছে
+custom.refreshedFb_dtsgError=fb_dtsg এবং jazoest রিফ্রেশ করার সময় একটি ত্রুটি হয়েছে
 
 # bot/login/loadData.js
-loadData.loadThreadDataSuccess=📁 | Base de données de %1 groupe(s) chargée avec succès !
-loadData.loadUserDataSuccess=👤 | Base de données de %1 utilisateur(s) chargée avec succès !
-loadData.refreshingThreadData=📡 | Actualisation de l'index des salons de discussion en cours...
-loadData.refreshThreadDataSuccess=🟩 | Données de synchronisation de %1 groupe(s) mises à jour !
-loadData.refreshThreadDataError=❌ | Erreur détectée lors de l'indexation des salons de discussion.
+loadData.loadThreadDataSuccess=%1 গ্রুপের ডেটা সফলভাবে লোড করা হয়েছে!
+loadData.loadUserDataSuccess=%1 ব্যবহারকারীর ডেটা সফলভাবে লোড করা হয়েছে!
+loadData.refreshingThreadData=গ্রুপগুলির তথ্য আপডেট করা হচ্ছে...
+loadData.refreshThreadDataSuccess=%1 গ্রুপের তথ্য আপডেট করা হয়েছে!
+loadData.refreshThreadDataError=গ্রুপগুলির তথ্য আপডেট করার সময় কিছু ভুল হয়েছে!
 
 # bot/login/loadScripts.js
-loadScripts.loadScriptsError=❌ | Impossible de charger les fichiers de commandes système suivants : %1
-loadScripts.loadScriptsNotMatchOrigin=⚠️ | Alerte intégrité : Les fichiers suivants [%1] diffèrent du code source original de GitHub. Assurez-vous de leur provenance.
-loadScripts.NOT_FOUND=Introuvable dans le répertoire racine :
-loadScripts.NOT_MATCH=Non conforme au code d'origine :
+loadScripts.loadScriptsError=%1 ফাইলগুলি লোড করার সময় একটি ত্রুটি হয়েছে:
+loadScripts.loadScriptsNotMatchOrigin=%1 ফাইলগুলি গিটহাব প্রোজেক্টের আসল ফাইলগুলির সাথে মিলছে না, নিশ্চিত করুন যে এই কমান্ড ফাইলগুলি নির্ভরযোগ্য:
+loadScripts.NOT_FOUND=আসল সোর্স কোডে খুঁজে পাওয়া যায়নি:
+loadScripts.NOT_MATCH=আসল সোর্স কোডের সাথে মিলছে না:
 
 # bot/login/socketIO.js
-socketIO.connected=🌐 | Connexion établie avec le serveur de communication socket.io.
-socketIO.error=❌ | Connexion impossible avec la passerelle réseau socket.io.
+socketIO.connected=socket.io সার্ভারের সাথে সংযুক্ত
+socketIO.error=socket.io সার্ভারে সংযোগ করার সময় একটি ত্রুটি হয়েছে
 
 # bot/handler/handlerCheckData.js
-handlerCheckData.cantCreateThread=❌ | Erreur critique : Impossible d'enregistrer le groupe ID '%1' dans la base de données.
-handlerCheckData.cantCreateUser=❌ | Erreur critique : Impossible d'enregistrer l'utilisateur ID '%1' dans la base de données.
+handlerCheckData.cantCreateThread=আইডি '%1' সহ গ্রুপগুলিকে ডেটাবেসে লেখা যাবে না!
+handlerCheckData.cantCreateUser=আইডি '%1' সহ ব্যবহারকারীদের ডেটাবেসে লেখা যাবে না!
 
 # bot/handler/handlerEvents.js
-handlerEvents.userBanned=⛔ | Vos accès au bot ont été révoqués par l'administration.\n» Motif : %1\n» Date : %2\n» Votre ID : %3
-handlerEvents.threadBanned=❌ | Ce groupe de discussion a été banni du système.\n» Motif : %1\n» Date : %2\n» ID Salon : %3
-handlerEvents.onlyAdminBox=🔒 | Restriction : Seuls les administrateurs de ce groupe de discussion peuvent solliciter le bot actuellement.
-handlerEvents.onlyAdminBot=❌ | Actuellement, seul l'administrateur du bot peut utiliser le bot.
-handlerEvents.onlyDeveloperGlobal=❌ | Actuellement, seuls les développeurs système peuvent exécuter le bot.
-handlerEvents.onlyVipUserGlobal=❌ | Actuellement, l'accès au bot est restreint aux membres de rang VIP ou supérieur.
-handlerEvents.commandNotFound=❌ | La commande " %1 " n'existe pas. Utilisez %2help pour voir la liste des fonctions disponibles.
-handlerEvents.commandNotFound2=❌ | Commande inconnue. Tapez %1help pour ouvrir le catalogue des modules.
-handlerEvents.commandNotFoundSuggestion=❌ | Commande introuvable. \n\nSouhaitez-vous plutôt exécuter : %2%1 ?
-handlerEvents.commandSyntaxError=⚠️ | Syntaxe incorrecte. Pour comprendre l'utilisation de ce module, tapez : %1help %2
-handlerEvents.onlyAdmin=❌ | Seuls les administrateurs de ce groupe possèdent les droits pour la commande " %1 ".
-handlerEvents.onlyAdminToUseOnReply=❌ | Seuls les administrateurs de ce groupe peuvent répondre (reply) à cette commande.
-handlerEvents.onlyAdminToUseOnReaction=❌ | Seuls les administrateurs de ce groupe peuvent ajouter une réaction pour déclencher ce module.
-handlerEvents.onlyAdminBot2=❌ | Seuls les gérants système possèdent les droits requis pour exécuter la commande " %1 ".
-handlerEvents.onlyAdminBot2ToUseOnReply=❌ | L'utilisation de cette commande via une réponse (reply) est réservée aux gérants système.
-handlerEvents.onlyAdminBot2ToUseOnReaction=❌ | Le déclenchement de cette commande via réaction est réservé aux gérants système.
-handlerEvents.onlyDeveloper=❌ | L'utilisation de la commande " %1 " est exclusivement réservée aux développeurs du bot.
-handlerEvents.onlyDeveloperToUseOnReply=❌ | L'exécution par réponse (reply) du module " %1 " est réservée aux développeurs.
-handlerEvents.onlyDeveloperToUseOnReaction=❌ | L'exécution par réaction du module " %1 " est réservée aux développeurs.
-handlerEvents.onlyVipUser=❌ | Vous devez posséder le statut de membre VIP pour solliciter la commande " %1 ".
-handlerEvents.onlyVipUserToUseOnReply=❌ | La commande par réponse " %1 " nécessite un abonnement VIP actif.
-handlerEvents.onlyVipUserToUseOnReaction=❌ | L'interaction par réaction sur le module " %1 " nécessite un rang VIP actif.
-handlerEvents.waitingForCommand=⏱️ | Mesures anti-spam actives. Veuillez patienter %1 seconde(s) avant de réutiliser cette fonction.
-handlerEvents.errorOccurred=❌ | Code erreur [ %1 ]\nUne exception est survenue sur la commande " %2 "\n\nDétails : %3
-handlerEvents.errorOccurred2=❌ | Code erreur [ %1 ]\nException détectée sur l'écouteur onChat du module " %2 "\n\nDétails : %3
-handlerEvents.errorOccurred3=❌ | Code erreur [ %1 ]\nException détectée sur l'écouteur onReply du module " %2 "\n\nDétails : %3
-handlerEvents.errorOccurred4=❌ | Code erreur [ %1 ]\nException détectée sur l'écouteur onReaction du module " %2 "\n\nDétails : %3
-handlerEvents.errorOccurred5=❌ | Code erreur [ %1 ]\nException détectée sur le processus onEvent du module " %2 "\n\nDétails : %3
-handlerEvents.errorOccurred6=❌ | Code erreur [ %1 ]\nException détectée sur le processus secondaire onEvent du module " %2 "\n\nDétails : %3
-handlerEvents.errorOccurred7=❌ | Code erreur [ %1 ]\nException globale détectée sur le gestionnaire onAnyEvent du module " %2 "\n\nDétails : %3
-handlerEvents.cannotFindCommandName=❌ | Échec du traitement : Impossible d'identifier le nom de la commande liée à cette réponse.
-handlerEvents.cannotFindCommand=❌ | Liaison interrompue : La commande originale " %1 " associée à cette action est introuvable.
+handlerEvents.userBanned=আপনাকে বট ব্যবহার করা থেকে নিষিদ্ধ করা হয়েছে\n» কারণ: %1\n» সময়: %2\n» ব্যবহারকারী আইডি: %3
+handlerEvents.threadBanned=এই গ্রুপটিকে বট ব্যবহার করা থেকে নিষিদ্ধ করা হয়েছে\n» কারণ: %1\n» সময়: %2\n» থ্রেড আইডি: %3
+handlerEvents.onlyAdminBox=এই গ্রুপে বর্তমানে শুধুমাত্র গ্রুপ অ্যাডমিনিস্ট্রেটররাই বট ব্যবহার করতে পারবে
+handlerEvents.onlyAdminBot=❌ | বর্তমানে শুধুমাত্র বটের অ্যাডমিনরাই বট ব্যবহার করতে পারবে
+handlerEvents.onlyDeveloperGlobal=❌ | বর্তমানে শুধুমাত্র বটের ডেভেলপার এবং উপরের স্তরের ব্যবহারকারীরাই বট ব্যবহার করতে পারবে
+handlerEvents.onlyVipUserGlobal=❌ | বর্তমানে শুধুমাত্র ভিআইপি ব্যবহারকারী এবং উপরের স্তরের ব্যবহারকারীরাই বট ব্যবহার করতে পারবে
+handlerEvents.commandNotFound=" %1 " কমান্ডটি বিদ্যমান নেই, সমস্ত উপলব্ধ কমান্ড দেখতে %2help টাইপ করুন
+handlerEvents.commandNotFound2=আপনি যে কমান্ডটি ব্যবহার করছেন তা বিদ্যমান নেই, সমস্ত উপলব্ধ কমান্ড দেখতে %1help টাইপ করুন
+
+# NEW KEY ADDED FOR SUGGESTION
+handlerEvents.commandNotFoundSuggestion=আপনি যে কমান্ডটি ব্যবহার করছেন তা বিদ্যমান নেই। \n\nআপনি কি %2%1 বলতে চেয়েছিলেন?
+# END NEW KEY
+
+handlerEvents.commandSyntaxError=আপনি যে কমান্ডটি ব্যবহার করছেন তার সিনট্যাক্স ভুল, এই কমান্ডটি কীভাবে ব্যবহার করতে হয় তার বিস্তারিত দেখতে %1help %2 টাইপ করুন
+handlerEvents.onlyAdmin=❌ | শুধুমাত্র গ্রুপ অ্যাডমিনিস্ট্রেটররাই " %1 " কমান্ডটি ব্যবহার করতে পারবে
+handlerEvents.onlyAdminToUseOnReply=❌ | শুধুমাত্র গ্রুপ অ্যাডমিনিস্ট্রেটররাই " %1 " কমান্ডের রিপ্লাই ফাংশন ব্যবহার করতে পারবে
+handlerEvents.onlyAdminToUseOnReaction=❌ | শুধুমাত্র গ্রুপ অ্যাডমিনিস্ট্রেটররাই " %1 " কমান্ডের রিঅ্যাকশন ফাংশন ব্যবহার করতে পারবে
+handlerEvents.onlyAdminBot2=❌ | শুধুমাত্র বটের অ্যাডমিনরাই " %1 " কমান্ডটি ব্যবহার করতে পারবে
+handlerEvents.onlyAdminBot2ToUseOnReply=❌ | শুধুমাত্র বটের অ্যাডমিনরাই " %1 " কমান্ডের রিপ্লাই ফাংশন ব্যবহার করতে পারবে
+handlerEvents.onlyAdminBot2ToUseOnReaction=❌ | শুধুমাত্র বটের অ্যাডমিনরাই " %1 " কমান্ডের রিঅ্যাকশন ফাংশন ব্যবহার করতে পারবে
+handlerEvents.onlyDeveloper=❌ | শুধুমাত্র বটের ডেভেলপাররাই " %1 " কমান্ডটি ব্যবহার করতে পারবে
+handlerEvents.onlyDeveloperToUseOnReply=❌ | শুধুমাত্র বটের ডেভেলপাররাই " %1 " কমান্ডের রিপ্লাই ফাংশন ব্যবহার করতে পারবে
+handlerEvents.onlyDeveloperToUseOnReaction=❌ | শুধুমাত্র বটের ডেভেলপাররাই " %1 " কমান্ডের রিঅ্যাকশন ফাংশন ব্যবহার করতে পারবে
+handlerEvents.onlyVipUser=❌ | শুধুমাত্র ভিআইপি ব্যবহারকারীরা " %1 " কমান্ডটি ব্যবহার করতে পারবে
+handlerEvents.onlyVipUserToUseOnReply=❌ | শুধুমাত্র ভিআইপি ব্যবহারকারীরা " %1 " কমান্ডের রিপ্লাই ফাংশন ব্যবহার করতে পারবে
+handlerEvents.onlyVipUserToUseOnReaction=❌ | শুধুমাত্র ভিআইপি ব্যবহারকারীরা " %1 " কমান্ডের রিঅ্যাকশন ফাংশন ব্যবহার করতে পারবে
+handlerEvents.waitingForCommand=⏱ আপনি এই কমান্ডটি ব্যবহার করার জন্য অপেক্ষা করছেন, অনুগ্রহ করে %1 সেকেন্ড পরে ফিরে আসুন
+handlerEvents.errorOccurred=❌ [ %1 ]\n" %2 " কমান্ডে একটি ত্রুটি হয়েছে\n\n%3
+handlerEvents.errorOccurred2=❌ [ %1 ]\n" %2 " কমান্ডে onChat এ একটি ত্রুটি হয়েছে\n\n%3
+handlerEvents.errorOccurred3=❌ [ %1 ]\n" %2 " কমান্ডে onReply এক্সিকিউট করার সময় একটি ত্রুটি হয়েছে\n\n%3
+handlerEvents.errorOccurred4=❌ [ %1 ]\n" %2 " কমান্ডে onReaction এক্সিকিউট করার সময় একটি ত্রুটি হয়েছে\n\n%3
+handlerEvents.errorOccurred5=❌ [ %1 ]\n" %2 " কমান্ডে onEvent এক্সিকিউট করার সময় একটি ত্রুটি হয়েছে\n\n%3
+handlerEvents.errorOccurred6=❌ [ %1 ]\n" %2 " কমান্ডে onEvent এক্সিকিউট করার সময় একটি ত্রুটি হয়েছে\n\n%3
+handlerEvents.errorOccurred7=❌ [ %1 ]\n" %2 " কমান্ডে onAnyEvent এক্সিকিউট করার সময় একটি ত্রুটি হয়েছে\n\n%3
+handlerEvents.cannotFindCommandName=❌ এই রিপ্লাই এক্সিকিউট করার জন্য কমান্ডের নাম খুঁজে পাওয়া যাচ্ছে না!
+handlerEvents.cannotFindCommand=❌ এই রিপ্লাই এক্সিকিউট করার জন্য " %1 " কমান্ডটি খুঁজে পাওয়া যাচ্ছে না!
 
 # bot/autoUptime.js
-autoUptime.autoUptimeTurnedOn=🚀 | Système d'Uptime continu (Auto-Uptime) activé en arrière-plan.
+autoUptime.autoUptimeTurnedOn=অটো-আপটাইম মোড চালু করা হয়েছে
 
 # database/controller/index.js
-indexController.connectingMongoDB=🗄️ | Initialisation de la passerelle vers la base de données MONGODB...
-indexController.connectMongoDBSuccess=🟩 | Connexion au serveur MONGODB établie. Stockage opérationnel.
-indexController.connectMongoDBError=❌ | Échec d'accès au serveur de stockage MONGODB :
-indexController.connectingMySQL=🗄️ | Initialisation de la passerelle vers le fichier SQLITE local...
-indexController.connectMySQLSuccess=🟩 | Table SQLite ouverte avec succès. Stockage local opérationnel.
-indexController.connectMySQLError=❌ | Échec de lecture du fichier de stockage SQLite :
+indexController.connectingMongoDB=MONGODB ডেটাবেসের সাথে সংযোগ করা হচ্ছে
+indexController.connectMongoDBSuccess=Mongodb ডেটাবেসের সাথে সফলভাবে সংযোগ করা হয়েছে!
+indexController.connectMongoDBError=Mongodb ডেটাবেসে সংযোগ করার সময় একটি ত্রুটি হয়েছে:
+indexController.connectingMySQL=SQLITE ডেটাবেসের সাথে সংযোগ করা হচ্ছে
+indexController.connectMySQLSuccess=SQLITE ডেটাবেসের সাথে সফলভাবে সংযোগ করা হয়েছে!
+indexController.connectMySQLError=SQLITE ডেটাবেসে সংযোগ করার সময় একটি ত্রুটি হয়েছে:
 
 # updater.js
-updater.updateTooFast=⏳ | Temporisation de sécurité active. Attendez %1 min %2 sec avant de solliciter une nouvelle vérification de mise à jour.
-updater.latestVersion=🟩 | Votre infrastructure système est à jour. Aucune mise à jour requise.
-updater.cantFindVersion=⚠️ | Votre build actuel n'est pas répertorié (%1). Veuillez inspecter l'intégrité de votre fichier package.json.
-updater.newVersions=📥 | %1 nouvelle(s) révision(s) logicielle(s) détectée(s). Déploiement automatique en cours...
-updater.updateSuccess=🟩 | Le noyau système a été mis à jour avec succès [%1].
-updater.configChanged=⚠️ | Des changements structurels ont été détectés sur le modèle. Veuillez réviser votre config.json.
-updater.installingPackages=📦 | Installation et mise à jour des dépendances NPM nécessaires au système...
-updater.installSuccess=🟩 | Dépendances logicielles installées. Veuillez redémarrer le bot pour instancier la mise à jour.
-updater.backupSuccess=💾 | Sauvegarde préventive de vos scripts modifiés créée dans le répertoire %1.
-updater.restartToApply=. Veuillez redémarrer l'application pour appliquer les correctifs.
-updater.skipFile=⏩ | La mise à jour du fichier %1 a été ignorée suite à la détection de la mention d'exclusion %2.
+updater.updateTooFast=ত্রুটি ছাড়াই আপডেট করার জন্য লেটেস্ট কমিটের পরে কমপক্ষে ৫ মিনিট অপেক্ষা করুন, %1 মিনিট %2 সেকেন্ড বাকি আছে
+updater.latestVersion=আপনি লেটেস্ট ভার্সন ব্যবহার করছেন
+updater.cantFindVersion=আপনি একটি অনির্দিষ্ট ভার্সন (%1) ব্যবহার করছেন, অনুগ্রহ করে আপনার package.json ফাইলটি আবার পরীক্ষা করুন
+updater.newVersions=আপডেট করার জন্য %1 টি নতুন ভার্সন রয়েছে, আপডেট শুরু হচ্ছে...
+updater.updateSuccess=সফলভাবে আপডেট করা হয়েছে%1
+updater.configChanged=%1 পরিবর্তন করা হয়েছে, অনুগ্রহ করে আপনার config.json ফাইলটি আবার পরীক্ষা করুন
+updater.installingPackages=বটের জন্য নির্ভরতা (dependencies) ইনস্টল করা হচ্ছে...
+updater.installSuccess=নির্ভরতা সফলভাবে ইনস্টল করা হয়েছে, নতুন ভার্সন ব্যবহার করতে বটটি রিস্টার্ট করুন
+updater.backupSuccess=পরিবর্তিত ফাইলগুলি সফলভাবে ব্যাকআপ করা হয়েছে, %1 ফোল্ডারে দেখুন
+updater.restartToApply=. নতুন ভার্সন প্রয়োগ করতে বটটি রিস্টার্ট করুন
+updater.skipFile=%1 ফাইলটির একটি নতুন ভার্সন রয়েছে, কিন্তু আপনি এই ফাইলটিতে %2 কমেন্ট লিখে আপডেটের সময় এটিকে এড়িয়ে গেছেন
 
 # dashboard/routes/verifyfbid.js
-verifyfbid.sendCode=🔐 | Votre jeton de sécurité temporaire de contrôle est :\n%1\nCe code expirera automatiquement dans %2 minutes.
+verifyfbid.sendCode=আপনার ভেরিফিকেশন কোড হল:\n%1\nভেরিফিকেশন কোডটি %2 মিনিটের জন্য বৈধ
 
 # utils.js
-utils.errorOccurred=❌ | Une exception inattendue a bloqué le processus :\n\n%1
+utils.errorOccurred=❌ একটি ত্রুটি হয়েছে:\n\n%1
 
 # for command
-command.restartedBot=🔄 | Le système central a été redémarré avec succès.
+command.restartedBot=বট রিস্টার্ট করা হয়েছে
 
 # dashboard/app.js
-app.googleApiRefreshTokenExpired=⚠️ | Session Google API corrompue. Veuillez acquérir un jeton valide sur : https://developers.google.com/oauthplayground/
-app.tooManyRequests=🚨 | Trafic saturé. Nombre maximal de requêtes par minute dépassé. Veuillez patienter un instant.
-app.notPermissionChangeFbstate=⛔ | Vous ne disposez pas des privilèges réseau requis pour altérer la configuration fbstate.
-app.notFoundFbstate=⚠️ | Requête incomplète. Le paramètre de session fbstate est obligatoire.
-app.changedFbstateSuccess=🟩 | Les jetons de session du fichier fbstate ont été modifiés avec succès.
-app.serverError=❌ | Erreur interne du serveur distant. Veuillez renouveler votre demande ultérieurement.
+app.googleApiRefreshTokenExpired=Google API রিফ্রেশ টোকেন মেয়াদ উত্তীর্ণ হয়েছে অথবা বাতিল করা হয়েছে, অনুগ্রহ করে নতুন টোকেন নিন: https://developers.google.com/oauthplayground/ থেকে
+app.tooManyRequests=গত মিনিটে খুব বেশি অনুরোধ করা হয়েছে। অনুগ্রহ করে পরে আবার চেষ্টা করুন।
+app.notPermissionChangeFbstate=fbstate পরিবর্তন করার অনুমতি আপনার নেই!
+app.notFoundFbstate=অনুগ্রহ করে fbstate দিন!
+app.changedFbstateSuccess=fbstate সফলভাবে পরিবর্তন করা হয়েছে!
+app.serverError=সার্ভারে একটি ত্রুটি হয়েছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন!
