@@ -2,179 +2,169 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 
-const PRISON_DB = new Map();
-
-// 👑 SEUL LE OWNER PEUT JAIL
-const OWNER_ID = "61573867120837";
-
-// ⏳ 3 jours
-const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+// Base de données temporaire en mémoire pour stocker les prisonniers par groupe
+if (!global.prisonDatabase) {
+  global.prisonDatabase = new Map();
+}
 
 module.exports = {
   config: {
     name: "prison",
     aliases: ["jail"],
-    version: "7.1 ultra final",
-    author: "Shade × ChatGPT",
-    role: 0,
-    category: "economy"
+    version: "8.0.0",
+    author: "Shade × AI",
+    role: 0, // Accessible par tous pour payer, mais sécurisé à l'intérieur pour l'ajout
+    category: "economy",
+    guide: {
+      fr: "{p}{n} add [@tag/reply] : Envoyer en prison (Admin)\n{p}{n} pay : Payer sa caution (100k)\n{p}{n} list : Voir les prisonniers"
+    }
   },
 
-  onStart: async function ({
-    event,
-    message,
-    args,
-    api,
-    usersData
-  }) {
-    const threadID = event.threadID;
-    const senderID = event.senderID;
-    const action = args[0];
+  // ========================================================
+  // 🔒 INTERCEPTION GLOBALE (Bloque les autres commandes)
+  // ========================================================
+  onChat: async function ({ event, message, api }) {
+    const { threadID, senderID, body } = event;
+    const prefix = global.GoatBot.config.prefix || "!";
 
-    if (!PRISON_DB.has(threadID)) PRISON_DB.set(threadID, {});
-    const db = PRISON_DB.get(threadID);
+    if (!global.prisonDatabase.has(threadID)) return;
+    const db = global.prisonDatabase.get(threadID);
 
-    // =========================
-    // 🔒 BLOCK PRISON CHAT ACCESS
-    // =========================
+    // Si l'utilisateur est en prison
     if (db[senderID]) {
-      const allowed = ["pay", "play"];
-
-      if (!action || !allowed.includes(action)) {
-        return message.reply("⛓️ ACCÈS INTERDIT : TU ES EN PRISON !");
-      }
-    }
-
-    // =========================
-    // 🚔 ADD PRISON (OWNER ONLY)
-    // =========================
-    if (action === "add") {
-      if (senderID !== OWNER_ID)
-        return message.reply("⛔ Seul le boss peut envoyer en prison.");
-
-      const targetID =
-        Object.keys(event.mentions)[0] ||
-        event.messageReply?.senderID;
-
-      if (!targetID)
-        return message.reply("Tag quelqu’un !");
-
-      db[targetID] = {
-        jailed: true,
-        start: Date.now(),
-        paid: false,
-        miniGame: Math.random() < 0.5 ? "🪓 casse-mur" : "🎲 chance"
-      };
-
-      return message.reply("🚔 PERSONNE EN PRISON !");
-    }
-
-    // =========================
-    // 💰 PAY (100K FROM BAL)
-    // =========================
-    if (action === "pay") {
-      const targetID = senderID;
-
-      if (!db[targetID])
-        return message.reply("Tu n’es pas en prison.");
-
-      const fine = 100000;
-
-      // Récupération des données via usersData
-      const userData = await usersData.get(targetID);
-      const money = userData.money || 0;
-
-      if (money < fine)
-        return message.reply("💔 Pas assez d'argent (100,000$ requis).");
-
-      // Mise à jour de l'argent de manière sécurisée
-      await usersData.set(targetID, {
-        money: money - fine
-      });
-
-      db[targetID].paid = true;
-      delete db[targetID];
-
-      return message.reply("🚪 TU AS PAYÉ 100,000$ ET TU ES LIBRE !");
-    }
-
-    // =========================
-    // 🎮 MINI GAME
-    // =========================
-    if (action === "play") {
-      const user = db[senderID];
-      if (!user) return message.reply("Tu n’es pas en prison.");
-
-      const win = Math.random() < 0.4;
-
-      if (win) {
-        db[senderID].paid = true;
-        delete db[senderID];
-        return message.reply("💥 TU ES LIBRE ! TU AS FUI LA PRISON !");
-      }
-
-      return message.reply("❌ ÉCHEC ! TU RESTES EN PRISON.");
-    }
-
-    // =========================
-    // ⏳ AUTO EXPULSION 3 JOURS
-    // =========================
-    for (const uid in db) {
-      const data = db[uid];
-
-      if (Date.now() - data.start > THREE_DAYS && !data.paid) {
-        delete db[uid];
-
-        try {
-          await api.removeUserFromGroup(uid, threadID);
-        } catch (e) {}
-      }
-    }
-
-    // =========================
-    // 📜 LIST PRISON
-    // =========================
-    if (action === "list") {
-      let text = "🚔 PRISON LIST\n\n";
-
-      for (const uid in db) {
-        const name = await usersData.getName(uid);
-        text += `⛓️ ${name}\n`;
-      }
-
-      return message.reply(text.trim() === "🚔 PRISON LIST" ? "Vide" : text);
-    }
-
-    // =========================
-    // 🚔 IMAGE PRISON
-    // =========================
-    const targetID =
-      Object.keys(event.mentions)[0] ||
-      event.messageReply?.senderID ||
-      senderID;
-
-    const name = await usersData.getName(targetID);
-    const avatar = await usersData.getAvatarUrl(targetID);
-
-    const tmpDir = path.join(__dirname, "tmp");
-    await fs.ensureDir(tmpDir); // S'assure que le dossier 'tmp' existe pour éviter les crashs
-    const filePath = path.join(tmpDir, `${targetID}.png`);
-
-    try {
-      const img = await axios.get(
-        `https://api.popcat.xyz/jail?image=${encodeURIComponent(avatar)}`,
-        { responseType: "arraybuffer" }
+      // Autoriser UNIQUEMENT la commande précise pour sortir (ex: !prison pay ou !jail pay)
+      const isTryingToEscape = body && (
+        body.toLowerCase().startsWith(`${prefix}prison pay`) || 
+        body.toLowerCase().startsWith(`${prefix}jail pay`)
       );
 
-      await fs.outputFile(filePath, img.data);
-
-      return message.reply({
-        body: `🚔 ${name} EST EN PRISON`,
-        attachment: fs.createReadStream(filePath)
-      });
-    } catch (error) {
-      // Fallback si l'API d'image crash
-      return message.reply(`🚔 ${name} EST EN PRISON (Impossible de charger l'image)`);
+      if (!isTryingToEscape) {
+        return message.reply("⛓️ **ACCÈS INTERDIT** : Tu es actuellement en prison ! Seule la commande `/prison pay` pour régler ta caution de 100,000 $ est autorisée.");
+      }
     }
+  },
+
+  // ========================================================
+  // 🎮 LOGIQUE PRINCIPALE DE LA COMMANDE
+  // ========================================================
+  onStart: async function ({ event, message, args, api, usersData }) {
+    const { threadID, senderID } = event;
+    const action = args[0]?.toLowerCase();
+
+    if (!global.prisonDatabase.has(threadID)) {
+      global.prisonDatabase.set(threadID, {});
+    }
+    const db = global.prisonDatabase.get(threadID);
+
+    // ────────────────────────────────────────────────────────
+    // 🚔 AJOUTER EN PRISON (Seulement les admins du groupe)
+    // ────────────────────────────────────────────────────────
+    if (action === "add") {
+      try {
+        // Vérification des droits d'administrateur du groupe
+        const threadInfo = await api.getThreadInfo(threadID);
+        const adminIDs = threadInfo.adminIDs.map(item => item.id);
+        const isGroupAdmin = adminIDs.includes(senderID);
+        const isBotOwner = senderID === "61573867120837"; // Votre ID Owner
+
+        if (!isGroupAdmin && !isBotOwner) {
+          return message.reply("⛔ **Erreur** : Seuls les administrateurs de ce groupe peuvent envoyer un membre en prison.");
+        }
+
+        // cibler l'utilisateur par tag ou par réponse de message
+        const targetID = Object.keys(event.mentions)[0] || event.messageReply?.senderID;
+
+        if (!targetID) {
+          return message.reply("⚠️ Veuillez taguer un utilisateur ou répondre à son message pour l'envoyer en prison.");
+        }
+
+        if (db[targetID]) {
+          return message.reply("🚔 Cet utilisateur est déjà sous les verrous.");
+        }
+
+        // Ajout à la base de données de la prison
+        db[targetID] = {
+          jailed: true,
+          time: Date.now()
+        };
+
+        // Génération de l'image montage de la prison
+        const uData = await usersData.get(targetID);
+        const name = uData.name || "L'utilisateur";
+        const avatar = await usersData.getAvatarUrl(targetID);
+
+        const tmpDir = path.join(__dirname, "tmp");
+        await fs.ensureDir(tmpDir);
+        const filePath = path.join(tmpDir, `${targetID}.png`);
+
+        try {
+          const img = await axios.get(
+            `https://api.popcat.xyz/jail?image=${encodeURIComponent(avatar)}`,
+            { responseType: "arraybuffer" }
+          );
+          await fs.outputFile(filePath, img.data);
+
+          return message.reply({
+            body: `🚔 🚨 **🚨 INCARCÉRATION 🚨**\n\n${name} a été envoyé en prison par un administrateur ! Ses accès aux commandes sont suspendus jusqu'au paiement de sa caution.`,
+            attachment: fs.createReadStream(filePath)
+          });
+        } catch (error) {
+          return message.reply(`🚔 🚨 **🚨 INCARCÉRATION 🚨**\n\n${name} a été envoyé en prison ! (Impossible d'afficher la photo d'écrou).`);
+        }
+
+      } catch (err) {
+        console.error(err);
+        return message.reply("❌ Impossible de vérifier les permissions ou d'ajouter le membre.");
+      }
+    }
+
+    // ────────────────────────────────────────────────────────
+    // 💰 PAYER LA CAUTION (100,000 $)
+    // ────────────────────────────────────────────────────────
+    if (action === "pay") {
+      if (!db[senderID]) {
+        return message.reply("🔒 Vous n'êtes pas en prison, votre casier est vierge.");
+      }
+
+      const fine = 100000;
+      const userData = await usersData.get(senderID);
+      const currentMoney = userData.money || 0;
+
+      if (currentMoney < fine) {
+        return message.reply(`💔 **Caution refusée** : Vous n'avez pas assez d'argent. Il vous faut **100,000 $** sur votre portefeuille (Solde actuel : ${currentMoney} $).`);
+      }
+
+      // Déduction de l'argent via usersData
+      await usersData.set(senderID, {
+        money: currentMoney - fine
+      });
+
+      // Retrait de la prison
+      delete db[senderID];
+
+      return message.reply(`🚪 ✨ **LIBÉRATION** : Vous avez payé votre caution de **100,000 $**. Vous êtes libre et vos accès aux commandes du bot sont rétablis !`);
+    }
+
+    // ────────────────────────────────────────────────────────
+    // 📜 LISTE DES PRISONNIERS
+    // ────────────────────────────────────────────────────────
+    if (action === "list") {
+      let activeJails = Object.keys(db);
+      if (activeJails.length === 0) {
+        return message.reply("🕊️ La prison de ce groupe est actuellement vide.");
+      }
+
+      let text = "🚔 📄 **LISTE DES PRISONNIERS ACTUELS**\n────────────────────\n";
+      for (const uid of activeJails) {
+        const uData = await usersData.get(uid);
+        text += `⛓️ ▪️ ${uData.name || uid}\n`;
+      }
+      text += "────────────────────\n💡 Pour sortir, les détenus doivent taper : `/prison pay`";
+      
+      return message.reply(text);
+    }
+
+    // Si aucune action valide n'est spécifiée
+    return message.reply("⚠️ **Commande incomplète**. Options valides :\n» `/prison list` (Voir les détenus)\n» `/prison pay` (Si vous êtes enfermé)");
   }
 };
