@@ -432,3 +432,213 @@ async function verifyAchievements(uid, message) {
     updatePlayerStats(uid, stats);
   }
     }
+
+module.exports = {
+  config: {
+    name: "quest",
+    version: "2.5.0",
+    author: "Gemini Engine RPG",
+    countDown: 2,
+    role: 0,
+    description: "Système de quêtes MMORPG connectant l'ensemble de l'écosystème du serveur.",
+    category: "game",
+    guide: {
+      fr: "{p}quest [daily | weekly | story | secret] | {p}quest claim <id> | {p}quest refresh | {p}quest leaderboard | {p}quest history",
+      en: "{p}quest [daily | weekly | story | secret] | {p}quest claim <id> | {p}quest refresh | {p}quest leaderboard | {p}quest history"
+    }
+  },
+
+  // Injection globale pour traquer l'ensemble des requêtes du serveur en arrière-plan
+  onChat: async function ({ event }) {
+    const { senderID, body } = event;
+    if (!body || !senderID) return;
+
+    // Analyse lexicale sommaire pour lier les déclenchements de commandes externes aux objectifs de quêtes
+    const lowerBody = body.toLowerCase();
+    if (lowerBody.startsWith("pirate explore")) listenRpgEvents(senderID, "pirate_explore");
+    if (lowerBody.startsWith("pirate battle") || lowerBody.startsWith("pirate boss")) listenRpgEvents(senderID, "boss_defeat");
+    if (lowerBody.startsWith("arena")) listenRpgEvents(senderID, "arena_win");
+    if (lowerBody.startsWith("treasure")) listenRpgEvents(senderID, "find_treasure");
+    if (lowerBody.startsWith("dice")) listenRpgEvents(senderID, "play_dice");
+    if (lowerBody.startsWith("mines")) listenRpgEvents(senderID, "play_mines");
+    if (lowerBody.startsWith("slots")) listenRpgEvents(senderID, "play_slots");
+    if (lowerBody.startsWith("bank deposit")) listenRpgEvents(senderID, "bank_deposit");
+    if (lowerBody.startsWith("bank withdraw")) listenRpgEvents(senderID, "bank_withdraw");
+    if (lowerBody.startsWith("transfer")) listenRpgEvents(senderID, "transfer_money");
+    if (lowerBody.startsWith("chest")) listenRpgEvents(senderID, "chest_open");
+  },
+
+  onStart: async function ({ api, event, args, usersData, message }) {
+    const { senderID } = event;
+    
+    // Initialisation / Contrôle temporel automatique
+    const playerActiveQuests = checkAndResetQuests(senderID);
+    const stats = getPlayerStats(senderID);
+    
+    const subCommand = args[0]?.toLowerCase();
+
+    // ==========================================
+    // 📋 AFFICHAGE DES CATEGORIES DE QUÊTES
+    // ==========================================
+    if (!subCommand || ["daily", "weekly", "story", "secret"].includes(subCommand)) {
+      const typeFilter = subCommand || "daily";
+      const targetList = playerActiveQuests[typeFilter];
+
+      if (!targetList || targetList.length === 0) {
+        return message.reply(`🔮 | Aucune quête active dans la catégorie **${typeFilter.toUpperCase()}** pour le moment.`);
+      }
+
+      // Construction du catalogue textuel d'accompagnement
+      let textMenu = `📜 [CONCORDANCE DES QUÊTES - ${typeFilter.toUpperCase()}]\n\n`;
+      targetList.forEach((q, index) => {
+        const status = q.claimed ? "✅ Réclamée" : (q.current >= q.target ? "🌟 Prête à valider" : "⚔️ En cours");
+        textMenu += `${index + 1}. [${status}] Id: ${q.id}\n`;
+        textMenu += `🎯 ${q.text}\n`;
+        textMenu += `📊 Progression : ${q.current}/${q.target}\n`;
+        textMenu += `💰 Prime : +${q.rewards.money}$ | +${q.rewards.xp} XP\n`;
+        textMenu += `-------------------------\n`;
+      });
+      textMenu += `👉 Tapez \`quest claim <id_quete>\` pour toucher vos récompenses d'or !`;
+
+      // Génération de la première quête de la liste sous format Canvas Premium
+      try {
+        const mainQuest = targetList[0]; 
+        const cardBuffer = await drawQuestDetailsCard(
+          `Quêtes ${typeFilter}`,
+          `Grimoire officiel de l'aventurier`,
+          mainQuest,
+          senderID
+        );
+        const cachePath = path.join(DATA_DIR, `list_${senderID}_${typeFilter}.png`);
+        fs.writeFileSync(cachePath, cardBuffer);
+
+        return message.reply({ body: textMenu, attachment: fs.createReadStream(cachePath) });
+      } catch (err) {
+        return message.reply(textMenu);
+      }
+    }
+
+    // ==========================================
+    // 💰 RECLAMATION DES RECOMPENSES (CLAIM)
+    // ==========================================
+    if (subCommand === "claim") {
+      const targetId = args[1];
+      if (!targetId) return message.reply("❌ | Spécifiez l'ID de la quête à valider. Exemple : `quest claim q_a1b2c3d4`");
+
+      let foundQuest = null;
+      let categoryFound = null;
+
+      const categories = ["daily", "weekly", "story", "secret"];
+      for (const cat of categories) {
+        if (playerActiveQuests[cat]) {
+          const match = playerActiveQuests[cat].find(q => q.id === targetId);
+          if (match) {
+            foundQuest = match;
+            categoryFound = cat;
+            break;
+          }
+        }
+      }
+
+      if (!foundQuest) return message.reply("❌ | Cet identifiant de quête est inexistant ou a expiré.");
+      if (foundQuest.claimed) return message.reply("🔒 | Les récompenses de cette quête ont déjà été versées dans votre coffre.");
+      if (foundQuest.current < foundQuest.target) {
+        return message.reply(`⚔️ | Objectif incomplet ! Vous êtes à (${foundQuest.current}/${foundQuest.target}) pour cette quête.`);
+      }
+
+      // Traitement financier avec usersData
+      let uData = await usersData.get(senderID);
+      let userMoney = uData.money || 0;
+      userMoney += foundQuest.rewards.money;
+      await usersData.set(senderID, { money: userMoney });
+
+      // Archivage et mise à jour des statistiques RPG
+      foundQuest.claimed = true;
+      updatePlayerQuests(senderID, playerActiveQuests);
+
+      stats.completed += 1;
+      stats.moneyEarned += foundQuest.rewards.money;
+      stats.xpEarned += foundQuest.rewards.xp;
+      stats.history.push({
+        id: foundQuest.id,
+        text: foundQuest.text,
+        date: new Date().toLocaleDateString('fr-FR'),
+        reward: foundQuest.rewards.money
+      });
+      updatePlayerStats(senderID, stats);
+
+      message.reply(`🎉 | **QUÊTE ACCOMPLIE !**\n\nVous empochez **+${foundQuest.rewards.money}$ d'or** et **+${foundQuest.rewards.xp} points d'expérience** !`);
+      
+      // Lancement de la vérification asynchrone des titres honorifiques
+      await verifyAchievements(senderID, message);
+      return;
+    }
+
+    // ==========================================
+    // ⚙️ FORCE REFRESH (Selon Cooldown)
+    // ==========================================
+    if (subCommand === "refresh") {
+      // Autorise un rafraîchissement forcé immédiat du cycle quotidien contre 15,000$ d'or
+      let uData = await usersData.get(senderID);
+      let userMoney = uData.money || 0;
+
+      if (userMoney < 15000) return message.reply("💰 | Réinitialiser votre tableau des quêtes quotidien vous coûte **15 000$**. Solde insuffisant.");
+
+      userMoney -= 15000;
+      await usersData.set(senderID, { money: userMoney });
+
+      playerActiveQuests.daily = [
+        generateRandomQuest("daily"),
+        generateRandomQuest("daily"),
+        generateRandomQuest("daily")
+      ];
+      playerActiveQuests.lastDailyReset = Date.now();
+      updatePlayerQuests(senderID, playerActiveQuests);
+
+      return message.reply("🔄 | Votre grimoire quotidien a été réinitialisé par les sorciers des tavernes. (-15,000$)");
+    }
+
+    // ==========================================
+    // 📊 LEADERBOARD (Classement des Aventuriers)
+    // ==========================================
+    if (subCommand === "leaderboard" || subCommand === "lb") {
+      const allStats = readJSON(STATS_FILE);
+      const sorted = Object.entries(allStats)
+        .map(([uid, data]) => ({ uid, completed: data.completed || 0 }))
+        .sort((a, b) => b.completed - a.completed)
+        .slice(0, 10);
+
+      if (sorted.length === 0) return message.reply("🏁 | Aucun aventurier n'a encore validé de contrat de quête.");
+
+      let lbText = "🏆 [CLASSEMENT DES LEGENDES DU SERVEUR]\n\n";
+      for (let i = 0; i < sorted.length; i++) {
+        let nameUser = (await usersData.get(sorted[i].uid)).name || "Aventurier Anonyme";
+        lbText += `${i + 1}. ${nameUser} — ${sorted[i].completed} quêtes résolues\n`;
+      }
+      return message.reply(lbText);
+    }
+
+    // ==========================================
+    // 📖 HISTORIQUE & STATISTIQUES DU JOUEUR
+    // ==========================================
+    if (subCommand === "history" || subCommand === "info") {
+      let histText = `📊 [STATISTIQUES DE CARRIÈRE RPG]\n\n`;
+      histText += `• Quêtes terminées au total : ${stats.completed}\n`;
+      histText += `• Or accumulé via les quêtes : +${stats.moneyEarned}$\n`;
+      histText += `• Expérience générale gagnée : +${stats.xpEarned} XP\n`;
+      histText += `• Titres possédés : [ ${stats.titles.join(", ") || "Aucun"} ]\n\n`;
+      histText += `📜 Dernières entrées du journal de bord :\n`;
+      
+      const lastEntries = stats.history.slice(-3).reverse();
+      if (lastEntries.length === 0) {
+        histText += "— Aucune archive récente.";
+      } else {
+        lastEntries.forEach(h => {
+          histText += `• [${h.date}] — ${h.text} (+${h.reward}$)\n`;
+        });
+      }
+
+      return message.reply(histText);
+    }
+  }
+};
