@@ -276,3 +276,153 @@ async function drawAnimalFocusCard(animal, index) {
 
   return canvas.toBuffer();
               }
+
+// --- ALGORITHME DE REPRODUCTION (BREEDING ENGINE) ---
+function executeBreeding(parent1, parent2) {
+  // Détermination de la rareté du bébé avec bonus si les parents sont rares
+  const roll = Math.random();
+  let finalRarity = "commune";
+  
+  let bonusChance = 0;
+  if (parent1.rarity === "rare" || parent2.rarity === "rare") bonusChance += 0.10;
+  if (parent1.rarity === "epique" || parent2.rarity === "epique") bonusChance += 0.20;
+  if (parent1.rarity === "legendaire" || parent2.rarity === "legendaire") bonusChance += 0.35;
+
+  if (roll + bonusChance > 0.98) finalRarity = "divine";
+  else if (roll + bonusChance > 0.92) finalRarity = "mythique";
+  else if (roll + bonusChance > 0.78) finalRarity = "legendaire";
+  else if (roll + bonusChance > 0.55) finalRarity = "epique";
+  else if (roll + bonusChance > 0.30) finalRarity = "rare";
+
+  // Le bébé hérite du type de l'un des deux parents de manière équitable
+  const chosenTemplateKey = Math.random() > 0.5 ? parent1.id : parent2.id;
+  const template = ANIMALS_DB[chosenTemplateKey];
+  const rarOpt = RARITIES[finalRarity];
+
+  // Calcul des valeurs initiales indexées sur la rareté obtenue
+  const initialValue = Math.floor(template.cost * 0.4 * rarOpt.statMult);
+  const calculatedRevenue = Math.floor(template.basePrice * 0.5 * rarOpt.statMult);
+
+  return {
+    id: template.id,
+    name: template.name,
+    emoji: template.emoji,
+    customName: `Bébé ${template.name}`,
+    level: 1,
+    rarity: finalRarity,
+    health: 100,
+    joy: 100,
+    hunger: 60,
+    age: 0,
+    sellValue: initialValue,
+    revenue: calculatedRevenue,
+    lastCollected: Date.now(),
+    product: template.product
+  };
+}
+
+// --- SIMULATEUR D'ÉVÉNEMENTS ALÉATOIRES IMMERSIFS ---
+function triggerRandomEvent(ranchData, message, usersData) {
+  const roll = Math.random();
+  
+  // 1. L'Animal Brillant (Shiny) - Chance: 4%
+  if (roll < 0.04 && ranchData.animals.length > 0) {
+    const idx = Math.floor(Math.random() * ranchData.animals.length);
+    const target = ranchData.animals[idx];
+    if (!target.customName?.includes("✨")) {
+      target.customName = `✨ ${target.customName || target.name} ✨`;
+      target.sellValue = Math.floor(target.sellValue * 2);
+      target.revenue = Math.floor(target.revenue * 1.5);
+      message.reply(`🌈 | **ÉVÉNEMENT MAGIQUE :** Un de vos animaux a interagi avec une lueur mystique ! Votre **Slot #${idx + 1}** devient un animal **Brillant** ! Sa valeur marchande double.`);
+      return true;
+    }
+  }
+
+  // 2. Le Renard Voleur - Chance: 3% (Événement Malus)
+  if (roll >= 0.04 && roll < 0.07 && ranchData.animals.length > 2) {
+    const idx = Math.floor(Math.random() * ranchData.animals.length);
+    const removed = ranchData.animals[idx];
+    // Protection si l'animal est de rang divin ou mythique
+    if (removed.rarity !== "divine" && removed.rarity !== "mythique") {
+      ranchData.animals.splice(idx, 1);
+      message.reply(`🦊 | **ALERTE RANCH :** Un renard sournois s'est infiltré de nuit et a enlevé votre **${removed.name}** (Slot #${idx + 1}). Renforcez vos clôtures au shop !`);
+      return true;
+    }
+  }
+
+  // 3. La Tempête Dévastatrice - Chance: 3% (Événement Malus)
+  if (roll >= 0.07 && roll < 0.10 && ranchData.animals.length > 0) {
+    ranchData.animals.forEach(ani => {
+      ani.health = Math.max(10, ani.health - Math.floor(Math.random() * 40 + 10));
+      ani.joy = Math.max(10, ani.joy - 30);
+    });
+    message.reply(`🌪️ | **TEMPÊTE VIOLENTE :** Un cyclone a traversé votre domaine. Tous vos animaux perdent de la santé et du bonheur. Pensez à les soigner et les nourrir !`);
+    return true;
+  }
+
+  // 4. Le Fermier Mystérieux ou Marchand Ambulant - Chance: 5% (Bonus)
+  if (roll >= 0.10 && roll < 0.15) {
+    const seedKeys = Object.keys(FOOD_DB);
+    const randomSeed = seedKeys[Math.floor(Math.random() * seedKeys.length)];
+    ranchData.foodStorage[randomSeed] += 5;
+    message.reply(`👨‍🌾 | **VISITEUR INATTENDU :** Un vieux fermier itinérant passe sur vos terres et vous offre amicalement **x5 ${FOOD_DB[randomSeed].emoji} ${FOOD_DB[randomSeed].name}** !`);
+    return true;
+  }
+
+  // 5. La Pluie Bénéfique - Chance: 5% (Bonus)
+  if (roll >= 0.15 && roll < 0.20 && ranchData.animals.length > 0) {
+    ranchData.animals.forEach(ani => {
+      ani.health = Math.min(100, ani.health + 20);
+      ani.joy = Math.min(100, ani.joy + 15);
+    });
+    message.reply(`🌧️ | **PLUIE BÉNÉFIQUE :** Une ondée rafraîchissante nettoie les pâturages. Vos bêtes reprennent des forces (+20 ❤️ Santé / +15 😊 Bonheur).`);
+    return true;
+  }
+
+  return false;
+}
+
+// --- ACTUALISATION PAR CYCLE DE PRODUCTION ---
+function processCycleUpdate(ranchData) {
+  const now = Date.now();
+  let productionCounter = 0;
+
+  ranchData.animals.forEach(ani => {
+    const template = ANIMALS_DB[ani.id] || ANIMALS_DB.poulet;
+    const elapsedSeconds = Math.floor((now - ani.lastCollected) / 1000);
+    
+    // Calcul du nombre de cycles de production achevés depuis le dernier relevé
+    if (elapsedSeconds >= template.time) {
+      const completedCycles = Math.floor(elapsedSeconds / template.time);
+      if (completedCycles > 0) {
+        // Ajout au stockage du hangar
+        const prodKey = ani.product;
+        ranchData.warehouse[prodKey] = (ranchData.warehouse[prodKey] || 0) + completedCycles;
+        ranchData.totals.collected += completedCycles;
+        productionCounter += completedCycles;
+
+        // Dégradation progressive de la faim, de la santé et du bonheur par cycle de travail
+        ani.hunger = Math.max(0, ani.hunger - (completedCycles * 5));
+        ani.joy = Math.max(0, ani.joy - (completedCycles * 3));
+        
+        if (ani.hunger <= 20) {
+          ani.health = Math.max(0, ani.health - (completedCycles * 8));
+        }
+
+        // Gain d'expérience de l'animal
+        ani.age += completedCycles;
+        const totalExp = template.expGiven * completedCycles;
+        ani.level += Math.floor((ani.age) / 25); // Évolution de niveau tous les 25 cycles achevés
+
+        // Recalcul des courbes de valeur dynamiques de l'animal
+        const rarOpt = RARITIES[ani.rarity] || RARITIES.commune;
+        ani.sellValue = Math.floor(template.cost * 0.4 * rarOpt.statMult * (1 + ani.level * 0.1));
+        ani.revenue = Math.floor(template.basePrice * 0.5 * rarOpt.statMult * (1 + ani.level * 0.15));
+
+        ani.lastCollected = now;
+      }
+    }
+  });
+
+  return productionCounter;
+                                }
