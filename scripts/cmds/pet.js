@@ -439,7 +439,7 @@ module.exports = {
     countDown: 2,
     role: 0,
     description: "Système de familiers (Pets) MMORPG interconnecté à tout le serveur.",
-    category: "game",
+    category: "economy",
     guide: {
       fr: "{p}pet info | {p}pet shop | {p}pet adopt <oeuf> | {p}pet hatch <oeuf> | {p}pet feed <slot> <nourriture> | {p}pet equip <slot> | {p}pet list | {p}pet evolve <slot> | {p}pet rename <slot> <nom>",
       en: "{p}pet info | {p}pet shop | {p}pet adopt <egg> | {p}pet hatch <egg> | {p}pet feed <slot> <food> | {p}pet equip <slot> | {p}pet list | {p}pet evolve <slot> | {p}pet rename <slot> <name>"
