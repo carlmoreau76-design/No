@@ -95,3 +95,184 @@ function updateRanch(uid, obj) {
   data[uid] = obj;
   writeJSON(RANCH_FILE, data);
 }
+
+// --- DESSIN DES FORMES AVEC BORDURES ARRONDIES ---
+function drawRoundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+// --- RENDU CANVAS : CARTE D'INTERFACE DU RANCH ---
+async function drawRanchCard(title, rData, uid) {
+  const canvas = createCanvas(850, 550);
+  const ctx = canvas.getContext('2d');
+  const infra = UPGRADES_DB[rData.rankLevel - 1] || UPGRADES_DB[0];
+
+  // Fond Sombre Cyber-Ranch
+  ctx.fillStyle = '#090a0f';
+  ctx.fillRect(0, 0, 850, 550);
+
+  // Grille technologique néon rouge
+  ctx.strokeStyle = 'rgba(255, 0, 60, 0.02)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 850; i += 30) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 550); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(850, i); ctx.stroke();
+  }
+
+  // Cadre double néon Rouge Impérial et Or
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#ff003c';
+  ctx.shadowColor = '#ff003c';
+  ctx.shadowBlur = 18;
+  drawRoundRect(ctx, 25, 25, 800, 500, 18);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#ffd700';
+  drawRoundRect(ctx, 32, 32, 786, 486, 14);
+  ctx.stroke();
+
+  // En-tête de l'interface
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 38px sans-serif';
+  ctx.fillText(title.toUpperCase(), 60, 90);
+
+  ctx.fillStyle = '#66fcf1';
+  ctx.font = 'italic 18px sans-serif';
+  ctx.fillText(`Structure : ${infra.name} (Niv. ${infra.level})`, 60, 125);
+
+  // Ligne de séparation ornementale
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(60, 145); ctx.lineTo(790, 145); ctx.stroke();
+
+  // Statistiques Générales du Domaine
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText(`📊 STATS DU DOMAINE :`, 60, 195);
+  
+  ctx.font = '18px sans-serif';
+  ctx.fillText(`• Population : ${rData.animals.length} / ${infra.maxAnimals} animaux`, 80, 230);
+  ctx.fillText(`• Multiplicateur de gains : x${infra.mult.toFixed(1)}`, 80, 260);
+  ctx.fillText(`• Produits en stock : ${Object.values(rData.warehouse).reduce((a, b) => a + b, 0)} unités`, 80, 290);
+  ctx.fillText(`• Naissances enregistrées : ${rData.totals.bred} bébés`, 80, 320);
+
+  // --- REFUGE ALIMENTAIRE (STOCK DE NOURRITURE) ---
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText(`🌾 SILO DE NOURRITURE :`, 60, 380);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '16px sans-serif';
+  let posX = 80;
+  for (const [key, amount] of Object.entries(rData.foodStorage)) {
+    const foodItem = FOOD_DB[key];
+    ctx.fillText(`${foodItem.emoji} ${foodItem.name} : x${amount}`, posX, 420);
+    posX += 140;
+  }
+
+  // --- RENDU PROGRESSION CAPACITÉ ---
+  const fillPct = Math.min(100, (rData.animals.length / infra.maxAnimals) * 100);
+  ctx.fillStyle = '#14151f';
+  drawRoundRect(ctx, 60, 465, 450, 25, 6);
+  ctx.fill();
+
+  if (fillPct > 0) {
+    const grad = ctx.createLinearGradient(60, 465, 60 + (450 * (fillPct / 100)), 465);
+    grad.addColorStop(0, '#8b0000');
+    grad.addColorStop(1, '#ff003c');
+    ctx.fillStyle = grad;
+    drawRoundRect(ctx, 60, 465, 450 * (fillPct / 100), 25, 6);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillText(`Occupation des Terres : ${fillPct.toFixed(0)}%`, 80, 482);
+
+  // --- INTÉGRATION DE L'AVATAR VIA FB_TOKEN ---
+  if (uid) {
+    try {
+      const avatarUrl = `https://graph.facebook.com/${uid}/picture?width=512&height=512&access_token=${encodeURIComponent(FB_TOKEN)}`;
+      const avatar = await loadImage(avatarUrl);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(680, 270, 85, 0, Math.PI * 2, true);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(avatar, 595, 185, 170, 170);
+      ctx.restore();
+
+      // Cercle d'or
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#ffd700';
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(680, 270, 85, 0, Math.PI * 2, true);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } catch (e) {
+      // Évite le blocage si l'avatar échoue à charger
+    }
+  }
+
+  return canvas.toBuffer();
+}
+
+// --- RENDU CANVAS : FOCUS SUR UN ANIMAL SÉLECTIONNÉ ---
+async function drawAnimalFocusCard(animal, index) {
+  const canvas = createCanvas(700, 320);
+  const ctx = canvas.getContext('2d');
+  const rar = RARITIES[animal.rarity] || RARITIES.commune;
+
+  ctx.fillStyle = '#0c0d14';
+  ctx.fillRect(0, 0, 700, 320);
+
+  // Bordure Néon de rareté
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = rar.color;
+  ctx.shadowColor = rar.color;
+  ctx.shadowBlur = 12;
+  drawRoundRect(ctx, 20, 20, 660, 280, 12);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Identité
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 30px sans-serif';
+  ctx.fillText(`${animal.emoji} ${animal.customName || animal.name} [Slot #${index + 1}]`, 40, 65);
+
+  ctx.fillStyle = rar.color;
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText(`CLASSIFICATION : ${rar.name.toUpperCase()}`, 40, 95);
+
+  // Statistiques vitaux
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '18px sans-serif';
+  ctx.fillText(`• Niveau Évolutif : ${animal.level} (Âge : ${animal.age} cycles)`, 40, 140);
+  ctx.fillText(`• ❤️ Santé : ${animal.health} / 100`, 40, 175);
+  ctx.fillText(`• 🍖 Faim : ${animal.hunger} / 100`, 40, 210);
+  ctx.fillText(`• 😊 Bonheur : ${animal.joy} / 100`, 40, 245);
+
+  // Valeur marchande à droite
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText(`💵 ESTIMATION`, 480, 140);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '18px sans-serif';
+  ctx.fillText(`Valeur : ${animal.sellValue}$`, 480, 175);
+  ctx.fillText(`Revenus : ${animal.revenue}$/h`, 480, 210);
+
+  return canvas.toBuffer();
+              }
