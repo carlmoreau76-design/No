@@ -294,3 +294,221 @@ function processTerritoryEarnings(guild) {
   }
   return null;
 }
+
+// --- MOTEUR DE MISSIONS AUTOMATIQUES DE GUILDE ---
+const GUILD_MISSIONS = {
+  m1: { id: "m1", text: "Déposer un total de 10M$ dans le Coffre", target: 10000000, type: "donate_total", moneyReward: 500000, xpReward: 1500 },
+  m2: { id: "m2", text: "Atteindre un cheptel de 25 membres actifs", target: 25, type: "members_count", moneyReward: 300000, xpReward: 1000 },
+  m3: { id: "m3", text: "Remporter 15 Victoires en Guild War", target: 15, type: "war_wins", moneyReward: 1200000, xpReward: 4000 },
+  m4: { id: "m4", text: "Conquérir et contrôler 3 Territoires", target: 3, type: "territories_count", moneyReward: 800000, xpReward: 2500 }
+};
+
+function checkAndProgressMission(guild, type, currentAmount) {
+  for (const [mId, mission] of Object.entries(GUILD_MISSIONS)) {
+    if (mission.type === type && !guild.completedMissions.includes(mId)) {
+      if (currentAmount >= mission.target) {
+        guild.completedMissions.push(mId);
+        guild.bank += mission.moneyReward;
+        guild.xp += mission.xpReward;
+        logGuildAction(guild, `🎯 Mission accomplie : "${mission.text}". +${mission.moneyReward}$, +${mission.xpReward} XP.`);
+      }
+    }
+  }
+}
+
+// --- SYSTÈME AUTOMATISÉ DES SUCCÈS (ACHIEVEMENTS) ---
+const GUILD_ACHIEVEMENTS = {
+  a_first: { id: "a_first", name: "🥉 Première Guilde", desc: "Fonder une guilde officielle", check: (g) => true },
+  a_lvl10: { id: "a_lvl10", name: "🥈 Niveau 10", desc: "Élever la guilde au Niveau 10", check: (g) => g.level >= 10 },
+  a_lvl25: { id: "a_lvl25", name: "🥇 Niveau 25", desc: "Élever la guilde au Niveau 25", check: (g) => g.level >= 25 },
+  a_lvl50: { id: "a_lvl50", name: "👑 Niveau 50", desc: "Atteindre le Niveau Maximal de Guilde (50)", check: (g) => g.level >= 50 },
+  a_wins:   { id: "a_wins",   name: "⚔️ Destructeur", desc: "Cumuler 100 victoires de guerre", check: (g) => g.wins >= 100 },
+  a_bank:   { id: "a_bank",   name: "💰 Fortune Commune", desc: "Accumuler 100M$ dans le coffre", check: (g) => g.bank >= 100000000 },
+  a_zones:  { id: "a_zones",  name: "🌍 Empire Mondial", desc: "Contrôler simultanément 5 territoires", check: (g) => g.territories.length >= 5 }
+};
+
+function updateGuildAchievements(guild) {
+  for (const [aId, ach] of Object.entries(GUILD_ACHIEVEMENTS)) {
+    if (!guild.achievements.includes(aId)) {
+      if (ach.check(guild)) {
+        guild.achievements.push(aId);
+        guild.xp += 2000; // Bonus d'XP fixe pour le déblocage d'un exploit
+        logGuildAction(guild, `🏆 Succès Débloqué : [${ach.name}] — ${ach.desc}.`);
+      }
+    }
+  }
+}
+
+// ==========================================
+// 🛡️ CONTROLEUR D'ENTRÉE GOATBOT V2 (DEBUT)
+// ==========================================
+module.exports = {
+  config: {
+    name: "guild",
+    version: "2.0.0",
+    author: "Gemini Engine RPG",
+    countDown: 3,
+    role: 0,
+    description: "Système de guildes et guerres de territoires MMORPG.",
+    category: "economy",
+    guide: { fr: "{p}guild [subcommand] (arguments)", en: "{p}guild [subcommand] (arguments)" }
+  },
+
+  onStart: async function ({ api, event, args, usersData, message }) {
+    const { senderID } = event;
+    
+    // Cycle Engine : Vérification automatique de l'état de la guerre en cours
+    checkAndManageWarCycle();
+
+    const guilds = readJSON(GUILDS_FILE);
+    const userLink = getUserGuildLink(senderID);
+    const subCommand = args[0]?.toLowerCase();
+
+    // ==========================================
+    // 📜 SOU-COMMANDE : CREATE <NOM>
+    // ==========================================
+    if (subCommand === "create") {
+      if (userLink) return message.reply("❌ | Vous appartenez déjà à une faction. Quittez-la d'abord via `guild leave`.");
+      
+      const guildName = args.slice(1).join(" ");
+      if (!guildName || guildName.length > 22) return message.reply("❌ | Indiquez un nom de guilde valide (Max 22 caractères).");
+
+      let uData = await usersData.get(senderID);
+      let userMoney = uData.money || 0;
+      const creationCost = 2500000; // Coût standard de fondation : 2.5M$
+
+      if (userMoney < creationCost) return message.reply(`💰 | Fonds insuffisants pour fonder une alliance. Coût requis : **${creationCost}$**.`);
+
+      // Déduction financière directe de l'argent personnel
+      userMoney -= creationCost;
+      await usersData.set(senderID, { money: userMoney });
+
+      const newId = generateGuildID();
+      guilds[newId] = {
+        id: newId,
+        name: guildName,
+        emoji: "🛡️",
+        description: "Aucune description éditée.",
+        leader: senderID,
+        createdAt: new Date().toLocaleDateString('fr-FR'),
+        level: 1,
+        xp: 0,
+        bank: 0,
+        trophies: 0,
+        wins: 0,
+        losses: 0,
+        members: [{ uid: senderID, role: "LEADER" }],
+        territories: [],
+        completedMissions: [],
+        achievements: [],
+        logs: [],
+        lastTerritoryCollect: Date.now()
+      };
+
+      // Liaison du joueur à sa nouvelle faction
+      setUserGuildLink(senderID, { guildId: newId, role: "LEADER" });
+      
+      // Déclenchement du premier succès automatique
+      updateGuildAchievements(guilds[newId]);
+      writeJSON(GUILDS_FILE, guilds);
+
+      let res = UI.boxStart("Alliance Fondée");
+      res += `\n${UI.field("Nom", guildName)}\n${UI.field("ID Unique", newId)}\n${UI.field("Coût payé", "2,500,000$")}\n${UI.line}\n│ 👑 Bienvenue dans votre nouveau quartier général !\n${UI.boxEnd()}`;
+      return message.reply(res);
+    }
+
+    // ==========================================
+    // 📊 SOUS-COMMANDE : INFO
+    // ==========================================
+    if (!subCommand || subCommand === "info") {
+      let targetId = args[1]?.toUpperCase() || (userLink ? userLink.guildId : null);
+      if (!targetId) return message.reply("❌ | Vous ne faites partie d'aucune guilde. Spécifiez l'ID d'une alliance à inspecter : `guild info <ID>`.");
+
+      const g = guilds[targetId];
+      if (!g) return message.reply("❌ | Identifiant de guilde introuvable.");
+
+      // Traitement de la récolte territoriale passive lors de la consultation d'info
+      const passiveHarvest = processTerritoryEarnings(g);
+      writeJSON(GUILDS_FILE, guilds);
+
+      let leaderName = (await usersData.get(g.leader))?.name || "Grand Maître";
+      let txt = UI.boxStart(`Faction : ${g.emoji} ${g.name}`);
+      txt += `\n${UI.field("ID Faction", g.id)}\n${UI.field("Fondateur / Leader", leaderName)}\n${UI.field("Création", g.createdAt)}`;
+      txt += `\n${UI.line}\n${UI.field("Rang / Niveau", `${g.level} / 50 (XP: ${g.xp}/${g.level * 4500})`)}`;
+      txt += `\n${UI.field("Membres", `${g.members.length} / ${getMaxMembers(g.level)}`)}`;
+      txt += `\n${UI.field("Trésorerie", `${g.bank.toLocaleString()}$`)}\n${UI.field("Trophées", `🏆 ${g.trophies}`)}`;
+      txt += `\n${UI.field("Palmarès Guerre", `✅ ${g.wins} Victoires | ❌ ${g.losses} Défaites`)}`;
+      txt += `\n${UI.field("Territoires occupés", g.territories.length === 0 ? "Aucun" : g.territories.map(t => TERRITORIES_DB[t]?.emoji).join(" "))}`;
+      txt += `\n${UI.line}\n│ 💬 Bio : ${g.description}`;
+      if (passiveHarvest) txt += `\n${UI.line}\n📦 [RÉCOLTE] Territoires exploités : +${passiveHarvest.money}$ accumulés !`;
+      txt += `\n${UI.boxEnd()}`;
+
+      return message.reply(txt);
+    }
+
+    // ==========================================
+    // 👥 SOUS-COMMANDE : LIST / SEARCH
+    // ==========================================
+    if (subCommand === "list" || subCommand === "search") {
+      const searchName = args.slice(1).join(" ").toLowerCase();
+      let listGuilds = Object.values(guilds);
+
+      if (searchName) {
+        listGuilds = listGuilds.filter(g => g.name.toLowerCase().includes(searchName));
+      }
+
+      if (listGuilds.length === 0) return message.reply("🔍 | Aucune guilde ne correspond aux critères.");
+
+      let listText = `📋 **[ANNUAIRE ET RECHERCHE DES GUILDES]**\n${UI.line}\n`;
+      listGuilds.slice(0, 15).forEach(g => {
+        listText += `• [${g.id}] ${g.emoji} **${g.name}** (Niv. ${g.level}) — 👥 ${g.members.length}/${getMaxMembers(g.level)} | 🏆 ${g.trophies}\n`;
+      });
+      return message.reply(listText);
+    }
+
+    // ==========================================
+    // 🚪 SOUS-COMMANDE : JOIN <ID>
+    // ==========================================
+    if (subCommand === "join") {
+      if (userLink) return message.reply("❌ | Vous devez quitter votre alliance actuelle avant de postuler ailleurs.");
+
+      const targetId = args[1]?.toUpperCase();
+      if (!targetId || !guilds[targetId]) return message.reply("❌ | ID de guilde inexistant.");
+
+      const g = guilds[targetId];
+      if (g.members.length >= getMaxMembers(g.level)) return message.reply("❌ | Ce bastion a atteint sa capacité de recrutement maximale.");
+
+      // Intégration par défaut au grade de MEMBRE (Rang 1)
+      g.members.push({ uid: senderID, role: "MEMBRE" });
+      setUserGuildLink(senderID, { guildId: targetId, role: "MEMBRE" });
+
+      logGuildAction(g, `Recrutement : Un nouveau combattant rejoint nos rangs.`);
+      
+      // Mise à jour de la mission de recrutement
+      checkAndProgressMission(g, "members_count", g.members.length);
+      writeJSON(GUILDS_FILE, guilds);
+
+      return message.reply(`🚪 | **RECRUTEMENT :** Vous franchissez les portes fortifiées de la guilde **${g.name}** [${g.id}].`);
+    }
+
+    // ==========================================
+    // 🚪 SOUS-COMMANDE : LEAVE
+    // ==========================================
+    if (subCommand === "leave") {
+      if (!userLink) return message.reply("❌ | Vous n'avez aucune guilde à abandonner.");
+      const g = guilds[userLink.guildId];
+      if (!g) return message.reply("❌ | Faction introuvable.");
+
+      if (userLink.role === "LEADER") {
+        return message.reply("👑 | Vous êtes le Leader suprême. Vous ne pouvez pas fuir vos hommes. Supprimez la guilde via `guild disband` ou transmettez la couronne.");
+      }
+
+      // Retrait du tableau des membres
+      g.members = g.members.filter(m => m.uid !== senderID);
+      setUserGuildLink(senderID, null);
+
+      logGuildAction(g, `Départ : Un membre s'est désengagé de la guilde.`);
+      writeJSON(GUILDS_FILE, guilds);
+
+      return message.reply(`🏃‍♂️ | Vous rompez votre serment et quittez l'alliance **${g.name}**.`);
+        }
