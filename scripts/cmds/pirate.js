@@ -182,7 +182,7 @@ module.exports = {
     countDown: 3,
     role: 0,
     description: "Système de simulation de piraterie RPG premium multi-équipages.",
-    category: "game",
+    category: "economy",
     guide: {
       fr: "{p}pirate crew create <nom> | explore | battle | war <nom_equipage> | info | upgrade",
       en: "{p}pirate crew create <name> | explore | battle | war <crew_name> | info | upgrade"
