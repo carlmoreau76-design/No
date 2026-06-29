@@ -266,3 +266,169 @@ async function drawAchievementCard(title, description, badge, uid) {
 
   return canvas.toBuffer();
   }
+
+// --- GÉNÉRATEUR ALÉATOIRE DE QUÊTES ---
+function generateRandomQuest(type, difficultyOverride = null) {
+  // Détermination de la difficulté selon les probabilités structurelles
+  let diffKey = "commune";
+  if (difficultyOverride) {
+    diffKey = difficultyOverride;
+  } else {
+    const roll = Math.random();
+    let cumulative = 0;
+    for (const [key, opt] of Object.entries(DIFFICULTIES)) {
+      cumulative += opt.chance;
+      if (roll <= cumulative) {
+        diffKey = key;
+        break;
+      }
+    }
+  }
+
+  const diffOpt = DIFFICULTIES[diffKey];
+  // Sélection aléatoire d'une typologie d'objectif
+  const objTemplate = OBJECTIVE_TYPES[Math.floor(Math.random() * OBJECTIVE_TYPES.length)];
+  
+  // Ajustement des coefficients multiplicateurs selon l'alignement temporel
+  let typeMult = 1.0;
+  if (type === "weekly") typeMult = 4.0;
+  if (type === "story") typeMult = 6.0;
+  if (type === "secret") typeMult = 10.0;
+
+  const targetValue = Math.floor(objTemplate.base * diffOpt.mult * typeMult) || 1;
+
+  // Calcul structurel des récompenses indexées
+  const goldReward = Math.floor(15000 * diffOpt.mult * typeMult * (0.8 + Math.random() * 0.4));
+  const xpReward = Math.floor(800 * diffOpt.mult * typeMult);
+  
+  let lootReward = null;
+  if (diffKey === "legendaire" || diffKey === "mythique" || diffKey === "divine") {
+    const loots = ["Artefact Sacré", "Clé Primordiale", "Carte des abysses", "Fragment d'Âme Corrompue"];
+    lootReward = loots[Math.floor(Math.random() * loots.length)];
+  }
+
+  return {
+    id: "q_" + Math.random().toString(36).substr(2, 9),
+    type: type,
+    key: objTemplate.key,
+    text: objTemplate.text.replace("X", targetValue),
+    target: targetValue,
+    current: 0,
+    difficulty: diffKey,
+    claimed: false,
+    rewards: {
+      money: goldReward,
+      xp: xpReward,
+      loot: lootReward
+    }
+  };
+}
+
+// --- SYSTÈME DE VÉRIFICATION ET RAFAÎCHISSEMENT TEMPOREL (RESET) ---
+function checkAndResetQuests(uid) {
+  const pQuests = getPlayerQuests(uid);
+  const now = Date.now();
+  
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+  let hasChanged = false;
+
+  // Cycle Quotidien
+  if (now - pQuests.lastDailyReset >= ONE_DAY || pQuests.daily.length === 0) {
+    pQuests.daily = [
+      generateRandomQuest("daily"),
+      generateRandomQuest("daily"),
+      generateRandomQuest("daily")
+    ];
+    pQuests.lastDailyReset = now;
+    hasChanged = true;
+  }
+
+  // Cycle Hebdomadaire
+  if (now - pQuests.lastWeeklyReset >= ONE_WEEK || pQuests.weekly.length === 0) {
+    pQuests.weekly = [
+      generateRandomQuest("weekly"),
+      generateRandomQuest("weekly")
+    ];
+    pQuests.lastWeeklyReset = now;
+    hasChanged = true;
+  }
+
+  // Initialisation de la trame narrative principale (Story)
+  if (pQuests.story.length === 0) {
+    pQuests.story = [generateRandomQuest("story", "epique")];
+    hasChanged = true;
+  }
+
+  // Génération sporadique de quêtes secrètes (5% de chance par itération de contrôle)
+  if (!pQuests.secret || pQuests.secret.length === 0) {
+    if (Math.random() < 0.05) {
+      pQuests.secret = [generateRandomQuest("secret", "mythique")];
+    } else {
+      pQuests.secret = [];
+    }
+    hasChanged = true;
+  }
+
+  if (hasChanged) {
+    updatePlayerQuests(uid, pQuests);
+  }
+  return pQuests;
+}
+
+// --- INTERCEPTIONS DES ACTIONS LIÉES AUX AUTRES COMMANDES ---
+// Permet la liaison directe avec arena, pirate, bank, slots, dice etc.
+function listenRpgEvents(uid, eventKey, quantity = 1) {
+  const pQuests = getPlayerQuests(uid);
+  let updated = false;
+
+  const lists = ["daily", "weekly", "story", "secret"];
+  lists.forEach(listType => {
+    if (pQuests[listType] && Array.isArray(pQuests[listType])) {
+      pQuests[listType].forEach(quest => {
+        if (quest.key === eventKey && !quest.claimed && quest.current < quest.target) {
+          quest.current += quantity;
+          if (quest.current > quest.target) quest.current = quest.target;
+          updated = true;
+        }
+      });
+    }
+  });
+
+  if (updated) {
+    updatePlayerQuests(uid, pQuests);
+  }
+}
+
+// --- LOGIQUE DE DÉBLOCAGE DES SUCCÈS AUTOMATIQUES ---
+async function verifyAchievements(uid, message) {
+  const stats = getPlayerStats(uid);
+  const currentTitles = stats.titles || [];
+  let unblockedCount = 0;
+
+  for (const [key, ach] of Object.entries(ACHIEVEMENTS_DB)) {
+    if (!currentTitles.includes(ach.title) && stats.completed >= ach.req) {
+      stats.titles.push(ach.title);
+      stats.moneyEarned += ach.reward;
+      unblockedCount++;
+
+      // Génération graphique du diplôme de succès accompli
+      try {
+        const achBuffer = await drawAchievementCard(ach.title, `Accomplir ${ach.req} quêtes légendaires au cours de votre périple.`, ach.badge, uid);
+        const achPath = path.join(DATA_DIR, `ach_${uid}_${key}.png`);
+        fs.writeFileSync(achPath, achBuffer);
+
+        message.reply({
+          body: `🏆 **SUCCÈS EXTRAORDINAIRE DEBLOQUÉ** 🏆\n🎖️ Titre : **${ach.title}**\n💰 Prime Royale : +${ach.reward}$`,
+          attachment: fs.createReadStream(achPath)
+        });
+      } catch (e) {
+        message.reply(`🏆 **SUCCÈS DEBLOQUÉ** : ${ach.badge} **${ach.title}** ! (+${ach.reward}$)`);
+      }
+    }
+  }
+
+  if (unblockedCount > 0) {
+    updatePlayerStats(uid, stats);
+  }
+    }
