@@ -2,6 +2,7 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 
+const githubUrl = "https://raw.githubusercontent.com/Saim-x69x/sakura/main/ApiUrl.json";
 const memoryFile = path.join(__dirname, "cache", "gem_memory.json");
 let memory = {};
 
@@ -23,20 +24,16 @@ function saveMemory() {
   }
 }
 
-// Appel à l'API Hugging Face avec DreamShaper
-async function queryHuggingFace(prompt, token) {
-  const response = await axios.post(
-    "https://api-inference.huggingface.co/models/Lykon/dreamshaper-xl-v2-turbo",
-    { inputs: prompt },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      responseType: "arraybuffer"
-    }
-  );
-  return Buffer.from(response.data);
+// Récupère l'URL de l'API depuis GitHub
+async function getApiUrl() {
+  const res = await axios.get(githubUrl);
+  return res.data.apiv3; // Utilise la clé 'apiv3' comme dans ton script edit
+}
+
+// Convertit l'image en Base64 pour l'API
+async function urlToBase64(url) {
+  const res = await axios.get(url, { responseType: "arraybuffer" });
+  return Buffer.from(res.data).toString("base64");
 }
 
 module.exports = {
@@ -53,18 +50,6 @@ module.exports = {
   onStart: async function ({ message, event, args, api }) {
     const userID = event.senderID;
     const prompt = args.join(" ").trim();
-
-    // ========================================================
-    // 🔑 EMPLACEMENT DE TA CLÉ API / TOKEN HUGGING FACE
-    // ========================================================
-    // Tu peux remplacer la ligne ci-dessous par ton token en dur entre guillemets si tu veux, 
-    // exemple : const hfToken = "hf_votreCléIci";
-    
-    const hfToken = process.env.HF_TOKEN || "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";
-
-    if (!hfToken || hfToken.includes("METS_TON_TOKEN_ICI")) {
-      return message.reply("✨ 🌸 **[ CONFIGURATION UNIQUE REQUISE ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n❌ Erreur : La clé d'accès `HF_TOKEN` n'est pas configurée dans le script ou sur ton panel Render.");
-    }
 
     // Réinitialisation de la mémoire utilisateur
     if (prompt.toLowerCase() === "reset") {
@@ -93,18 +78,33 @@ module.exports = {
 
     let loading;
     const cacheDir = path.join(__dirname, "cache");
-    const filePath = path.join(cacheDir, `hori_gem_${userID}_${Date.now()}.png`);
+    const filePath = path.join(cacheDir, `hori_gem_${userID}_${Date.now()}.jpg`);
 
     try {
       api.setMessageReaction("🎨", event.messageID, () => {}, true);
       loading = await message.reply("✨ 🌸 **[ IMMERSION GRAPHIQUE ]** 🌸 ✨\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🎨 Rendu en cours d'exécution... Le module de dessin applique vos filtres esthétiques, veuillez patienter.");
 
-      // Création physique du sous-dossier cache si absent
+      // 1. Récupération de l'URL de l'API
+      const API_URL = await getApiUrl();
+
+      // 2. Préparation des données (Payload) en Base64 comme ton script edit
+      const payload = {
+        prompt: memory[userID].story,
+        images: [await urlToBase64(attachment.url)],
+        format: "jpg"
+      };
+
+      // 3. Création physique du sous-dossier cache si absent
       await fs.ensureDir(cacheDir);
 
-      // Génération de l'image via l'API
-      const imageBuffer = await queryHuggingFace(memory[userID].story, hfToken);
-      fs.writeFileSync(filePath, imageBuffer);
+      // 4. Appel de ton API externe
+      const res = await axios.post(API_URL, payload, {
+        responseType: "arraybuffer",
+        timeout: 180000
+      });
+
+      // 5. Sauvegarde de l'image reçue
+      await fs.writeFile(filePath, Buffer.from(res.data));
 
       if (loading?.messageID) {
         await api.unsendMessage(loading.messageID);
@@ -120,7 +120,7 @@ module.exports = {
       });
 
     } catch (e) {
-      console.log("====== GEM ERROR ======", e.message || e);
+      console.log("====== GEM ERROR ======", e?.response?.data || e.message || e);
       if (loading?.messageID) {
         await api.unsendMessage(loading.messageID).catch(() => {});
       }
