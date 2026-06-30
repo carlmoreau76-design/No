@@ -3,6 +3,15 @@ const fs = require("fs-extra");
 const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
 
+// URL de ton fichier de configuration sur GitHub
+const githubUrl = "https://raw.githubusercontent.com/Saim-x69x/sakura/main/ApiUrl.json";
+
+// Fonction pour récupérer l'URL de base de l'API
+async function getBaseApiUrl() {
+  const res = await axios.get(githubUrl);
+  return res.data.apiv3; // Récupère l'URL de ton API (ex: https://votre-api.com)
+}
+
 module.exports = {
   config: {
     name: "pin",
@@ -26,8 +35,14 @@ module.exports = {
     const loading = await message.reply("⏳ Recherche et génération de la galerie...");
 
     try {
-      // Appel à ton API Pinterest (Demande de 100 images max pour gérer le défilement)
-      const apiUrl = `https://zetbot-page.onrender.com/api/pinterest?query=${encodeURIComponent(query)}&limit=100`;
+      // 1. Récupération dynamique de ton URL d'API depuis GitHub
+      const baseApiUrl = await getBaseApiUrl();
+      
+      // 2. Construction de la nouvelle URL de recherche Pinterest
+      // On extrait l'origine (domaine) pour lui ajouter la route Pinterest requise par ton script
+      const urlObj = new URL(baseApiUrl);
+      const apiUrl = `${urlObj.origin}/api/pinterest?query=${encodeURIComponent(query)}&limit=100`;
+
       const response = await axios.get(apiUrl, { timeout: 10000 });
 
       let allImages = [];
@@ -52,7 +67,9 @@ module.exports = {
 
     } catch (e) {
       console.error(e);
-      await message.unsend(loading.messageID);
+      if (loading?.messageID) {
+        await message.unsend(loading.messageID).catch(() => {});
+      }
       return message.reply("❌ Une erreur est survenue lors de la communication avec l'API Pinterest.");
     }
   },
@@ -130,7 +147,7 @@ module.exports = {
         downloadedPaths.push(filePath);
         const img = await loadImage(filePath);
 
-        // Découpe intelligente centrée pour respecter le ratio vertical sans déformer l'image original
+        // Découpe intelligente centrée pour respecter le ratio vertical sans déformer l'image originale
         ctx.save();
         ctx.beginPath();
         ctx.rect(x, y, cellWidth, cellHeight);
