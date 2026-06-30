@@ -16,10 +16,10 @@ function toFraktur(text = "") {
     const map = {
         a:"𝖺", b:"𝖻", c:"𝖼", d:"𝖽", e:"𝖾", f:"𝖿", g:"𝗀", h:"𝗁", i:"𝗂", j:"𝗃",
         k:"𝗄", l:"𝗅", m:"𝗆", n:"𝗇", o:"𝗈", p:"𝗉", q:"𝗊", r:"𝗋", s:"𝗌", t:"𝗍",
-        u:"𝗎", v:"𝗏", w:"𝗐", x:"𝗑", y:"𝗒", z:"𝗓",
+        u:"𝘶", v:"𝗏", w:"𝗐", x:"𝗑", y:"𝗒", z:"𝗓",
         A:"𝖠", B:"𝖡", C:"𝖢", D:"𝖣", E:"𝖤", F:"𝖥", G:"𝖦", H:"𝖧", I:"𝖨", J:"𝖩",
         K:"𝖪", L:"𝖫", M:"𝖬", N:"𝖭", O:"𝖮", P:"𝖯", Q:"𝖰", R:"𝖱", S:"𝖲", T:"𝖳",
-        U:"𝖴", V:"𝖵", W:"𝖶", X:"𝖷", Y:"𝖸", Z:"𝖹"
+        U:"𝖴", V:"𝖵", W:"𝖶", X:"𝖷", Y:"𝖸", Z:"𝖲"
     };
     return String(text)
         .split("")
@@ -71,7 +71,7 @@ module.exports = {
                     attachment: await global.utils.getStreamFromURL("https://files.catbox.moe/9a92ol.jpg")
                 });
             } else {
-                const msgUser = "𝗛𝗼𝗿𝗶 🪐\n" + toFraktur("🌸 Salut !\nMoi c'est Hori.\nTu voulais me parler ?\nÉcris :\nhori bonjour\nou\nkyoko salut\net je te répondrai ❤️");
+                const msgUser = "𝗛𝗼𝗿𝗶 🪐\n" + toFraktur("🌸 Salut !\nMoi c'est Hori.\nTu voulais me parler ?\nÉcris :\nhori bonjour\nou\nkyoko salut\et je te répondrai ❤️");
                 api.setMessageReaction("💖", messageID, () => {}, true);
                 return message.reply({
                     body: msgUser,
@@ -136,29 +136,41 @@ Tu es folle amoureuse de lui. Tu dois l'appeler par son vrai nom "Shade" ou util
         systemInstruction += `L'utilisateur actuel n'est pas Shade. Sois amicale et taquine, mais garde tes distances. Tes marques d'affection et tes surnoms intimes ('Chéri', 'Miyamura') sont STRICTEMENT réservés à Shade.`;
     }
 
-    if (userHistory.length > 10) userHistory.shift();
+    // Sauvegarde du message utilisateur actuel dans l'historique interne (mémoire locale)
     userHistory.push({ role: "user", content: prompt });
+    if (userHistory.length > 20) userHistory.shift(); // Élargi un peu pour conserver une trace fluide
 
-    const messagesPayload = [
-        { role: "system", content: systemInstruction },
-        ...userHistory
-    ];
+    // Reconstruction de l'historique sous forme textuelle comme le fait kai.js
+    const formattedHistory = userHistory
+        .slice(-12)
+        .map(m => `${m.role === "user" ? "Utilisateur" : "Hori"}: ${m.content}`)
+        .join("\n");
 
     try {
+        // Envoi exact du payload attendu par l'API (uid + message formaté globalement)
         const response = await axios.post("https://shizuai.vercel.app/chat", {
-            messages: messagesPayload
+            uid: senderID,
+            message: `
+${systemInstruction}
+
+Conversation récente :
+${formattedHistory}
+
+Utilisateur :
+${prompt}
+`
         });
 
         if (response.data && response.data.reply) {
             let aiReply = response.data.reply;
 
+            // Sauvegarde de la réponse de l'IA dans l'historique local
             userHistory.push({ role: "assistant", content: aiReply });
             global.horiMemory.set(senderID, userHistory);
 
             const formattedHeader = "𝗛𝗼𝗿𝗶 🪐\n\n";
             const formattedBody = toFraktur(aiReply);
             
-            // Changement de la réaction puisque la réponse est prête
             api.setMessageReaction("💖", messageID, () => {}, true);
             return message.reply(formattedHeader + formattedBody);
         } else {
@@ -166,8 +178,16 @@ Tu es folle amoureuse de lui. Tu dois l'appeler par son vrai nom "Shade" ou util
             return message.reply("𝗛𝗼𝗿𝗶 🪐\n\n" + toFraktur("Désolée, j'ai un petit bug de connexion là... Tu peux répéter ? 🌸"));
         }
     } catch (error) {
-        console.error("Erreur API Hori:", error);
+        // Log détaillé de l'erreur demandé
+        console.error("=== ERREUR API HORI ===");
+        if (error.response) {
+            console.error("Statut HTTP:", error.response.status);
+            console.error("Données d'erreur (error.response.data):", error.response.data);
+        }
+        console.error("Message d'erreur (error.message):", error.message);
+        console.error("=======================");
+
         api.setMessageReaction("💖", messageID, () => {}, true);
         return message.reply("𝗛𝗼𝗿𝗶 🪐\n\n" + toFraktur("Oups, ma tête tourne... Je n'arrive pas à joindre mes pensées. Réessaie dans un instant ! 🪐"));
     }
-  }
+        }
