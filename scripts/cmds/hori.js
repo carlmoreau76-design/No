@@ -35,7 +35,7 @@ module.exports = {
         countDown: 2,
         role: 0,
         description: "IA Hori 🪐 - Personnage original avec réactions dynamiques",
-        category: "ia",
+        category: "ai",
         guide: {
             en: "Dis 'hori [message]' ou 'kyoko [message]' pour lui parler.",
             vi: "Nói 'hori [message]' hoặc 'kyoko [message]' để trò chuyện."
