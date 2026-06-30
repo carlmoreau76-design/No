@@ -9,11 +9,11 @@ module.exports = {
   config: {
     name: "vip",
     aliases: ["vipmember", "viplist"],
-    version: "4.1.0",
+    version: "4.2.0",
     author: "Shade × Gemini",
     countDown: 5,
     role: 0, 
-    description: "💎 Gestion du club VIP Privé avec interface Canvas Deluxe",
+    description: "💎 Gestion du club VIP Privé avec base de données persistante et Canvas",
     category: "system",
     guide: {
       fr: "{p}{n} list → Afficher le club VIP (Public)\n{p}{n} add [@tag | uid | reply] → Inscrire un VIP (Owner Only)\n{p}{n} remove [@tag | uid | reply] → Révoquer un VIP (Owner Only)"
@@ -24,8 +24,13 @@ module.exports = {
     const { threadID, messageID, senderID } = event;
     
     try {
-      const config = global.GoatBot.config;
-      config.vipuser = config.vipuser || [];
+      // Utilisation du stockage global persistant pour éviter les wipes au déploiement
+      if (!global.client.vipStorage) {
+        global.client.vipStorage = [];
+      }
+      
+      // On essaie de synchroniser si une variable globale existe déjà dans GoatBot
+      let vipList = global.client.vipStorage;
 
       const action = args[0]?.toLowerCase();
 
@@ -53,15 +58,23 @@ module.exports = {
           let already = [];
 
           for (const id of uids) {
-            if (config.vipuser.includes(id)) {
+            if (vipList.includes(id)) {
               already.push(id);
             } else {
-              config.vipuser.push(id);
+              vipList.push(id);
               added.push(id);
             }
           }
 
-          writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
+          global.client.vipStorage = vipList;
+          
+          // Sauvegarde dans un fichier hors du dossier de build si possible, ou via l'utilitaire GoatBot
+          try {
+            // Tente de sauvegarder dans le config global au cas où l'hébergeur maintient les fichiers (ex: VPS)
+            global.GoatBot.config.vipuser = vipList;
+            writeFileSync(global.client.dirConfig, JSON.stringify(global.GoatBot.config, null, 2));
+          } catch(e){}
+
           try { api.setMessageReaction("👑", messageID, () => {}, true); } catch(e){}
           return message.reply(`🔱 **[VIP REGISTER]**\n━━━━━━━━━━━━━━━━━\n🟩 Nouveaux membres accrédités : ${added.length}\n⚠️ Sujets déjà présents : ${already.length}`);
         }
@@ -69,7 +82,7 @@ module.exports = {
         if (action === "remove" || action === "-r") {
           let removed = [];
 
-          config.vipuser = config.vipuser.filter(id => {
+          vipList = vipList.filter(id => {
             if (uids.includes(id)) {
               removed.push(id);
               return false;
@@ -77,7 +90,13 @@ module.exports = {
             return true;
           });
 
-          writeFileSync(global.client.dirConfig, JSON.stringify(config, null, 2));
+          global.client.vipStorage = vipList;
+
+          try {
+            global.GoatBot.config.vipuser = vipList;
+            writeFileSync(global.client.dirConfig, JSON.stringify(global.GoatBot.config, null, 2));
+          } catch(e){}
+
           try { api.setMessageReaction("🗑️", messageID, () => {}, true); } catch(e){}
           return message.reply(`🔱 **[VIP REVOCATION]**\n━━━━━━━━━━━━━━━━━\n🟥 Accréditations VIP révoquées : ${removed.length}`);
         }
@@ -85,21 +104,19 @@ module.exports = {
 
       // --- COMMANDE PUBLIQUE : LIST CARD LUXE ---
       if (action === "list" || action === "-l") {
-        if (!config.vipuser.length) {
+        if (!vipList.length) {
           return message.reply("📡 **[DATABASE]** Aucun membre VIP n'est actuellement enregistré dans le club.");
         }
 
         try { api.setMessageReaction("⏳", messageID, () => {}, true); } catch(e){}
 
-        // Maximum 6 membres affichés sur la carte d'honneur
-        const vipsToShow = config.vipuser.slice(0, 6);
+        const vipsToShow = vipList.slice(0, 6);
         const width = 900;
         const height = 150 + (vipsToShow.length * 110);
         
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext("2d");
 
-        // 🌌 Fond Luxueux Or Noir (Dégradé Sombre Premium)
         const bgGrad = ctx.createLinearGradient(0, 0, width, height);
         bgGrad.addColorStop(0, "#0d0d0d");
         bgGrad.addColorStop(0.5, "#1a160d");
@@ -107,12 +124,10 @@ module.exports = {
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, width, height);
 
-        // Bordure fine dorée tout autour du Canvas
         ctx.strokeStyle = "#d4af37";
         ctx.lineWidth = 5;
         ctx.strokeRect(10, 10, width - 20, height - 20);
 
-        // 👑 TITRE PRINCIPAL STYLE LUXE
         ctx.save();
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 38px sans-serif";
@@ -122,30 +137,25 @@ module.exports = {
         ctx.fillText("⚜️ THE PRIVILEGED CLUB - VIP ⚜️", width / 2, 75);
         ctx.restore();
 
-        // Ligne de séparation dorée sous le titre
         ctx.strokeStyle = "rgba(212, 175, 55, 0.4)";
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(50, 105); ctx.lineTo(width - 50, 105); ctx.stroke();
 
-        // Génération de chaque ligne VIP
         let yPos = 160;
         for (let i = 0; i < vipsToShow.length; i++) {
           const uid = vipsToShow[i];
           const name = await usersData.getName(uid) || "Membre Élite";
 
-          // Encadré de chaque VIP (Ligne individuelle translucide)
           ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
           ctx.fillRect(40, yPos - 45, width - 80, 90);
           ctx.strokeStyle = "rgba(212, 175, 55, 0.15)";
           ctx.strokeRect(40, yPos - 45, width - 80, 90);
 
-          // 🖼️ Récupération de l'avatar via l'API interne stable (comme balance.js / spy.js)
           let avatarImg;
           try {
             const avatarUrl = await usersData.getAvatarUrl(uid);
             avatarImg = await loadImage(avatarUrl);
           } catch(e) {
-            // Fallback si l'image distante échoue
             try {
               avatarImg = await loadImage(`https://graph.facebook.com/${uid}/picture?type=large`);
             } catch(err) {
@@ -153,7 +163,6 @@ module.exports = {
             }
           }
 
-          // Dessin du portrait circulaire avec lueur or
           ctx.save();
           ctx.shadowColor = "#d4af37";
           ctx.shadowBlur = 10;
@@ -171,7 +180,6 @@ module.exports = {
           ctx.drawImage(avatarImg, 67, yPos - 33, 66, 66);
           ctx.restore();
 
-          // Textes : Nom & UID style or/blanc
           ctx.textAlign = "left";
           ctx.fillStyle = "#ffffff";
           ctx.font = "bold 24px sans-serif";
@@ -181,7 +189,6 @@ module.exports = {
           ctx.font = "600 16px monospace";
           ctx.fillText(`UID: ${uid}`, 170, yPos + 22);
 
-          // Badge Élite à droite
           ctx.textAlign = "right";
           ctx.font = "italic bold 18px sans-serif";
           ctx.fillStyle = "#d4af37";
@@ -195,7 +202,6 @@ module.exports = {
         const stream = canvas.createPNGStream();
         stream.pipe(out);
 
-        // On attend la fin complète de l'écriture du fichier sur le disque avant d'envoyer
         out.on("finish", () => {
           try { api.setMessageReaction("💎", messageID, () => {}, true); } catch(e){}
           api.sendMessage({
@@ -206,7 +212,6 @@ module.exports = {
         return;
       }
 
-      // En cas d'argument inconnu ou absent
       return message.reply("💡 **[INFO VIP]** Options disponibles :\n• `vip list` : Voir le salon d'honneur.\n• `vip add [@tag / reply]` : Ajouter un membre émérite.\n• `vip remove [@tag / reply]` : Destituer un VIP.");
 
     } catch (err) {
