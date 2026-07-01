@@ -450,3 +450,264 @@ module.exports = {
 
       return message.reply(`💰 | **CONTRAT COMMERCIAL :** Vous vendez votre ${spec.emoji} **${targetPet.customName || spec.baseName}** (Niv. ${targetPet.level}) au marché noir pour **+${finalSellPrice.toLocaleString()}$**.`);
         }
+
+    // ==========================================
+    // 🍖 SOUS-COMMANDE : FEED (RESTAURATION DE LA FAIM)
+    // ==========================================
+    if (subCommand === "feed") {
+      if (!player.activePetId) return message.reply("❌ | Veuillez d'abord équiper le familier à nourrir via `pet equip`.");
+      const pet = player.inventory.find(p => p.uniqueId === player.activePetId);
+      const spec = PETS_REGISTRY[pet.baseId];
+
+      if (pet.hunger >= 100) return message.reply("🍖 | Votre compagnon est déjà totalement rassasié.");
+
+      const foodCost = 5000;
+      if (userMoney < foodCost) return message.reply(`💰 | Vous n'avez pas assez d'or pour acheter des rations militaires (${foodCost.toLocaleString()}$ requis).`);
+
+      userMoney -= foodCost;
+      pet.hunger = Math.min(100, pet.hunger + 25);
+      
+      await usersData.set(senderID, { money: userMoney });
+      savePlayerStorage(senderID, player);
+
+      return message.reply(`🍖 | **NUTRITION :** Vous achetez une ration pour **-${foodCost.toLocaleString()}$**. ${spec.emoji} **${pet.customName || spec.baseName}** reprend des forces (+25 Faim). Niveau de faim : **${pet.hunger}/100**.`);
+    }
+
+    // ==========================================
+    // ❤️ SOUS-COMMANDE : PLAY (RESTAURATION DU BONHEUR)
+    // ==========================================
+    if (subCommand === "play") {
+      if (!player.activePetId) return message.reply("❌ | Aucun compagnon actif détecté pour lancer une session de jeu.");
+      const pet = player.inventory.find(p => p.uniqueId === player.activePetId);
+      const spec = PETS_REGISTRY[pet.baseId];
+
+      if (pet.happiness >= 100) return message.reply("❤️ | Votre compagnon déborde d'affection et de bonheur.");
+
+      // Système de cooldown de jeu : 15 minutes entre chaque session
+      const now = Date.now();
+      if (now - player.lastPlay < 15 * 60 * 1000) {
+        const remaining = Math.ceil((15 * 60 * 1000 - (now - player.lastPlay)) / 1000 / 60);
+        return message.reply(`⏳ | Votre familier est fatigué d'avoir trop joué. Attendez **${remaining} minute(s)**.`);
+      }
+
+      pet.happiness = Math.min(100, pet.happiness + 20);
+      player.lastPlay = now;
+      savePlayerStorage(senderID, player);
+
+      return message.reply(`⚽ | **DIVERTISSEMENT :** Vous passez du temps avec ${spec.emoji} **${pet.customName || spec.baseName}**. Son affection grimpe en flèche (+20 Bonheur). Statut : **${pet.happiness}/100**.`);
+    }
+
+    // ==========================================
+    // ⭐ SOUS-COMMANDE : TRAIN (ENTRAÎNEMENT PROGRESSIF)
+    // ==========================================
+    if (subCommand === "train") {
+      if (!player.activePetId) return message.reply("❌ | Équipez un familier pour commencer son entraînement martial.");
+      const pet = player.inventory.find(p => p.uniqueId === player.activePetId);
+      const spec = PETS_REGISTRY[pet.baseId];
+
+      if (pet.hunger < 20) return message.reply("⚠️ | Votre familier est affamé et refuse de s'entraîner. Donnez-lui d'abord à manger (`pet feed`).");
+
+      const now = Date.now();
+      if (now - player.lastTrain < 30 * 60 * 1000) {
+        const remaining = Math.ceil((30 * 60 * 1000 - (now - player.lastTrain)) / 1000 / 60);
+        return message.reply(`⏳ | Corps d'entraînement saturé. Laissez votre familier récupérer pendant **${remaining} minute(s)**.`);
+      }
+
+      // Consommation de faim et apport d'XP
+      pet.hunger = Math.max(0, pet.hunger - 15);
+      const xpGain = Math.floor(Math.random() * 250) + 150;
+      pet.xp += xpGain;
+      player.lastTrain = now;
+
+      let trainMsg = `⚔️ | **ENTRAÎNEMENT MILITAIRE :**\n${UI.line}\n`;
+      trainMsg += `│ ${spec.emoji} **${pet.customName || spec.baseName}** gagne **+${xpGain} XP**.\n`;
+      trainMsg += `│ 🍖 Faim dépensée : -15 (Actuel : ${pet.hunger}/100)\n`;
+
+      // Vérification du passage de niveau
+      let nextXp = pet.level * 1200;
+      if (pet.xp >= nextXp) {
+        pet.xp -= nextXp;
+        pet.level += 1;
+        pet.age += 1; // Le familier prend de l'âge en gagnant des niveaux
+        trainMsg += `${UI.line}\n🌟 **UPGRADE !** Votre familier passe au **Niveau ${pet.level}** !\n│ Ses statistiques de combat globales augmentent de +12% !`;
+      }
+
+      savePlayerStorage(senderID, player);
+      return message.reply(trainMsg);
+    }
+
+    // ==========================================
+    // ✨ SOUS-COMMANDE : EVOLVE (MUTATION DE PALIERS DE RANG)
+    // ==========================================
+    if (subCommand === "evolve") {
+      const indexInput = parseInt(args[1]) - 1;
+      if (isNaN(indexInput) || !player.inventory[indexInput]) {
+        return message.reply("❌ | Indiquez l'index précis du familier prêt pour la métamorphose : `pet evolve <index>`");
+      }
+
+      const pet = player.inventory[indexInput];
+      const spec = PETS_REGISTRY[pet.baseId];
+
+      if (!spec.nextEvoId || !spec.evoLevel) {
+        return message.reply("👑 | Ce familier a déjà atteint sa forme d'évolution ultime absolue.");
+      }
+
+      if (pet.level < spec.evoLevel) {
+        return message.reply(`🔒 | Conditions insatisfaites. Ce familier doit atteindre le **Niveau ${spec.evoLevel}** pour muter (Niveau actuel : ${pet.level}).`);
+      }
+
+      const evolutionCost = spec.evoLevel * 20000;
+      if (userMoney < evolutionCost) {
+        return message.reply(`💰 | Vos réserves d'or sont insuffisantes pour catalyser la mutation. Requis : **${evolutionCost.toLocaleString()}$**.`);
+      }
+
+      // Exécution de l'évolution structurelle
+      userMoney -= evolutionCost;
+      const nextSpec = PETS_REGISTRY[spec.nextEvoId];
+      
+      pet.baseId = nextSpec.id; // Remplacement de l'identifiant de l'espèce
+      
+      await usersData.set(senderID, { money: userMoney });
+      savePlayerStorage(senderID, player);
+
+      let evoBox = UI.boxStart("Métamorphose Majeure !") + `\n`;
+      evoBox += `│ 🔮 Mutation financée pour : -${evolutionCost.toLocaleString()}$\n`;
+      evoBox += `${UI.line}\n`;
+      evoBox += `│ 🎉 **${spec.baseName}** évolue en ➔ ${nextSpec.emoji} **${nextSpec.baseName}** !\n`;
+      evoBox += `│ ✨ Nouveau palier de rareté : ${RARITY_DETAILS[nextSpec.rarity].color} **${RARITY_DETAILS[nextSpec.rarity].name}**\n`;
+      evoBox += `│ 💠 Nouveau Talent Passif : \`${nextSpec.talent}\`\n`;
+      evoBox += UI.boxEnd();
+      return message.reply(evoBox);
+    }
+
+    // ==========================================
+    // ⚔️ SOUS-COMMANDE : BATTLE (DUEL SAUVAGE SYNCHRONE)
+    // ==========================================
+    if (subCommand === "battle") {
+      if (!player.activePetId) return message.reply("❌ | Équipez un familier de combat pour vous lancer dans l'arène sauvage.");
+      const myPet = player.inventory.find(p => p.uniqueId === player.activePetId);
+      const mySpec = PETS_REGISTRY[myPet.baseId];
+
+      if (myPet.hunger < 25) return message.reply("❌ | Votre familier est trop épuisé ou affamé pour combattre efficacement.");
+
+      // Simulation d'un familier ennemi sauvage équivalent en niveau
+      const allPetIds = Object.keys(PETS_REGISTRY);
+      const enemyBaseId = allPetIds[Math.floor(Math.random() * allPetIds.length)];
+      const enemySpec = PETS_REGISTRY[enemyBaseId];
+      
+      const enemyPetMock = {
+        baseId: enemyBaseId,
+        level: myPet.level,
+        hunger: 100,
+        happiness: 100
+      };
+
+      // Calcul des statistiques réelles pour l'affrontement
+      const myStats = calculateStats(myPet);
+      const enemyStats = calculateStats(enemyPetMock);
+
+      let myHP = myStats.hp;
+      let enemyHP = enemyStats.hp;
+      let roundsLog = "";
+      let round = 1;
+
+      // Boucle de combat automatique RPG rapide
+      while (myHP > 0 && enemyHP > 0 && round <= 5) {
+        // Tour du joueur
+        if (Math.random() > enemyStats.dodge) {
+          let dmg = Math.max(10, myStats.atk - Math.floor(enemyStats.def / 2));
+          if (Math.random() < myStats.crit) dmg = Math.floor(dmg * 1.5);
+          enemyHP -= dmg;
+        }
+        // Tour de l'ennemi
+        if (enemyHP > 0 && Math.random() > myStats.dodge) {
+          let dmgEn = Math.max(10, enemyStats.atk - Math.floor(myStats.def / 2));
+          if (Math.random() < enemyStats.crit) dmgEn = Math.floor(dmgEn * 1.5);
+          myHP -= dmgEn;
+        }
+        round++;
+      }
+
+      // Résolution du combat
+      const victory = myHP > enemyHP;
+      myPet.hunger = Math.max(0, myPet.hunger - 20); // Perte de faim suite à l'effort
+
+      let battleMsg = UI.boxStart(`Rapport d'Arène Sauvage`) + `\n`;
+      battleMsg += `│ 🛡️ Votre Allié : ${mySpec.emoji} **${myPet.customName || mySpec.baseName}** (Niv. ${myPet.level})\n`;
+      battleMsg += `│ 👾 Adversaire : ${enemySpec.emoji} **${enemySpec.baseName}** (Niv. ${enemyPetMock.level})\n`;
+      battleMsg += `${UI.line}\n`;
+
+      if (victory) {
+        const rewardGold = Math.floor(Math.random() * 50000) + 20000;
+        const rewardXp = Math.floor(Math.random() * 300) + 100;
+        userMoney += rewardGold;
+        myPet.xp += rewardXp;
+        
+        battleMsg += `│ 🏆 **VICTOIRE ÉCLATANTE !**\n`;
+        battleMsg += `│ 💰 Or pillé : **+${rewardGold.toLocaleString()}$**\n`;
+        battleMsg += `│ ⭐ XP gagné : **+${rewardXp} XP**\n`;
+
+        // Gestion du niveau
+        let nextXp = myPet.level * 1200;
+        if (myPet.xp >= nextXp) {
+          myPet.xp -= nextXp;
+          myPet.level += 1;
+          battleMsg += `│ 🌟 **Niveau supérieur !** Votre familier passe Niveau **${myPet.level}** !\n`;
+        }
+        await usersData.set(senderID, { money: userMoney });
+      } else {
+        battleMsg += `│ 💀 **DÉFAITE CONSTRUITE...**\n│ Votre familier bat en retraite pour panser ses plaies.\n`;
+      }
+      
+      battleMsg += `│ 🍖 Faim résiduelle : ${myPet.hunger}/100\n`;
+      battleMsg += UI.boxEnd();
+
+      savePlayerStorage(senderID, player);
+      return message.reply(battleMsg);
+    }
+
+    // ==========================================
+    // 📈 SOUS-COMMANDE : LEADERBOARD (PANTHÉON DES MAÎTRES)
+    // ==========================================
+    if (subCommand === "leaderboard" || subCommand === "top") {
+      const fullDb = readJSON(PLAYER_PETS_FILE);
+      let globalList = [];
+
+      for (const [uid, pData] of Object.entries(fullDb)) {
+        if (pData.inventory && pData.inventory.length > 0) {
+          pData.inventory.forEach(pet => {
+            globalList.push({
+              uid: uid,
+              pet: pet,
+              spec: PETS_REGISTRY[pet.baseId]
+            });
+          });
+        }
+      }
+
+      if (globalList.length === 0) return message.reply("🏁 | Aucun familier enregistré au registre de l'Empire pour le moment.");
+
+      // Tri sur le niveau de la créature
+      globalList.sort((a, b) => b.pet.level - a.pet.level);
+
+      let topMsg = `🏆 **[PANTHÉON GLOBAL DES MAÎTRES DES FAMILIERS]**\n${UI.line}\n`;
+      for (let i = 0; i < Math.min(10, globalList.length); i++) {
+        const item = globalList[i];
+        const uName = (await usersData.get(item.uid))?.name || "Éleveur Anonyme";
+        const petName = item.pet.customName ? `${item.pet.customName} (${item.spec.baseName})` : item.spec.baseName;
+        topMsg += `${i + 1}. **${uName}** ➔ ${item.spec.emoji} **${petName}** | **Niv. ${item.pet.level}** (${RARITY_DETAILS[item.spec.rarity].name})\n`;
+      }
+
+      return message.reply(topMsg);
+    }
+
+    return message.reply("❌ | Sous-commande introuvable. Utilisez la commande brute `~pet` pour afficher le catalogue complet des actions.");
+  }
+};
+
+// ==========================================
+// 🛠️ SÉCURITÉ ET CODES COMPLÉMENTAIRES D'AUTHENTIFICATION
+// ==========================================
+function generateUID() {
+  return Math.random().toString(16).substring(2, 8).toUpperCase();
+            }
