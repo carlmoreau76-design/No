@@ -124,7 +124,7 @@ module.exports = {
     countDown: 3,
     role: 0,
     description: "Système de piraterie MMORPG ultra premium : Équipages, explorations, guerres navales et chasses aux boss.",
-    category: "jeux",
+    category: "game",
     guide: { fr: "{p}pirate [sous-commande]", en: "{p}pirate [subcommand]" }
   },
 
@@ -352,3 +352,138 @@ module.exports = {
 
       return message.reply(`💥 | **SABORDAGE :** Le Capitaine a ouvert les vannes de fond et fait sauter la soute à munitions. L'équipage **${crew.name}** repose désormais par le fond.`);
   }
+
+    // ==========================================
+    // 📊 SUBCOMMANDE : STATUS (FICHE TECHNIQUE DE LA FLOTTE)
+    // ==========================================
+    if (subCommand === "status") {
+      if (!userLink) return message.reply("❌ | Vous n'avez pas d'équipage. Créez-en un via `pirate crew create <nom>`.");
+      
+      const crew = crews[userLink.crewId];
+      const statsShip = getShipStats(crew);
+      const nextXpRequired = crew.level * 10000;
+
+      let statusBox = UI.boxStart(`Registre : ${crew.name}`) + `\n`;
+      statusBox += `${UI.field("Identifiant Unique", `\`${crew.id}\``)}\n`;
+      statusBox += `${UI.field("Date de Création", crew.createdDate)}\n`;
+      statusBox += `${UI.field("Niveau de Flotte", `Niv. ${crew.level} (XP: ${crew.xp} / ${nextXpRequired})`)}\n`;
+      statusBox += `${UI.field("Trésor de l'Équipage", `💰 ${crew.vault.toLocaleString()}$`)}\n`;
+      statusBox += `${UI.field("Membres à Bord", `${crew.members.length} / ${statsShip.capacity} Pirates`)}\n`;
+      statusBox += `${UI.field("Bilan des Combats", `🟢 ${crew.victories} Victoires | 🔴 ${crew.failures} Défaites`)}\n`;
+      statusBox += `${UI.line}\n`;
+      statusBox += `│ 🚢 SPÉCIFICATIONS DU NAVIRE ACTIVÉ :\n`;
+      statusBox += `${UI.field("Modèle du Vaisseau", `${statsShip.emoji} ${statsShip.name} (Upgrade Niv. ${crew.ship.upgradeLevel})`)}\n`;
+      statusBox += `${UI.field("Points de Structure", `${statsShip.hp} HP`)}\n`;
+      statusBox += `${UI.field("Blindage de Coque", `${statsShip.def} DEF`)}\n`;
+      statusBox += `${UI.field("Batteries d'Artillerie", `${statsShip.canons} Canons de Bord`)}\n`;
+      statusBox += `${UI.field("Bonus de Butin Passif", `+${Math.floor(statsShip.treasureBonus * 100)}% de gains`)}\n`;
+      statusBox += UI.boxEnd();
+
+      return message.reply(statusBox);
+    }
+
+    // ==========================================
+    // 💰 SUBCOMMANDE : DEPOSIT (FINANCEMENT DU COFFRE COMMUN)
+    // ==========================================
+    if (subCommand === "deposit") {
+      if (!userLink) return message.reply("❌ | Vous devez appartenir à un équipage pour approvisionner un coffre commun.");
+      
+      const amountInput = args[1];
+      const crew = crews[userLink.crewId];
+
+      if (!amountInput || isNaN(amountInput) || parseInt(amountInput) <= 0) {
+        return message.reply("❌ | Veuillez indiquer une somme d'or valide à transférer : `pirate deposit <montant>`");
+      }
+
+      const amountToDeposit = parseInt(amountInput);
+      if (userMoney < amountToDeposit) {
+        return message.reply(`💰 | Vos finances sont insuffisantes pour faire un don de **${amountToDeposit.toLocaleString()}$**.`);
+      }
+
+      // Transfert économique
+      userMoney -= amountToDeposit;
+      crew.vault += amountToDeposit;
+
+      await usersData.set(senderID, { money: userMoney });
+      crews[userLink.crewId] = crew;
+      writeDB(CREWS_FILE, crews);
+
+      return message.reply(`🪙 | **DON FINANCIER :** Vous déposez **+${amountToDeposit.toLocaleString()}$** dans le coffre commun. Nouveau solde de la flotte : **${crew.vault.toLocaleString()}$**.`);
+    }
+
+    // ==========================================
+    // 🏗️ SUBCOMMANDE : SHIPYARD (CHANTIER NAVAL IMPÉRIAL)
+    // ==========================================
+    if (subCommand === "shipyard") {
+      if (!userLink) return message.reply("❌ | Seuls les marins rattachés à une flotte ont accès au Chantier Naval.");
+      const crew = crews[userLink.crewId];
+      
+      const operation = args[1]?.toLowerCase();
+
+      // Catalogue d'achat du Chantier Naval si aucune opération spécifiée
+      if (!operation) {
+        let yardMsg = `🏗️ **[CHANTIER NAVAL DE L'EMPIRE DES MERS]**\n${UI.line}\n`;
+        yardMsg += `*Votre Navire Actuel : ${crew.ship.type.toUpperCase()} (Niv. d'amélioration : ${crew.ship.upgradeLevel})*\n`;
+        yardMsg += `Pour améliorer votre navire actuel : \`pirate shipyard upgrade\`\n${UI.line}\n`;
+        
+        for (const [id, ship] of Object.entries(SHIPS_CATALOG)) {
+          yardMsg += `${ship.emoji} **${ship.name}**\n│ 💰 Prix : ${ship.price.toLocaleString()}$ | 👥 Capacité : ${ship.capacity} places\n│ 📊 HP: ${ship.baseHp} | Canons: ${ship.baseCanons}\n│ ➔ \`pirate shipyard buy ${id}\`\n${UI.line}\n`;
+        }
+        return message.reply(yardMsg);
+      }
+
+      // Autorisation administrative requise pour modifier les structures de la flotte
+      if (ROLES[userLink.role].power < 2) {
+        return message.reply("❌ | Seuls les Officiers ou le Capitaine peuvent commander des travaux navals.");
+      }
+
+      // --- OPTION : BUY (ACHAT D'UN NOUVEAU NAVIRE DE RANG SUPÉRIEUR) ---
+      if (operation === "buy") {
+        const targetShipId = args[2]?.toLowerCase();
+        if (!targetShipId || !SHIPS_CATALOG[targetShipId]) {
+          return message.reply("❌ | Modèle de navire inconnu ou non répertorié. Consultez la liste via `pirate shipyard`.");
+        }
+
+        const selectedShip = SHIPS_CATALOG[targetShipId];
+        
+        if (crew.vault < selectedShip.price) {
+          return message.reply(`❌ | Le coffre de l'équipage ne contient pas les fonds nécessaires (**${selectedShip.price.toLocaleString()}$** requis). Utilisez \`pirate deposit\` pour le renflouer.`);
+        }
+
+        if (crew.members.length > selectedShip.capacity) {
+          return message.reply(`❌ | Impossible de rétrograder vers ce navire. Votre équipage actuel (${crew.members.length} membres) dépasse la capacité maximale autorisée (${selectedShip.capacity} places).`);
+        }
+
+        // Déduction des fonds sur le coffre de guilde et écriture du nouveau type
+        crew.vault -= selectedShip.price;
+        crew.ship.type = targetShipId;
+        crew.ship.upgradeLevel = 1; // Réinitialisation du niveau d'amélioration pour le nouveau modèle
+
+        crews[userLink.crewId] = crew;
+        writeDB(CREWS_FILE, crews);
+
+        return message.reply(`🏗️ | **CHANTIER COMPLET :** L'équipage a fait l'acquisition du navire : ${selectedShip.emoji} **${selectedShip.name}** ! Les fonds ont été prélevés du coffre de flotte.`);
+      }
+
+      // --- OPTION : UPGRADE (AMÉLIORATION DE LA COUPE ET DE L'ARMEMENT) ---
+      if (operation === "upgrade") {
+        const currentUpgradeLevel = crew.ship.upgradeLevel || 1;
+        const baseShipData = SHIPS_CATALOG[crew.ship.type];
+        
+        // Formule de calcul du coût de mise à niveau : 30% de la valeur de base du navire par niveau supplémentaire
+        const upgradeCost = Math.floor(baseShipData.price * 0.30 * currentUpgradeLevel);
+
+        if (crew.vault < upgradeCost) {
+          return message.reply(`❌ | Les améliorations de charpente exigent **${upgradeCost.toLocaleString()}$** prélevés du coffre d'équipage. Solde insuffisant.`);
+        }
+
+        // Application de l'ingénierie navale
+        crew.vault -= upgradeCost;
+        crew.ship.upgradeLevel += 1;
+
+        crews[userLink.crewId] = crew;
+        writeDB(CREWS_FILE, crews);
+
+        return message.reply(`🛠️ | **MIGRATION DE STRUCTURE :** Votre ${baseShipData.emoji} **${baseShipData.name}** est élevé au **Niveau d'amélioration ${crew.ship.upgradeLevel}** ! Ses caractéristiques de combat augmentent de **+15%**.`);
+      }
+    }
