@@ -320,3 +320,171 @@ module.exports = {
       view += `\n` + UI.boxEnd();
       return message.reply(view);
     }
+
+    // ==========================================
+    // 💰 SOUS-COMMANDE : CLAIM (ENCAISSEMENT DES PRIMES)
+    // ==========================================
+    if (subCommand === "claim") {
+      const type = args[1]?.toLowerCase();
+      const targetId = args[2]?.toUpperCase();
+
+      if (!type || !["daily", "weekly", "story", "secret"].includes(type)) {
+        return message.reply("❌ | Spécifiez le registre de la quête : `quest claim <daily|weekly|story|secret> [ID]`");
+      }
+
+      let targetQuest = null;
+
+      // Traitement spécifique à la quête narrative (Story) qui n'a pas d'ID aléatoire
+      if (type === "story") {
+        targetQuest = qData.activeStory;
+        if (!targetQuest) return message.reply("❌ | Aucune quête d'histoire n'est active.");
+        if (targetQuest.claimed) return message.reply("❌ | Vous avez déjà perçu les récompenses de ce chapitre.");
+        if (targetQuest.current < targetQuest.target) {
+          return message.reply(`❌ | Objectif inachevé. Finissez le travail : [${targetQuest.current}/${targetQuest.target}]`);
+        }
+
+        // Distribution des récompenses
+        let userMoney = (await usersData.get(senderID)).money || 0;
+        userMoney += targetQuest.reward.money;
+        await usersData.set(senderID, { money: userMoney });
+
+        qData.stats.totalCompleted += 1;
+        qData.stats.totalGoldEarned += targetQuest.reward.money;
+        qData.history.push(`[STORY] Chapitre ${targetQuest.step} - Réussi (+${targetQuest.reward.money}$)`);
+        
+        // Progression au chapitre suivant
+        qData.storyStep += 1;
+        qData.activeStory = null; // Sera régénéré au prochain appel
+
+        savePlayerQuests(senderID, qData);
+        return message.reply(`🎉 | **ÉPOPÉE ACCOMPLIE :** Vous validez le Chapitre **${targetQuest.step}** ! Vos coffres reçoivent **+${targetQuest.reward.money.toLocaleString()}$**.`);
+      }
+
+      // Traitement des quêtes à identifiant unique (daily, weekly, secret)
+      if (!targetId) return message.reply("❌ | Veuillez mentionner l'ID de la mission à valider.");
+      
+      let questArray = qData[type];
+      let questIndex = questArray.findIndex(q => q.id === targetId);
+
+      if (questIndex === -1) return message.reply(`❌ | ID unique **${targetId}** introuvable dans votre registre de quêtes ${type}.`);
+      targetQuest = questArray[questIndex];
+
+      if (targetQuest.claimed) return message.reply("❌ | Cette prime a déjà été versée sur votre compte bancaire.");
+      if (targetQuest.current < targetQuest.target) {
+        return message.reply(`❌ | Objectif non atteint. Progression actuelle : [${targetQuest.current}/${targetQuest.target}]`);
+      }
+
+      // Interconnexion et application des multiplicateurs de familiers (Pet Connection)
+      let petBonusMultiplier = 1.0;
+      try {
+        const petDBFile = path.join(__dirname, 'cache', 'petsMMO', 'player_pets.json');
+        if (fs.existsSync(petDBFile)) {
+          const petDB = JSON.parse(fs.readFileSync(petDBFile, 'utf8'));
+          const playerPet = petDB[senderID];
+          if (playerPet && playerPet.activePetId) {
+            const activePetInstance = playerPet.inventory.find(p => p.uniqueId === playerPet.activePetId);
+            if (activePetInstance && activePetInstance.hunger > 30) {
+              // Si le familier est de la famille dragon (bonus d'XP globale)
+              if (activePetInstance.baseId.includes("dragon")) petBonusMultiplier += 0.15;
+            }
+          }
+        }
+      } catch (err) { /* Sécurité anti-crash si le fichier pet n'existe pas encore */ }
+
+      // Application financière des gains
+      let finalGold = targetQuest.reward.money;
+      let finalXp = Math.floor(targetQuest.reward.xp * petBonusMultiplier);
+
+      let userMoney = (await usersData.get(senderID)).money || 0;
+      userMoney += finalGold;
+      await usersData.set(senderID, { money: userMoney });
+
+      // Archivage des statistiques globales du joueur
+      targetQuest.claimed = true;
+      qData.stats.totalCompleted += 1;
+      qData.stats.totalGoldEarned += finalGold;
+      if (targetQuest.difficulty === "divine") qData.stats.divineCompleted += 1;
+      if (targetQuest.type === "pirate_explore") qData.stats.pirateQuests += 1;
+
+      qData.history.push(`[${type.toUpperCase()}] ${targetQuest.text} - Réussi (+${finalGold}$)`);
+
+      // Vérification immédiate du déblocage des succès (Achievements Engine)
+      Object.entries(ACHIEVEMENTS_DB).forEach(([key, value]) => {
+        if (!qData.achievements.includes(key)) {
+          if (key === "aventurier" && qData.stats.totalCompleted >= value.req) qData.achievements.push(key);
+          if (key === "heros" && qData.stats.totalCompleted >= value.req) qData.achievements.push(key);
+          if (key === "roi_pirate" && qData.stats.pirateQuests >= value.req) qData.achievements.push(key);
+          if (key === "millionnaire" && qData.stats.totalGoldEarned >= value.req) qData.achievements.push(key);
+          if (key === "legende" && qData.stats.divineCompleted >= value.req) qData.achievements.push(key);
+        }
+      });
+
+      savePlayerQuests(senderID, qData);
+      return message.reply(`🏆 | **CONTRAT REMPLI :** Félicitations ! Votre prime de **+${finalGold.toLocaleString()}$** et **+${finalXp} XP** (Bonus Familier inclus) a été octroyée.`);
+    }
+
+    // ==========================================
+    // 🔄 SOUS-COMMANDE : REFRESH (REOUVERTURE DES BORDEREAUX)
+    // ==========================================
+    if (subCommand === "refresh") {
+      // Cooldown technique de 10 minutes pour éviter le spam réseau
+      if (!global.questRefreshCooldown) global.questRefreshCooldown = {};
+      const lastRefresh = global.questRefreshCooldown[senderID] || 0;
+      if (nowTime - lastRefresh < 10 * 60 * 1000) {
+        const remaining = Math.ceil((10 * 60 * 1000 - (nowTime - lastRefresh)) / 1000 / 60);
+        return message.reply(`⏳ | Le bureau des contrats est fermé. Revenez dans **${remaining} minute(s)**.`);
+      }
+
+      const refreshCost = 75000;
+      let userMoney = (await usersData.get(senderID)).money || 0;
+      if (userMoney < refreshCost) {
+        return message.reply(`💰 | Les frais administratifs de réédition des contrats s'élèvent à **${refreshCost.toLocaleString()}$**.`);
+      }
+
+      // Facturation et re-génération immédiate du set quotidien
+      userMoney -= refreshCost;
+      await usersData.set(senderID, { money: userMoney });
+
+      qData.daily = [
+        generateRandomQuest("daily", "common"),
+        generateRandomQuest("daily", "rare"),
+        generateRandomQuest("daily", "epic")
+      ];
+      global.questRefreshCooldown[senderID] = nowTime;
+      savePlayerQuests(senderID, qData);
+
+      return message.reply(`🔄 | **CAHIER EN COURS DE RÉÉDITION :** Vos quêtes quotidiennes ont été réinitialisées pour **-${refreshCost.toLocaleString()}$**.`);
+    }
+
+    // ==========================================
+    // 🏅 SOUS-COMMANDE : INFO (SALLE DES SUCCÈS)
+    // ==========================================
+    if (subCommand === "info" || subCommand === "achievements") {
+      let cabinet = UI.boxStart("Panthéon des Succès") + `\n`;
+      cabinet += `│ Total Quêtes Accomplies : **${qData.stats.totalCompleted}**\n`;
+      cabinet += `│ Richesses Cumulées : **${qData.stats.totalGoldEarned.toLocaleString()}$**\n`;
+      cabinet += `${UI.line}\n`;
+
+      Object.entries(ACHIEVEMENTS_DB).forEach(([key, val]) => {
+        const unlocked = qData.achievements.includes(key);
+        cabinet += `${unlocked ? "🟢" : "🔒"} **${val.name}**\n│ ➔ *${val.desc}*\n`;
+      });
+      cabinet += UI.boxEnd();
+      return message.reply(cabinet);
+    }
+
+    // ==========================================
+    // 📖 SOUS-COMMANDE : HISTORY (GRAND LIVRE DES EXPLOITS)
+    // ==========================================
+    if (subCommand === "history") {
+      if (!qData.history || qData.history.length === 0) {
+        return message.reply("📋 | Votre casier militaire et vos archives d'aventurier sont totalement vierges.");
+      }
+
+      let book = `📖 **[ARCHIVES DE VOS EXPLOITS PASSE]**\n${UI.line}\n`;
+      // Inversion pour afficher les quêtes terminées les plus récentes au sommet
+      qData.history.slice(-12).reverse().forEach((log, index) => {
+        book += `${index + 1}. ${log}\n`;
+      });
+      return message.reply(book);
+        }
