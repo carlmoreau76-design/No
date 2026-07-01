@@ -117,3 +117,168 @@ const UI = {
   boxEnd: () => `╰───────────────────────────────╯`,
   field: (label, val) => `│ 🔸 ${label} : ${val}`
 };
+
+// ==========================================
+// 🛡️ CONFIGURATION ET INTERFACE DU MODULE GOATBOT
+// ==========================================
+module.exports = {
+  config: {
+    name: "pet",
+    aliases: ["familiers", "pets", "companion"],
+    version: "1.0.0",
+    author: "Collaborateur IA RPG",
+    countDown: 2,
+    role: 0,
+    description: "Système de familiers MMORPG complet connecté aux modules économiques et de combat.",
+    category: "game",
+    guide: { fr: "{p}pet [sous-commande]", en: "{p}pet [subcommand]" }
+  },
+
+  onStart: async function ({ api, event, args, usersData, message }) {
+    const { senderID, threadID } = event;
+    const player = getPlayerStorage(senderID);
+    const subCommand = args[0]?.toLowerCase();
+
+    // Récupération sécurisée du solde monétaire du joueur via le middleware de GoatBot
+    let userData = await usersData.get(senderID);
+    let userMoney = userData.money || 0;
+
+    // ==========================================
+    // 📜 INTERFACE : MENU D'AIDE AUTOMATIQUE (SI "pet" UNIQUEMENT)
+    // ==========================================
+    if (!subCommand) {
+      let menu = `╭───────────────────────────────────────╮\n`;
+      menu += `│ 🐾  𝐒𝐘𝐒𝐓È𝐌𝐄 𝐃𝐄 𝐅𝐀𝐌𝐈𝐋𝐈𝐄𝐑𝐒 𝐌𝐌𝐎𝐑𝐏𝐆\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🔹 ~pet buy <type> : Acheter un œuf du catalogue\n`;
+      menu += `│ 🔹 ~pet adopt : Éclore un œuf de votre inventaire\n`;
+      menu += `│ 🔹 ~pet hatch : Synonyme d'adoption et d'éclosion\n`;
+      menu += `│ 🔹 ~pet info [index] : Examiner la fiche d'un familier\n`;
+      menu += `│ 🔹 ~pet list : Consulter votre ménagerie complète\n`;
+      menu += `│ 🔹 ~pet equip <index> : Assigner le familier actif\n`;
+      menu += `│ 🔹 ~pet unequip : Renvoyer le familier actif au ranch\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🍖 𝐒𝐎𝐈𝐍𝐒 & 𝐏𝐑𝐎𝐆𝐑𝐄𝐒𝐒𝐈𝐎𝐍\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🔹 ~pet feed : Nourrir pour restaurer la faim (+25)\n`;
+      menu += `│ 🔹 ~pet play : Jouer pour restaurer le bonheur (+20)\n`;
+      menu += `│ 🔹 ~pet train : Entraîner au combat (+XP & Fatigue)\n`;
+      menu += `│ 🔹 ~pet evolve <index> : Déclencher une mutation de rang\n`;
+      menu += `│ 🔹 ~pet rename <index> <nom> : Personnaliser le patronyme\n`;
+      menu += `│ 🔹 ~pet sell <index> : Revendre un familier contre de l'or\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🏆 ⚔️  𝐂𝐎𝐌𝐏É𝐓𝐈𝐓𝐈𝐎𝐍 & 𝐂𝐋𝐀𝐒𝐒𝐄𝐌𝐄𝐍𝐓𝐒\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🔹 ~pet battle : Lancer un duel sauvage synchrone\n`;
+      menu += `│ 🔹 ~pet leaderboard : Consulter le Panthéon des Maîtres\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ ✨ Les familiers actifs s'interconnectent et agissent\n`;
+      menu += `│    dans : arena, pirate, quest, bank & mining !\n`;
+      menu += `╰───────────────────────────────────────╯`;
+      return message.reply(menu);
+    }
+
+    // ==========================================
+    // 🛒 SOUS-COMMANDE : BUY (ACHAT D'ŒUFS DANS LA BOUTIQUE)
+    // ==========================================
+    if (subCommand === "buy") {
+      const typeInput = args[1]?.toLowerCase();
+      if (!typeInput || !EGGS_DB[typeInput]) {
+        let shopMsg = `🛒 **[MARCHÉ AUX ŒUFS DE L'EMPIRE]**\n${UI.line}\n`;
+        for (const [id, egg] of Object.entries(EGGS_DB)) {
+          shopMsg += `${egg.emoji} **${egg.name}** ➔ 💰 ${egg.price.toLocaleString()}$ (~pet buy ${id})\n`;
+        }
+        return message.reply(shopMsg);
+      }
+
+      const selectedEgg = EGGS_DB[typeInput];
+      if (userMoney < selectedEgg.price) {
+        return message.reply(`💰 | Vos finances personnelles sont insuffisantes. Cet œuf requiert **${selectedEgg.price.toLocaleString()}$**.`);
+      }
+
+      // Transaction financière
+      userMoney -= selectedEgg.price;
+      await usersData.set(senderID, { money: userMoney });
+
+      // Initialisation de la réserve d'œufs si inexistante
+      if (!player.eggsInventory) player.eggsInventory = {};
+      player.eggsInventory[selectedEgg.id] = (player.eggsInventory[selectedEgg.id] || 0) + 1;
+
+      savePlayerStorage(senderID, player);
+      return message.reply(`📦 | **ACHAT EFFECTUÉ :** Vous obtenez un ${selectedEgg.emoji} **${selectedEgg.name}**. Utilisez \`pet hatch\` ou \`pet adopt\` pour briser sa coquille !`);
+    }
+
+    // ==========================================
+    // 🐣 SOUS-COMMANDES : ADOPT & HATCH (MÉCANIQUE GACHA D'ÉCLOSION)
+    // ==========================================
+    if (subCommand === "adopt" || subCommand === "hatch") {
+      if (!player.eggsInventory || Object.values(player.eggsInventory).every(v => v === 0)) {
+        return message.reply("❌ | Votre réserve est vide. Visitez d'abord la boutique impériale via `pet buy`.");
+      }
+
+      // Sélection automatique du premier œuf disponible en stock
+      let availableEggKey = Object.keys(player.eggsInventory).find(k => player.eggsInventory[k] > 0);
+      const targetEgg = EGGS_DB[availableEggKey];
+
+      // Consommation de l'objet dans l'inventaire joueur
+      player.eggsInventory[availableEggKey] -= 1;
+
+      // Algorithme de sélection de rareté par distribution de probabilités (Gacha Core)
+      const roll = Math.random();
+      let accumulatedProbability = 0;
+      let selectedRarity = "common";
+
+      for (const [rarity, rate] of Object.entries(targetEgg.rates)) {
+        accumulatedProbability += rate;
+        if (roll <= accumulatedProbability) {
+          selectedRarity = rarity;
+          break;
+        }
+      }
+
+      // Extraction des familiers correspondants à la rareté tirée dans le catalogue global
+      const matchingIds = Object.keys(PETS_REGISTRY).filter(id => {
+        // On ne fait éclore que les formes de base (Niveau 1)
+        return PETS_REGISTRY[id].rarity === selectedRarity && id.endsWith("_1");
+      });
+
+      // Secours technique si catalogue incomplet sur une rareté spécifique
+      const finalPetId = matchingIds.length > 0 
+        ? matchingIds[Math.floor(Math.random() * matchingIds.length)]
+        : "chien_1";
+
+      const petSpec = PETS_REGISTRY[finalPetId];
+      const rarityData = RARITY_DETAILS[petSpec.rarity];
+
+      // Génération de la nouvelle instance de familier avec statistiques individuelles de départ
+      const newPetInstance = {
+        uniqueId: generateUID(),
+        baseId: petSpec.id,
+        customName: null,
+        level: 1,
+        xp: 0,
+        hunger: 100,
+        happiness: 100,
+        birthday: new Date().toLocaleDateString('fr-FR'),
+        age: 0
+      };
+
+      player.inventory.push(newPetInstance);
+      
+      // Auto-équipement si aucun familier n'est actif sur le profil du joueur
+      if (!player.activePetId) {
+        player.activePetId = newPetInstance.uniqueId;
+      }
+
+      savePlayerStorage(senderID, player);
+
+      let hatchBox = UI.boxStart("Éclosion Réussie !") + `\n`;
+      hatchBox += `│ Coquille brisée : ${targetEgg.emoji} ${targetEgg.name}\n`;
+      hatchBox += `${UI.line}\n`;
+      hatchBox += `│ 🎉 Créature : ${petSpec.emoji} **${petSpec.baseName}**\n`;
+      hatchBox += `│ ✨ Rareté : ${rarityData.color} **${rarityData.name}**\n`;
+      hatchBox += `│ 💠 Talent Inné : \`${petSpec.talent}\`\n`;
+      hatchBox += `│ 📊 Statut Initial : Niv.1 | ❤️ HP: ${petSpec.baseHp} | ⚔️ ATK: ${petSpec.baseAtk}\n`;
+      hatchBox += `${UI.line}\n│ *Ce familier a rejoint votre collection et a été assigné par défaut !*\n` + UI.boxEnd();
+      return message.reply(hatchBox);
+    }
