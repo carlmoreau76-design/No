@@ -864,3 +864,139 @@ module.exports = {
 
       return message.reply(`💥 | **ANNIHILATION COMPLETE :** La guilde **${g.name}** a été rayée de la carte. Tous ses soldats sont redevenus des mercenaires sans attache.`);
         }
+
+    // ==========================================
+    // 💰 SOUS-COMMANDES : DONATE & WITHDRAW (FINANCES COMMUNES)
+    // ==========================================
+    if (subCommand === "donate" || subCommand === "withdraw") {
+      if (!userLink) return message.reply("❌ | Opération financière avortée. Vous devez posséder une guilde.");
+      const g = guilds[userLink.guildId];
+      
+      let amountInput = (args[1] === "all" && subCommand === "donate") ? senderMoney : parseInt(args[1]);
+
+      if (isNaN(amountInput) || amountInput <= 0) {
+        return message.reply(`❌ | Montant invalide. Exemple : \`guild ${subCommand} 2500000\``);
+      }
+
+      if (subCommand === "donate") {
+        if (senderMoney < amountInput) {
+          return message.reply("💰 | Votre bourse personnelle est insuffisante pour effectuer ce versement.");
+        }
+
+        // Mutation des capitaux vers la banque
+        senderMoney -= amountInput;
+        g.bank += amountInput;
+        
+        await usersData.set(senderID, { money: senderMoney });
+        addGuildLog(g, `💰 Dépôt : Un membre a versé +${amountInput.toLocaleString()}$ dans la trésorerie.`);
+        
+        checkAndProgressMission(g, "donate_total", g.bank);
+        updateGuildAchievements(g);
+        writeDB(GUILDS_FILE, guilds);
+
+        return message.reply(`✅ | Contribution validée ! **+${amountInput.toLocaleString()}$** injectés dans la banque commune.`);
+      } 
+      
+      if (subCommand === "withdraw") {
+        if (!ROLES[userLink.role].canWithdraw) {
+          return message.reply("❌ | Accès refusé. Seuls le Leader et les Co-Leaders disposent de la signature bancaire.");
+        }
+
+        if (g.bank < amountInput) {
+          return message.reply("❌ | Solde bancaire insuffisant. Le coffre de la guilde ne contient pas cette somme.");
+        }
+
+        // Mutation des capitaux vers l'officier
+        g.bank -= amountInput;
+        senderMoney += amountInput;
+        
+        await usersData.set(senderID, { money: senderMoney });
+        addGuildLog(g, `💰 Retrait : Un haut gradé a retiré -${amountInput.toLocaleString()}$ de la trésorerie.`);
+        
+        writeDB(GUILDS_FILE, guilds);
+        return message.reply(`🏦 | Retrait approuvé ! **+${amountInput.toLocaleString()}$** transférés sur votre compte personnel.`);
+      }
+    }
+
+    // ==========================================
+    // ⬆️ SOUS-COMMANDE : UPGRADE (ÉVOLUTION DU BASTION)
+    // ==========================================
+    if (subCommand === "upgrade") {
+      if (!userLink) return message.reply("❌ | Vous n'avez pas de guilde.");
+      const g = guilds[userLink.guildId];
+
+      if (userLink.role !== "LEADER" && userLink.role !== "CO_LEADER") {
+        return message.reply("❌ | Ordre d'architecture refusé. Seul le haut commandement peut valider des extensions.");
+      }
+
+      if (g.level >= 50) return message.reply("👑 | Splendeur maximale ! Votre guilde a déjà atteint le Niveau 50.");
+
+      const directCost = getUpgradeCost(g.level);
+      if (g.bank < directCost) {
+        return message.reply(`❌ | Fonds de guilde insuffisants. La mise à niveau nécessite **${directCost.toLocaleString()}$** présents dans le coffre.`);
+      }
+
+      // Consommation des ressources de banque et up de niveau
+      g.bank -= directCost;
+      g.level += 1;
+      
+      addGuildLog(g, `🏰 Évolution : Les structures ont été modernisées. Faction Niveau ${g.level}.`);
+      updateGuildAchievements(g);
+      writeDB(GUILDS_FILE, guilds);
+
+      let upText = UI.boxStart(`Bastion Évolué — Niveau ${g.level}`) + `\n`;
+      upText += `│ 👥 Capacité max : ${getMaxMembers(g.level)} soldats\n`;
+      upText += `│ 💰 Rendement économique : +${Math.floor(g.level * 4)}%\n`;
+      upText += `│ ⭐ Multiplicateur d'XP : +${Math.floor(g.level * 5)}%\n`;
+      upText += `│ ⚔️ Bonus offensif brut : +${g.level * 15} DMG\n`;
+      upText += UI.boxEnd();
+      return message.reply(upText);
+    }
+
+    // ==========================================
+    // 📜 SOUS-COMMANDE : LOGS (HISTORIQUE DES ACTIONS)
+    // ==========================================
+    if (subCommand === "logs") {
+      if (!userLink) return message.reply("❌ | Vous n'avez pas de guilde.");
+      const g = guilds[userLink.guildId];
+
+      if (g.logs.length === 0) return message.reply("📋 | Le grand livre de sécurité est vierge pour le moment.");
+
+      let ledger = `📜 **[GRAND LIVRE DES COMPTES — ${g.name.toUpperCase()}]**\n${UI.line}\n`;
+      // Inversion pour afficher les actions les plus récentes au sommet
+      g.logs.slice(-15).reverse().forEach(entry => {
+        ledger += `• [${entry.time}] ${entry.action}\n`;
+      });
+      return message.reply(ledger);
+    }
+
+    // ==========================================
+    // 🎁 SOUS-COMMANDE : DAILY (RATION QUOTIDIENNE MILITAIRE)
+    // ==========================================
+    if (subCommand === "daily") {
+      if (!userLink) return message.reply("❌ | Ravitaillement impossible. Vous devez posséder une alliance.");
+      const g = guilds[userLink.guildId];
+
+      // Initialisation de la mémoire cache volatile pour l'horloge journalière
+      if (!global.guildDailyCooldown) global.guildDailyCooldown = {};
+      
+      const lastClaim = global.guildDailyCooldown[senderID];
+      const cycleLength = 24 * 60 * 60 * 1000; // 24 Heures règlementaires
+
+      if (lastClaim && (Date.now() - lastClaim < cycleLength)) {
+        const remainingMs = cycleLength - (Date.now() - lastClaim);
+        const remHours = Math.floor(remainingMs / (60 * 60 * 1000));
+        const remMins = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+        return message.reply(`⏳ | Allocation indisponible. Vos rations ont été distribuées. Revenez dans **${remHours}h ${remMins}min**.`);
+      }
+
+      // Équation mathématique d'allocation indexée sur le niveau de la guilde
+      const basePay = 100000;
+      const finalAllocation = Math.floor(basePay * getLevelBonus(g.level).moneyMultiplier);
+
+      senderMoney += finalAllocation;
+      global.guildDailyCooldown[senderID] = Date.now();
+      
+      await usersData.set(senderID, { money: senderMoney });
+      return message.reply(`🎁 | Intendance : Allocation quotidienne récupérée ! Vos bonus de faction vous rapportent **+${finalAllocation.toLocaleString()}$**.`);
+    }
