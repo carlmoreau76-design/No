@@ -160,6 +160,7 @@ module.exports = {
     }
 
     // ==========================================
+    // ==========================================
     // 📜 INTERFACE : MENU D'AIDE CENTRALISÉ
     // ==========================================
     if (!subCommand) {
@@ -176,6 +177,7 @@ module.exports = {
       menu += `│ 🔹 ~tournament top : Classement de la saison active\n`;
       menu += `│ 🔹 ~tournament history : Archives des vainqueurs\n`;
       menu += `│ 🔹 ~tournament rewards : Liste de vos titres possédés\n`;
+      menu += `│ 🔹 ~tournament equip <titre> : Équiper un titre honorifique\n`;
       menu += `│ 🔹 ~tournament buy ticket : Acheter des tickets d'entrée\n`;
       menu += `├───────────────────────────────────────┤\n`;
       menu += `│ ⏱️ Inscriptions ouvertes pendant 1 heure dès l'annonce.\n`;
@@ -183,7 +185,7 @@ module.exports = {
       menu += `╰───────────────────────────────────────╯`;
       return message.reply(menu);
     }
-
+    
     // ==========================================
     // 📊 SOUS-COMMANDE : INFO (ÉTAT DU TOURNOI ACTUEL)
     // ==========================================
