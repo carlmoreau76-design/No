@@ -1000,3 +1000,224 @@ module.exports = {
       await usersData.set(senderID, { money: senderMoney });
       return message.reply(`🎁 | Intendance : Allocation quotidienne récupérée ! Vos bonus de faction vous rapportent **+${finalAllocation.toLocaleString()}$**.`);
     }
+
+    // ==========================================
+    // ⚔️ SOUS-COMMANDE : WAR (GESTION DU CONFLIT ET ASSAUTS)
+    // ==========================================
+    if (subCommand === "war") {
+      const warState = readDB(WAR_FILE);
+      const action = args[1]?.toLowerCase();
+
+      // Affichage du tableau de bord général de la Guerre en cours
+      if (!action) {
+        if (!warState.phase || warState.phase === "ended") {
+          let noWar = UI.boxStart("Statut Conflit Global") + `\n`;
+          noWar += `│ 💤 Aucun conflit mondial déclaré pour le moment.\n`;
+          if (warState.nextWarTime) {
+            const remMs = warState.nextWarTime - Date.now();
+            if (remMs > 0) {
+              const h = Math.floor(remMs / (60 * 60 * 1000));
+              const m = Math.floor((remMs % (60 * 60 * 1000)) / (60 * 1000));
+              noWar += `${UI.line}\n│ ⏳ Prochain tirage au sort dans : **${h}h ${m}min**\n`;
+            }
+          }
+          if (warState.finalResults) {
+            const res = warState.finalResults;
+            noWar += `${UI.line}\n🏆 DERNIER RAPPORT DE GUERRE :\n`;
+            noWar += `│ 👑 Vainqueur : **${res.winnerName}**\n`;
+            noWar += `│ 📊 Score final : ${res.scoreA.toLocaleString()} vs ${res.scoreB.toLocaleString()} PTS\n`;
+            if (res.mvp && res.mvp.uid !== "Aucun") {
+              let mvpName = (await usersData.get(res.mvp.uid))?.name || "Héros Légendaire";
+              noWar += `│ 🥇 MVP : **${mvpName}** (${res.mvp.damage.toLocaleString()} DMG, ${res.mvp.attacks} assauts)\n`;
+            }
+          }
+          noWar += UI.boxEnd();
+          return message.reply(noWar);
+        }
+
+        const gA = guilds[warState.guildA];
+        const gB = guilds[warState.guildB];
+        const remMs = warState.phaseEndTime - Date.now();
+        const min = Math.max(0, Math.floor(remMs / (60 * 1000)));
+        const sec = Math.max(0, Math.floor((remMs % (60 * 1000)) / 1000));
+
+        let panel = UI.boxStart(`Guerre — Phase : ${warState.phase.toUpperCase()}`) + `\n`;
+        panel += `⏳ Temps restant dans cette phase : **${min}min ${sec}s**\n`;
+        panel += `${UI.line}\n`;
+        panel += `🔴 **Alliance A :** ${gA?.name || "Inconnue"} [${warState.guildA}]\n`;
+        panel += `│ 👥 Combattants enrôlés : ${warState.participantsA.length} soldat(s)\n`;
+        panel += `│ 📊 Score de guerre : **${(warState.scores[warState.guildA] || 0).toLocaleString()} PTS**\n`;
+        panel += `${UI.line}\n`;
+        panel += `🔵 **Alliance B :** ${gB?.name || "Inconnue"} [${warState.guildB}]\n`;
+        panel += `│ 👥 Combattants enrôlés : ${warState.participantsB.length} soldat(s)\n`;
+        panel += `│ 📊 Score de guerre : **${(warState.scores[warState.guildB] || 0).toLocaleString()} PTS**\n`;
+        panel += `${UI.line}\n`;
+        panel += `ℹ️ | *${warState.phase === "registration" ? "Utilisez `guild war join` pour vous inscrire !" : "Utilisez `guild war attack` pour frapper l'ennemi !"}*\n`;
+        panel += UI.boxEnd();
+        return message.reply(panel);
+      }
+
+      // Enrôlement officiel d'un joueur dans le contingent de guerre
+      if (action === "join") {
+        if (!userLink) return message.reply("❌ | Vous devez appartenir à une guilde engagée pour rejoindre le front.");
+        if (!warState.phase || warState.phase !== "registration") {
+          return message.reply("❌ | Inscriptions fermées. Aucune phase de recrutement militaire n'est ouverte.");
+        }
+
+        const myId = userLink.guildId;
+        if (myId === warState.guildA) {
+          if (warState.participantsA.includes(senderID)) return message.reply("🛡️ | Vous êtes déjà inscrit sur les listes de l'Alliance A.");
+          warState.participantsA.push(senderID);
+        } else if (myId === warState.guildB) {
+          if (warState.participantsB.includes(senderID)) return message.reply("🛡️ | Vous êtes déjà inscrit sur les listes de l'Alliance B.");
+          warState.participantsB.push(senderID);
+        } else {
+          return message.reply("🦅 | Votre guilde neutre n'a pas été sélectionnée pour cette session de guerre mondiale.");
+        }
+
+        writeDB(WAR_FILE, warState);
+        return message.reply("⚔️ | **ENRÔLEMENT COMPLET :** Vos armes sont affûtées. Préparez-vous à l'ouverture des hostilités !");
+      }
+
+      // Simulation d'attaque RPG tactique
+      if (action === "attack") {
+        if (!userLink || !warState.phase || warState.phase !== "battle") {
+          return message.reply("❌ | Champ de bataille inactif. La phase de combat n'a pas encore commencé ou s'est achevée.");
+        }
+
+        const isA = warState.participantsA.includes(senderID);
+        const isB = warState.participantsB.includes(senderID);
+        if (!isA && !isB) return message.reply("❌ | Accès refusé. Vous n'avez pas signé votre formulaire d'inscription durant la phase requise.");
+
+        const myGuildId = userLink.guildId;
+        const myGuild = guilds[myGuildId];
+        const userLvl = senderData.level || 1;
+
+        // Anti-spam de combat dynamique basé sur les timestamps
+        if (!global.guildWarSpam) global.guildWarSpam = {};
+        const lastHit = global.guildWarSpam[senderID] || 0;
+        if (Date.now() - lastHit < 8000) { // Cooldown de 8 secondes par assaut
+          return message.reply("⏳ | Vos troupes reprennent leur souffle ! Attendez quelques secondes avant de charger à nouveau.");
+        }
+        global.guildWarSpam[senderID] = Date.now();
+
+        // Calculs RPG des dégâts
+        let baseDmg = Math.floor(Math.random() * 300) + 150;
+        let lvlBonus = (userLvl * 10) + (myGuild.level * 15);
+        let finalDmg = baseDmg + lvlBonus;
+
+        // Formules de coups critiques et d'esquives
+        const roll = Math.random();
+        let statusText = "⚔️ Frapper";
+        if (roll < 0.08) { // 8% chance d'esquive complète de l'adversaire
+          finalDmg = 0;
+          statusText = "💨 ESQUIVE ENNEMIE ! Votre coup s'écrase dans le vide";
+        } else if (roll > 0.85) { // 15% chance de Coup Critique dévastateur
+          finalDmg = Math.floor(finalDmg * 1.85);
+          statusText = "🔥 COUP CRITIQUE ! Vous transpercez les lignes défensives";
+        }
+
+        // Injection des scores et statistiques individuelles
+        if (finalDmg > 0) {
+          warState.scores[myGuildId] = (warState.scores[myGuildId] || 0) + finalDmg;
+          warState.damageDealt[senderID] = (warState.damageDealt[senderID] || 0) + finalDmg;
+        }
+        warState.attacksCount[senderID] = (warState.attacksCount[senderID] || 0) + 1;
+
+        writeDB(WAR_FILE, warState);
+        return message.reply(`💥 | **[COMBAT EN COURS]**\n${statusText}\n│ Dégâts infligés : **+${finalDmg.toLocaleString()}** points d'impact au score global !`);
+      }
+    }
+
+    // ==========================================
+    // 🌍 SOUS-COMMANDES : TERRITORIES & TERRITORY (CARTE DU MONDE)
+    // ==========================================
+    if (subCommand === "territories" || subCommand === "territory") {
+      let mapMsg = `🌍 **[ATLAS GÉOPOLITIQUE DES TERRITOIRES]**\n${UI.line}\n`;
+      
+      for (const [id, zone] of Object.entries(TERRITORIES_MAP)) {
+        let currentOwner = "🚫 Aucun (Zone Neutre)";
+        Object.values(guilds).forEach(g => {
+          if (g.territories && g.territories.includes(id)) {
+            currentOwner = `${g.emoji} **${g.name}**`;
+          }
+        });
+
+        mapMsg += `${zone.emoji} **${zone.name}** (Tier ${zone.tier})\n`;
+        mapMsg += `│ 📦 Toutes les 12h: +${zone.money.toLocaleString()}$ | +${zone.xp} XP\n`;
+        mapMsg += `│ 👑 Occupant : ${currentOwner}\n`;
+        mapMsg += `${UI.line}\n`;
+      }
+      return message.reply(mapMsg);
+    }
+
+    // ==========================================
+    // 🎯 SOUS-COMMANDES : MISSIONS & ACHIEVEMENTS (SUIVI DES OBJECTIFS)
+    // ==========================================
+    if (subCommand === "missions" || subCommand === "achievements") {
+      if (!userLink) return message.reply("❌ | Vous devez être membre d'une guilde pour observer cette interface.");
+      const g = guilds[userLink.guildId];
+
+      if (subCommand === "missions") {
+        let questBoard = `🎯 **[TABLEAU DES QUÊTES COLLECTIVES — ${g.name.toUpperCase()}]**\n${UI.line}\n`;
+        for (const [id, m] of Object.entries(GUILD_MISSIONS_DB)) {
+          const status = g.completedMissions.includes(id) ? "✅ ACCOMPLIE (Récompense versée)" : "⏳ EN COURS DE VALIDATION";
+          questBoard += `• **${m.text}**\n  ➔ Statut : \`${status}\`\n\n`;
+        }
+        return message.reply(questBoard);
+      } else {
+        let trophyRoom = `🏆 **[PANTHÉON DES SUCCÈS HISTORIQUES DE GUILDE]**\n${UI.line}\n`;
+        for (const [id, a] of Object.entries(GUILD_ACHIEVEMENTS_DB)) {
+          const statusIcon = g.achievements.includes(id) ? "🟢 ACQUIS" : "🔒 VERROUILLÉ";
+          trophyRoom += `• **${a.name}**\n  Description : *${a.desc}*\n  État : [${statusIcon}]\n\n`;
+        }
+        return message.reply(trophyRoom);
+      }
+    }
+
+    // ==========================================
+    // 📈 SOUS-COMMANDE : TOP (CLASSEMENT DES ÉLITES)
+    // ==========================================
+    if (subCommand === "top") {
+      const allGuilds = Object.values(guilds);
+      if (allGuilds.length === 0) return message.reply("🏁 | Le tableau des scores est vierge. Aucune alliance n'a été répertoriée.");
+
+      // Tri sur le volume des trophées possédés
+      allGuilds.sort((a, b) => b.trophies - a.trophies);
+
+      let leaderboard = `🏆 **[LEADERBOARD DES GUILDES SUPRÊMES]**\n${UI.line}\n`;
+      allGuilds.slice(0, 10).forEach((g, idx) => {
+        leaderboard += `${idx + 1}. ${g.emoji} **${g.name}** ➔ Niv. ${g.level} | 🏆 **${g.trophies.toLocaleString()}** Trophées | 👥 ${g.members.length} membres\n`;
+      });
+      return message.reply(leaderboard);
+    }
+
+    // ==========================================
+    // 💬 SOUS-COMMANDE : CHAT (CANAL DE TÉLÉCOMMUNICATIONS SÉCURISÉ)
+    // ==========================================
+    if (subCommand === "chat") {
+      if (!userLink) return message.reply("❌ | Vous devez posséder une faction pour utiliser l'émetteur de guilde.");
+      const g = guilds[userLink.guildId];
+      
+      const payloadMessage = args.slice(1).join(" ");
+      if (!payloadMessage || payloadMessage.trim() === "") return message.reply("❌ | Message vide. Usage : `guild chat <texte>`");
+
+      let rankData = ROLES[userLink.role];
+      let formattedMsg = `💬 **[CANAL PRIVÉ — ${g.name.toUpperCase()}]**\n🔹 *${rankData.emoji} ${rankData.name} ${(senderData.name || "Joueur")}* : ${payloadMessage}`;
+
+      // Diffusion instantanée en boucle sur tous les UIDs des membres inscrits
+      let count = 0;
+      g.members.forEach(m => {
+        if (m.uid !== senderID) {
+          api.sendMessage(formattedMsg, m.uid);
+          count++;
+        }
+      });
+
+      return message.reply(`🛰️ | **CRYPTAGE ET ENVOI RÉUSSIS :** Votre message a été relayé dans la boîte de messagerie de vos ${count} alliés connectés.`);
+    }
+
+    // Capture finale si la sous-commande est erronée ou obsolète
+    return message.reply("❌ | Commande non reconnue. Tapez simplement `~guild` pour consulter le catalogue complet des fonctionnalités.");
+  }
+};
