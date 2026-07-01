@@ -488,3 +488,123 @@ module.exports = {
       });
       return message.reply(book);
         }
+
+    // ==========================================
+    // 📈 SOUS-COMMANDE : LEADERBOARD (CLASSEMENT MONDIAL)
+    // ==========================================
+    if (subCommand === "leaderboard" || subCommand === "top") {
+      const fullDb = readDB(PLAYER_QUESTS_FILE);
+      let leaderboardList = [];
+
+      for (const [uid, data] of Object.entries(fullDb)) {
+        if (data.stats && data.stats.totalCompleted > 0) {
+          leaderboardList.push({
+            uid: uid,
+            completed: data.stats.totalCompleted,
+            gold: data.stats.totalGoldEarned
+          });
+        }
+      }
+
+      if (leaderboardList.length === 0) {
+        return message.reply("🏁 | Le tableau des scores est vierge. Aucun aventurier n'a validé de contrat.");
+      }
+
+      // Tri par nombre de quêtes terminées
+      leaderboardList.sort((a, b) => b.completed - a.completed);
+
+      let topMsg = `🏆 **[PANTHÉON IMPÉRIAL DES AVENTURIERS]**\n${UI.line}\n`;
+      for (let i = 0; i < Math.min(10, leaderboardList.length); i++) {
+        const item = leaderboardList[i];
+        const uName = (await usersData.get(item.uid))?.name || "Aventurier Anonyme";
+        topMsg += `${i + 1}. **${uName}** ➔ **${item.completed}** quêtes réussies | 💰 ${item.gold.toLocaleString()}$\n`;
+      }
+
+      return message.reply(topMsg);
+    }
+
+    return message.reply("❌ | Sous-commande introuvable. Utilisez la commande brute `~quest` pour afficher le catalogue des actions.");
+  }
+};
+
+// ==========================================
+// 🔄 MOTEUR GLOBAL D'INCRÉMENTATION INTERCONNECTÉ (API EXPORTEE)
+// ==========================================
+/**
+ * Incrémente la progression d'un type d'objectif pour un joueur spécifique
+ * @param {string} uid - Identifiant unique de l'utilisateur (senderID)
+ * @param {string} actionType - Le type d'objectif à mettre à jour (ex: "arena_win", "pirate_explore")
+ * @param {number} amount - Quantité à ajouter à la progression (par défaut 1)
+ */
+module.exports.incrementProgress = function (uid, actionType, amount = 1) {
+  try {
+    const DATA_DIR = path.join(__dirname, 'cache', 'questsMMO');
+    const PLAYER_QUESTS_FILE = path.join(DATA_DIR, 'player_quests.json');
+    
+    if (!fs.existsSync(PLAYER_QUESTS_FILE)) return;
+    const db = JSON.parse(fs.readFileSync(PLAYER_QUESTS_FILE, 'utf8') || "{}");
+    const qData = db[uid];
+    
+    if (!qData) return; // Le joueur n'a pas encore initialisé son journal de quêtes
+
+    // 1. Incrémentation dans les quêtes quotidiennes
+    if (qData.daily && qData.daily.length > 0) {
+      qData.daily.forEach(q => {
+        if (q.type === actionType && !q.claimed) {
+          q.current = Math.min(q.target, q.current + amount);
+        }
+      });
+    }
+
+    // 2. Incrémentation dans les quêtes hebdomadaires
+    if (qData.weekly && qData.weekly.length > 0) {
+      qData.weekly.forEach(q => {
+        if (q.type === actionType && !q.claimed) {
+          q.current = Math.min(q.target, q.current + amount);
+        }
+      });
+    }
+
+    // 3. Incrémentation dans la quête d'histoire (Story Mode)
+    if (qData.activeStory && qData.activeStory.type === actionType && !qData.activeStory.claimed) {
+      qData.activeStory.current = Math.min(qData.activeStory.target, qData.activeStory.current + amount);
+    }
+
+    // 4. Incrémentation dans les quêtes secrètes (si actives)
+    if (qData.secret && qData.secret.length > 0) {
+      qData.secret.forEach(q => {
+        if (q.type === actionType && !q.claimed) {
+          q.current = Math.min(q.target, q.current + amount);
+        }
+      });
+    }
+
+    // 5. Déclenchement aléatoire de quêtes secrètes (7% de chance sur les actions majeures)
+    if ((actionType === "arena_win" || actionType === "pirate_explore") && Math.random() < 0.07) {
+      if (!qData.secret) qData.secret = [];
+      // On s'assure qu'il n'accumule pas trop de contrats secrets en même temps
+      if (qData.secret.filter(s => !s.claimed).length < 2) {
+        const templatesKeys = Object.keys(OBJECTIVE_TEMPLATES);
+        const selectedType = templatesKeys[Math.floor(Math.random() * templatesKeys.length)];
+        const template = OBJECTIVE_TEMPLATES[selectedType];
+        
+        qData.secret.push({
+          id: Math.random().toString(16).substring(2, 8).toUpperCase(),
+          type: selectedType,
+          text: template.text.replace("{count}", (template.baseCount * 2).toLocaleString()),
+          target: template.baseCount * 2,
+          current: 0,
+          difficulty: "mythic",
+          claimed: false,
+          reward: { money: 1000000, xp: 5000 }
+        });
+      }
+    }
+
+    // Sauvegarde immédiate des mutations de progression
+    db[uid] = qData;
+    fs.writeFileSync(PLAYER_QUESTS_FILE, JSON.stringify(db, null, 2), 'utf8');
+  } catch (err) {
+    console.error("[QUEST ENGINE ERROR] Failed to update progress:", err);
+  }
+};
