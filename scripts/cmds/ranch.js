@@ -161,3 +161,102 @@ module.exports = {
       menu += `╰───────────────────────────────────────╯`;
       return message.reply(menu);
         }
+
+    // ==========================================
+    // 📊 SOUS-COMMANDE : INFO (BILAN DU DOMAINE)
+    // ==========================================
+    if (subCommand === "info") {
+      const currentConfig = RANCH_UPGRADES.find(u => u.level === rData.level) || RANCH_UPGRADES[0];
+      
+      let infoBox = UI.boxStart(`Exploitation de : ${(userData.name || "Fermier")}`) + `\n`;
+      infoBox += `${UI.field("Rang du Domaine", `Niv.${rData.level} - **${currentConfig.name}**`)}\n`;
+      infoBox += `${UI.field("Occupation des étables", `📋 ${rData.animals.length} / ${currentConfig.capacity} Animaux`)}\n`;
+      infoBox += `${UI.field("Multiplicateur de vitesse", `⚡ x${currentConfig.speedBonus.toFixed(2)}`)}\n`;
+      infoBox += `${UI.line}\n`;
+      infoBox += `🌾 **RÉSERVES DU SILO (ALIMENTS) :**\n`;
+      Object.entries(rData.silo).forEach(([key, qty]) => {
+        infoBox += `│ ➔ ${FOOD_TYPES[key].name} : **${qty}** unités\n`;
+      });
+      infoBox += `${UI.line}\n`;
+      infoBox += `📦 **STOCK DE MARCHANDISES EN ENTREPÔT :**\n`;
+      if (Object.keys(rData.storage).length === 0) {
+        infoBox += `│ *Aucun produit en stock. Attendez la récolte.*\n`;
+      } else {
+        Object.entries(rData.storage).forEach(([prodName, qty]) => {
+          if (qty > 0) infoBox += `│ ➔ ${prodName} : **x${qty}**\n`;
+        });
+      }
+      infoBox += `${UI.line}\n`;
+      infoBox += `📈 **ARCHIVES HISTORIQUES :**\n`;
+      infoBox += `${UI.field("Produits récoltés", rData.stats.totalCollected)}\n`;
+      infoBox += `${UI.field("Chiffre d'affaires", `${rData.stats.totalEarnings.toLocaleString()}$`)}\n`;
+      infoBox += UI.boxEnd();
+
+      return message.reply(infoBox);
+    }
+
+    // ==========================================
+    // 🔎 SOUS-COMMANDE : INVENTORY (REGISTRE DU BÉTAIL)
+    // ==========================================
+    if (subCommand === "inventory" || subCommand === "inv") {
+      if (rData.animals.length === 0) {
+        return message.reply("🌾 | Vos étables sont totalement vides. Visitez le marché via `~ranch shop` pour acquérir votre premier animal.");
+      }
+
+      let invBox = `📋 **[REGISTRE DE VOS ANIMAUX D'ÉLEVAGE]**\n${UI.line}\n`;
+      const now = Date.now();
+
+      rData.animals.forEach((ani, index) => {
+        const template = ANIMAL_TEMPLATES[ani.baseId];
+        const rarityInfo = RARITIES[ani.rarity || "common"];
+        
+        // Simulation dynamique d'usure de la faim basée sur le temps écoulé (ex: perd 3% de faim par minute)
+        const minutesElapsed = Math.floor((now - ani.lastFed) / (60 * 1000));
+        ani.hunger = Math.max(0, 100 - (minutesElapsed * 3));
+        
+        // Le bonheur chute si l'animal est affamé
+        if (ani.hunger < 30) {
+          ani.happiness = Math.max(0, ani.happiness - 5);
+          ani.health = Math.max(10, ani.health - 2);
+        }
+
+        // Calcul du temps restant avant production
+        const currentConfig = RANCH_UPGRADES.find(u => u.level === rData.level) || RANCH_UPGRADES[0];
+        const actualProdTimeMs = (template.prodTime * 60 * 1000) / currentConfig.speedBonus;
+        const timePassedSinceCollect = now - ani.lastCollect;
+        const readyCount = Math.floor(timePassedSinceCollect / actualProdTimeMs);
+
+        invBox += `[**ID: ${index + 1}**] ${template.emoji} **${ani.customName || template.name}** | Niv.**${ani.level}**\n`;
+        invBox += `│ 🧬 Rareté : ${rarityInfo.color} **${rarityInfo.name}**\n`;
+        invBox += `│ ❤️ Santé : ${UI.bar(ani.health, 100, "❤️", "🖤")} [${ani.health}/100]\n`;
+        invBox += `│ 🍖 Faim  : ${UI.bar(ani.hunger, 100, "🍗", "⬛")} [${Math.floor(ani.hunger)}/100]\n`;
+        invBox += `│ 😊 Joie  : ${UI.bar(ani.happiness, 100, "😊", "⚫")} [${ani.happiness}/100]\n`;
+        invBox += `│ 📦 Prêt à la récolte : **x${readyCount}** ${template.product}\n`;
+        invBox += `${UI.line}\n`;
+      });
+
+      // Sauvegarde des altérations de faim calculées à la volée
+      savePlayerRanch(senderID, rData);
+      return message.reply(invBox);
+    }
+
+    // ==========================================
+    // 🛒 SOUS-COMMANDE : SHOP (CATALOGUE AGRO-FOURNITURES)
+    // ==========================================
+    if (subCommand === "shop") {
+      let shopBox = `🛒 **[MARCHÉ CENTRALE ET CENTRALE D'ACHATS]**\n${UI.line}\n`;
+      shopBox += `Pour acheter, tapez : \`~ranch buy animal <nom>\` ou \`~ranch buy food <nom> [quantité]\`\n\n`;
+      
+      shopBox += `🌱 **SECTION 1 : ANIMAUX ET CHEPTEL**\n${UI.line}\n`;
+      Object.values(ANIMAL_TEMPLATES).forEach(ani => {
+        const rar = RARITIES[ani.rarity];
+        shopBox += `${ani.emoji} **${ani.name}** (${rar.color} ${rar.name})\n│ 💰 Coût : **${ani.cost.toLocaleString()}$** | 📦 Produit : ${ani.product}\n│ ⏱️ Cycle : ${ani.prodTime} min\n${UI.line}\n`;
+      });
+
+      shopBox += `\n🌾 **SECTION 2 : SILO & GRAINES (NOURRITURE)**\n${UI.line}\n`;
+      Object.entries(FOOD_TYPES).forEach(([id, food]) => {
+        shopBox += `🔸 **${food.name}** (id: \`${id}\`)\n│ 💰 Prix Unitaire : **${food.cost}$** | 🍖 Restaure : **+${food.restore} Faim**\n${UI.line}\n`;
+      });
+
+      return message.reply(shopBox);
+    }
