@@ -260,3 +260,222 @@ module.exports = {
 
       return message.reply(shopBox);
     }
+
+    // ==========================================
+    // 🛍️ SOUS-COMMANDE : BUY (LOGIQUE TRANSACTIONNELLE)
+    // ==========================================
+    if (subCommand === "buy") {
+      const type = args[1]?.toLowerCase();
+      const targetId = args[2]?.toLowerCase();
+
+      if (!type || !["animal", "food"].includes(type) || !targetId) {
+        return message.reply("❌ | Paramètres invalides. Usage : `~ranch buy animal <nom>` ou `~ranch buy food <id_aliment> [quantité]`");
+      }
+
+      // --- BRANCHE D'ACHAT : ANIMAL ---
+      if (type === "animal") {
+        const template = ANIMAL_TEMPLATES[targetId];
+        if (!template) return message.reply("❌ | Cet animal n'existe pas dans le catalogue du marché.");
+
+        const currentConfig = RANCH_UPGRADES.find(u => u.level === rData.level) || RANCH_UPGRADES[0];
+        if (rData.animals.length >= currentConfig.capacity) {
+          return message.reply(`❌ | Vos étables sont pleines (**${rData.animals.length}/${currentConfig.capacity}**). Améliorez votre ranch via \`~ranch upgrade\`.`);
+        }
+
+        if (userMoney < template.cost) {
+          return message.reply(`💰 | Vous n'avez pas les fonds nécessaires pour cet animal (Requis : **${template.cost.toLocaleString()}$**).`);
+        }
+
+        // Facturation et intégration au cheptel
+        userMoney -= template.cost;
+        await usersData.set(senderID, { money: userMoney });
+
+        rData.animals.push({
+          baseId: template.id,
+          customName: null,
+          level: 1,
+          xp: 0,
+          rarity: template.rarity,
+          health: 100,
+          hunger: 100,
+          happiness: 100,
+          lastFed: Date.now(),
+          lastCollect: Date.now()
+        });
+
+        savePlayerRanch(senderID, rData);
+        return message.reply(`🎉 | **ACHAT REUSSI :** Un magnifique **${template.name}** a rejoint vos étables ! (-${template.cost.toLocaleString()}$)`);
+      }
+
+      // --- BRANCHE D'ACHAT : NOURRITURE ---
+      if (type === "food") {
+        const food = FOOD_TYPES[targetId];
+        if (!food) return message.reply("❌ | Cet aliment n'est pas répertorié au silo central.");
+
+        const quantity = parseInt(args[3]) || 1;
+        if (quantity <= 0) return message.reply("❌ | Veuillez spécifier une quantité valide supérieure à 0.");
+
+        const totalCost = food.cost * quantity;
+        if (userMoney < totalCost) {
+          return message.reply(`💰 | Vos finances ne permettent pas d'acheter **x${quantity} ${food.name}** (Coût : **${totalCost.toLocaleString()}$**).`);
+        }
+
+        userMoney -= totalCost;
+        await usersData.set(senderID, { money: userMoney });
+
+        rData.silo[targetId] = (rData.silo[targetId] || 0) + quantity;
+        savePlayerRanch(senderID, rData);
+
+        return message.reply(`🌾 | **APPROVISIONNEMENT :** Vous achetez **x${quantity} ${food.name}** pour vos silos. (-${totalCost.toLocaleString()}$)`);
+      }
+    }
+
+    // ==========================================
+    // 🍖 SOUS-COMMANDE : FEED (ALIMENTATION DU CHEPTEL)
+    // ==========================================
+    if (subCommand === "feed") {
+      const targetIndexInput = args[1]; // Index numérique "1", "2" ou "all"
+      const foodId = args[2]?.toLowerCase();
+
+      if (!targetIndexInput || !foodId || !FOOD_TYPES[foodId]) {
+        return message.reply("❌ | Usage : `~ranch feed <index_animal|all> <id_nourriture>` (Ex: `~ranch feed 1 herbe`)");
+      }
+
+      if ((rData.silo[foodId] || 0) <= 0) {
+        return message.reply(`❌ | Votre réserve de **${FOOD_TYPES[foodId].name}** est totalement épuisée. Ravitaillez-vous au marché.`);
+      }
+
+      const foodEffect = FOOD_TYPES[foodId];
+
+      // --- ACTION : NOURRIR TOUT LE MONDE (ALL) ---
+      if (targetIndexInput.toLowerCase() === "all") {
+        if (rData.animals.length === 0) return message.reply("❌ | Aucun animal à nourrir.");
+        
+        let fedCount = 0;
+        for (let ani of rData.animals) {
+          if ((rData.silo[foodId] || 0) > 0 && ani.hunger < 95) {
+            rData.silo[foodId]--;
+            ani.hunger = Math.min(100, ani.hunger + foodEffect.restore);
+            ani.health = Math.min(100, ani.health + 5);
+            ani.happiness = Math.min(100, ani.happiness + 10);
+            ani.lastFed = Date.now();
+            fedCount++;
+          }
+        }
+
+        if (fedCount === 0) return message.reply("🌾 | Vos animaux n'ont pas suffisamment faim pour gaspiller vos précieuses rations.");
+        
+        savePlayerRanch(senderID, rData);
+        return message.reply(`🍖 | **DISTRIBUTION GLOBALE :** Vous avez distribué du **${foodEffect.name}** à **${fedCount}** animaux de vos granges.`);
+      }
+
+      // --- ACTION : NOURRIR UN ANIMAL UNIQUE PAR INDEX ---
+      const idx = parseInt(targetIndexInput) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= rData.animals.length) {
+        return message.reply("❌ | Index d'animal introuvable dans votre registre.");
+      }
+
+      let targetAnimal = rData.animals[idx];
+      rData.silo[foodId]--;
+      targetAnimal.hunger = Math.min(100, targetAnimal.hunger + foodEffect.restore);
+      targetAnimal.health = Math.min(100, targetAnimal.health + 10);
+      targetAnimal.happiness = Math.min(100, targetAnimal.happiness + 15);
+      targetAnimal.lastFed = Date.now();
+
+      savePlayerRanch(senderID, rData);
+      return message.reply(`🍖 | **ALIMENTATION :** Vous donnez **${foodEffect.name}** à votre **${ANIMAL_TEMPLATES[targetAnimal.baseId].name}** (ID: ${idx + 1}). Faim restaurée !`);
+    }
+
+    // ==========================================
+    // 🧺 SOUS-COMMANDE : COLLECT (RÉCOLTE ET ÉVÉNEMENTS RPG)
+    // ==========================================
+    if (subCommand === "collect") {
+      if (rData.animals.length === 0) return message.reply("❌ | Rien à récolter, votre domaine est vide.");
+
+      const now = Date.now();
+      let totalCollectedThisTime = 0;
+      let summaryLogs = "";
+      
+      // Facteur d'accélération lié aux structures de la ferme
+      const currentConfig = RANCH_UPGRADES.find(u => u.level === rData.level) || RANCH_UPGRADES[0];
+
+      rData.animals.forEach((ani) => {
+        const template = ANIMAL_TEMPLATES[ani.baseId];
+        const actualProdTimeMs = (template.prodTime * 60 * 1000) / currentConfig.speedBonus;
+        const timePassed = now - ani.lastCollect;
+        
+        // Nombre d'unités empilées prêtes à être récupérées
+        let unitsReady = Math.floor(timePassed / actualProdTimeMs);
+
+        if (unitsReady > 0) {
+          // Gestion du bonus d'XP par récolte pour l'animal
+          ani.xp += unitsReady * 15;
+          const xpForNextLevel = ani.level * 150;
+          if (ani.xp >= xpForNextLevel) {
+            ani.xp -= xpForNextLevel;
+            ani.level += 1;
+            summaryLogs += `✨ **LEVEL UP !** Votre ${template.emoji} ${template.name} passe au **Niveau ${ani.level}** !\n`;
+          }
+
+          // Remplissage de l'entrepôt temporaire du joueur
+          rData.storage[template.product] = (rData.storage[template.product] || 0) + unitsReady;
+          totalCollectedThisTime += unitsReady;
+          ani.lastCollect = now;
+        }
+      });
+
+      if (totalCollectedThisTime === 0) {
+        return message.reply("⏱️ | Vos animaux n'ont pas encore fini leur cycle de production actuel. Revenez plus tard.");
+      }
+
+      rData.stats.totalCollected += totalCollectedThisTime;
+      
+      // 🎁 MOTEUR D'ÉVÉNEMENTS ALÉATOIRES IMMERSIFS (18% de chance lors des grandes récoltes)
+      let eventAlert = "";
+      if (Math.random() < 0.18) {
+        const randEvent = Math.random();
+
+        if (randEvent < 0.25) {
+          // Événement Positif : Le Fermier Mystérieux double une marchandise
+          const productsInStorage = Object.keys(rData.storage);
+          if (productsInStorage.length > 0) {
+            const chosenProd = productsInStorage[Math.floor(Math.random() * productsInStorage.length)];
+            rData.storage[chosenProd] *= 2;
+            eventAlert = `\n👨‍🌾 **ÉVÉNEMENT : Un Fermier Mystérieux** visite vos hangars et double votre stock de **${chosenProd}** !`;
+          }
+        } else if (randEvent < 0.50) {
+          // Événement Négatif : Attaque du Renard voleur
+          if (rData.animals.length > 1) {
+            const removed = rData.animals.shift(); // Un animal au hasard s'enfuit
+            eventAlert = `\n🦊 **CATASTROPHE : Un renard rusé** a profité de la nuit pour dérober votre **${ANIMAL_TEMPLATES[removed.baseId].name}** !`;
+          }
+        } else if (randEvent < 0.75) {
+          // Événement Positif : Trésor trouvé dans la paille
+          const bonusGold = Math.floor(150000 + Math.random() * 300000);
+          userMoney += bonusGold;
+          await usersData.set(senderID, { money: userMoney });
+          eventAlert = `\n🌈 **ÉVÉNEMENT : Trésor caché !** En nettoyant la litière, vous déterrez une vieille cassette contenant **+${bonusGold.toLocaleString()}$** !`;
+        } else {
+          // Événement Neutre/Bénéfique : Une pluie magique rend les bêtes heureuses
+          rData.animals.forEach(a => { a.happiness = 100; a.health = 100; });
+          eventAlert = `\n🌧️ **ÉVÉNEMENT : Pluie Bénéfique !** Une ondée céleste purifie vos pâturages, restaurant la santé et la joie de tout votre bétail.`;
+        }
+      }
+
+      savePlayerRanch(senderID, rData);
+
+      // Interconnexion : Notification automatique au module d'objectifs de quêtes (Quest Connection)
+      try {
+        const questModule = require('./quest.js');
+        if (questModule) questModule.incrementProgress(senderID, "ranch_collect", totalCollectedThisTime);
+      } catch (e) {}
+
+      let collectBox = UI.boxStart("Grandes Récoltes") + `\n`;
+      collectBox += `│ 🧺 Vous avez rassemblé **${totalCollectedThisTime}** ressources agricoles.\n`;
+      collectBox += `│ Consultez votre entrepôt mis à jour via : \`~ranch info\`\n`;
+      if (summaryLogs) collectBox += `${UI.line}\n${summaryLogs}`;
+      if (eventAlert) collectBox += `${UI.line}${eventAlert}\n`;
+      collectBox += UI.boxEnd();
+
+      return message.reply(collectBox);
+        }
