@@ -428,4 +428,32 @@ function runBattle(api, threadID, p1, p2, mise, increaseMoney) {
                 p1Id: attacker.id, p1Name: attacker.name,
                 p2Id: defender.id, p2Name: defender.name,
                 winnerId: attacker.id, mise, gain: netGain,
-                date: new D
+                date: new Date().toLocaleString('fr-FR')
+            });
+
+            const wAch = checkAchievements(winnerData);
+            const lAch = checkAchievements(loserData);
+            saveData();
+
+            let endMsg = `━━━━━━━━━━━━━━━━━━━━━━━━
+🏆 **FIN DU DUEL - VICTOIRE** 🏆
+━━━━━━━━━━━━━━━━━━━━━━━━
+👑 Vainqueur : **${attacker.name}**
+💀 Perdant : **${defender.name}**
+💰 Gain : **${netGain.toLocaleString()} $** (Taxe 5% incluse)
+
+📊 **Impacts Classement :**
+• **${attacker.name}** : +25 pts 📈 (Rang: ${getRank(winnerData.points)})
+• **${defender.name}** : -15 pts 📉 (Rang: ${getRank(loserData.points)})`;
+
+            if (wAch.length > 0) endMsg += `\n\n🏅 **Succès (${attacker.name})** : ${wAch.join(', ')}`;
+            if (lAch.length > 0) endMsg += `\n\n🏅 **Succès (${defender.name})** : ${lAch.join(', ')}`;
+            endMsg += `\n━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+            api.sendMessage(endMsg, threadID);
+            return;
+        }
+
+        turn = turn === 1 ? 2 : 1;
+    }, 3200);
+}
