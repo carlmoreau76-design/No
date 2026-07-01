@@ -111,3 +111,244 @@ const UI = {
   boxEnd: () => `╰───────────────────────────────╯`,
   field: (label, val) => `│ ➔ ${label} : ${val}`
 };
+
+// ==========================================
+// 🛡️ ACCROCHE ET CONFIGURATION GOATBOT V2
+// ==========================================
+module.exports = {
+  config: {
+    name: "pirate",
+    aliases: ["pirates", "corsaire", "crew", "piraterie"],
+    version: "1.0.0",
+    author: "Collaborateur IA RPG",
+    countDown: 3,
+    role: 0,
+    description: "Système de piraterie MMORPG ultra premium : Équipages, explorations, guerres navales et chasses aux boss.",
+    category: "jeux",
+    guide: { fr: "{p}pirate [sous-commande]", en: "{p}pirate [subcommand]" }
+  },
+
+  onStart: async function ({ api, event, args, usersData, message }) {
+    const { senderID, threadID, mentions } = event;
+    const crews = readDB(CREWS_FILE);
+    const userLink = getPlayerLink(senderID);
+    const subCommand = args[0]?.toLowerCase();
+
+    // Récupération sécurisée du portefeuille de l'or du joueur
+    let userData = await usersData.get(senderID);
+    let userMoney = userData.money || 0;
+
+    // ==========================================
+    // 📜 INTERFACE : MENU D'AIDE CENTRALISÉ
+    // ==========================================
+    if (!subCommand) {
+      let menu = `╭───────────────────────────────────────╮\n`;
+      menu += `│ 🏴‍☠️  𝐒𝐘𝐒𝐓È𝐌𝐄 𝐃𝐄 𝐏𝐈𝐑𝐀𝐓𝐄𝐑𝐈𝐄 𝐌𝐌𝐎𝐑𝐏𝐆\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🔹 ~pirate crew create <nom> : Fonder votre flotte\n`;
+      menu += `│ 🔹 ~pirate invite @joueur : Enrôler un pirate\n`;
+      menu += `│ 🔹 ~pirate leave : Déserter votre équipage actuel\n`;
+      menu += `│ 🔹 ~pirate kick @joueur : Bannir un matelot du bord\n`;
+      menu += `│ 🔹 ~pirate promote @joueur : Élever au rang d'Officier\n`;
+      menu += `│ 🔹 ~pirate demote @joueur : Rétrograder un officier\n`;
+      menu += `│ 🔹 ~pirate dissolve : Saborder l'équipage (Capitaine)\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🚢 𝐆𝐄𝐒𝐓𝐈𝐎𝐍 𝐃𝐔 𝐍𝐀𝐕𝐈𝐑𝐄 & 𝐂𝐎𝐅𝐅𝐑𝐄\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🔹 ~pirate status : Fiche technique de votre flotte\n`;
+      menu += `│ 🔹 ~pirate deposit <somme> : Renflouer le coffre commun\n`;
+      menu += `│ 🔹 ~pirate shipyard : Acheter/Améliorer votre navire\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🌊 𝐀𝐕𝐄𝐍𝐓𝐔𝐑𝐄𝐒 & 𝐂𝐎𝐌𝐁𝐀𝐓𝐒\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🔹 ~pirate explore : Lancer une expédition en mer\n`;
+      menu += `│ 🔹 ~pirate battle : Attaquer un équipage PNJ pirate\n`;
+      menu += `│ 🔹 ~pirate war <ID_Crew> : Déclarer une guerre navale\n`;
+      menu += `│ 🔹 ~pirate boss : Lancer un raid contre un Boss Rare\n`;
+      menu += `│ 🔹 ~pirate top : Classement des flibustiers d'élite\n`;
+      menu += `╰───────────────────────────────────────╯`;
+      return message.reply(menu);
+    }
+
+    // ==========================================
+    // 🏴‍☠️ SUBCOMMANDE : CREW CREATE (FONDATION DE LA FLOTTE)
+    // ==========================================
+    if (subCommand === "crew" && args[1]?.toLowerCase() === "create") {
+      if (userLink) return message.reply("❌ | Vous appartenez déjà à une faction maritime. Quittez-la avant d'en créer une nouvelle.");
+      
+      const crewName = args.slice(2).join(" ");
+      if (!crewName || crewName.trim() === "") return message.reply("❌ | Veuillez attribuer un nom à votre équipage. Usage: `pirate crew create <nom>`");
+      if (crewName.length > 20) return message.reply("❌ | Le nom choisi ne doit pas dépasser 20 caractères.");
+
+      const registrationFee = 500000; // Coût de création : 500 000$
+      if (userMoney < registrationFee) return message.reply(`💰 | Créer un équipage coûte **${registrationFee.toLocaleString()}$**. Vos économies sont insuffisantes.`);
+
+      // Facturation
+      userMoney -= registrationFee;
+      await usersData.set(senderID, { money: userMoney });
+
+      const crewId = "CREW_" + Math.random().toString(36).substring(2, 7).toUpperCase();
+      
+      // Enregistrement de la nouvelle entité Équipage
+      crews[crewId] = {
+        id: crewId,
+        name: crewName.trim(),
+        emoji: "🏴‍☠️",
+        captainId: senderID,
+        officers: [],
+        members: [senderID],
+        level: 1,
+        xp: 0,
+        vault: 0,
+        victories: 0,
+        failures: 0,
+        ship: { type: "barque", upgradeLevel: 1 },
+        createdDate: new Date().toLocaleDateString('fr-FR')
+      };
+
+      writeDB(CREWS_FILE, crews);
+      setPlayerLink(senderID, crewId, "CAPTAIN");
+
+      let creationBox = UI.boxStart("Nouveau Pavillon Levé") + `\n`;
+      creationBox += `│ 📜 Équipage : **${crewName.trim()}**\n`;
+      creationBox += `│ 🆔 Identifiant Flotte : \`${crewId}\`\n`;
+      creationBox += `│ 👑 Capitaine : ${(userData.name || "Vous")}\n`;
+      creationBox += `│ 🚢 Navire Initial : 🛶 Barque de Fortune\n`;
+      creationBox += `${UI.line}\n│ *Frais de pavillon payés : -${registrationFee.toLocaleString()}$*\n` + UI.boxEnd();
+      return message.reply(creationBox);
+    }
+
+    // ==========================================
+    // ✉️ SUBCOMMANDE : INVITE (RECRUTEMENT DE MATELOTS)
+    // ==========================================
+    if (subCommand === "invite") {
+      if (!userLink) return message.reply("❌ | Vous devez posséder un équipage pour lancer des invitations.");
+      const crew = crews[userLink.crewId];
+      
+      // Seuls le Capitaine et les Officiers ont le pouvoir de recrutement
+      if (ROLES[userLink.role].power < 2) return message.reply("❌ | Seuls les Officiers ou le Capitaine peuvent recruter.");
+
+      const targetId = Object.keys(mentions)[0];
+      if (!targetId) return message.reply("❌ | Veuillez mentionner le joueur à enrôler : `pirate invite @joueur`");
+      
+      const targetLink = getPlayerLink(targetId);
+      if (targetLink) return message.reply("❌ | Ce joueur navigue déjà sous un autre pavillon.");
+
+      const shipStats = getShipStats(crew);
+      if (crew.members.length >= shipStats.capacity) {
+        return message.reply(`🚢 | Votre navire actuel (**${shipStats.name}**) est surchargé ! Améliorez-le ou achetez un plus grand vaisseau pour accueillir de nouveaux membres.`);
+      }
+
+      // Simulation de signature de contrat (Auto-acceptation par souci de fluidité sur Discord)
+      crew.members.push(targetId);
+      crews[userLink.crewId] = crew;
+      writeDB(CREWS_FILE, crews);
+      setPlayerLink(targetId, userLink.crewId, "SAILOR");
+
+      return message.reply(`⚓ | **RECRUTEMENT REUSSI :** L'utilisateur a été enrôlé en tant que **Matelot** au sein de l'équipage **${crew.name}** !`);
+    }
+
+    // ==========================================
+    // 🥾 SUBCOMMANDE : KICK (BANNISSEMENT DE BORD)
+    // ==========================================
+    if (subCommand === "kick") {
+      if (!userLink) return message.reply("❌ | Vous n'avez pas d'équipage.");
+      const crew = crews[userLink.crewId];
+      if (ROLES[userLink.role].power < 2) return message.reply("❌ | Autorisations insuffisantes pour expulser un membre.");
+
+      const targetId = Object.keys(mentions)[0];
+      if (!targetId) return message.reply("❌ | Spécifiez le membre à exclure via sa mention : `pirate kick @joueur`");
+
+      if (targetId === crew.captainId) return message.reply("❌ | Mutinerie impossible ! On ne peut pas expulser le Capitaine.");
+
+      const targetLink = getPlayerLink(targetId);
+      if (!targetLink || targetLink.crewId !== userLink.crewId) return message.reply("❌ | Ce joueur ne fait pas partie de votre flotte.");
+
+      // Retrait des listes
+      crew.members = crew.members.filter(id => id !== targetId);
+      crew.officers = crew.officers.filter(id => id !== targetId);
+      
+      crews[userLink.crewId] = crew;
+      writeDB(CREWS_FILE, crews);
+      setPlayerLink(targetId, null, null);
+
+      return message.reply(`🥾 | **EXPULSION :** Le joueur a été débarqué de force sur l'île déserte la plus proche.`);
+    }
+
+    // ==========================================
+    // ⚔️ SUBCOMMANDES : PROMOTE & DEMOTE (PROMOTIONS / RETROGRADATIONS)
+    // ==========================================
+    if (subCommand === "promote") {
+      if (!userLink || userLink.role !== "CAPTAIN") return message.reply("❌ | Seul le Capitaine de la flotte détient le pouvoir des nominations.");
+      
+      const targetId = Object.keys(mentions)[0];
+      if (!targetId) return message.reply("❌ | Mentionnez le membre à élever au rang d'officier.");
+
+      const crew = crews[userLink.crewId];
+      if (!crew.members.includes(targetId)) return message.reply("❌ | Ce pirate ne figure pas sur le registre de votre équipage.");
+      if (crew.officers.includes(targetId)) return message.reply("❌ | Ce membre occupe déjà un poste d'officier de pont.");
+
+      crew.officers.push(targetId);
+      crews[userLink.crewId] = crew;
+      writeDB(CREWS_FILE, crews);
+      setPlayerLink(targetId, userLink.crewId, "OFFICER");
+
+      return message.reply(`⚔️ | **NOMINATION :** Félicitations, le matelot a été élevé au grade d'**Officier** de l'équipage !`);
+    }
+
+    if (subCommand === "demote") {
+      if (!userLink || userLink.role !== "CAPTAIN") return message.reply("❌ | Seul le Capitaine suprême peut rétrograder ses officiers.");
+      
+      const targetId = Object.keys(mentions)[0];
+      if (!targetId) return message.reply("❌ | Mentionnez l'officier à destituer.");
+
+      const crew = crews[userLink.crewId];
+      if (!crew.officers.includes(targetId)) return message.reply("❌ | Ce membre n'est pas officier.");
+
+      crew.officers = crew.officers.filter(id => id !== targetId);
+      crews[userLink.crewId] = crew;
+      writeDB(CREWS_FILE, crews);
+      setPlayerLink(targetId, userLink.crewId, "SAILOR");
+
+      return message.reply(`⚓ | **RÉTROGRADATION :** L'officier a été déchu de ses fonctions et retourne récurer le pont comme **Matelot**.`);
+    }
+
+    // ==========================================
+    // 🏃 SUBCOMMANDE : LEAVE (DÉSERTION DE BORD)
+    // ==========================================
+    if (subCommand === "leave") {
+      if (!userLink) return message.reply("❌ | Vous n'avez aucun navire à abandonner.");
+      const crew = crews[userLink.crewId];
+
+      if (userLink.role === "CAPTAIN") {
+        return message.reply("❌ | Un capitaine ne peut pas déserter son navire ! Utilisez `pirate dissolve` pour saborder la flotte ou cédez votre place.");
+      }
+
+      crew.members = crew.members.filter(id => id !== senderID);
+      crew.officers = crew.officers.filter(id => id !== senderID);
+
+      crews[userLink.crewId] = crew;
+      writeDB(CREWS_FILE, crews);
+      setPlayerLink(senderID, null, null);
+
+      return message.reply(`🏃 | **DÉSERTION :** Vous avez glissé une barque à la mer à la nuit tombée et quitté définitivement l'équipage **${crew.name}**.`);
+    }
+
+    // ==========================================
+    // 🔥 SUBCOMMANDE : DISSOLVE (SABORDAGE COMPLET DE LA FLOTTE)
+    // ==========================================
+    if (subCommand === "dissolve") {
+      if (!userLink || userLink.role !== "CAPTAIN") return message.reply("❌ | Seul le Capitaine fondateur peut saborder l'équipage.");
+
+      const crew = crews[userLink.crewId];
+      
+      // Libération et mise à pied de tous les membres rattachés
+      crew.members.forEach(mId => {
+        setPlayerLink(mId, null, null);
+      });
+
+      delete crews[userLink.crewId];
+      writeDB(CREWS_FILE, crews);
+
+      return message.reply(`💥 | **SABORDAGE :** Le Capitaine a ouvert les vannes de fond et fait sauter la soute à munitions. L'équipage **${crew.name}** repose désormais par le fond.`);
+  }
