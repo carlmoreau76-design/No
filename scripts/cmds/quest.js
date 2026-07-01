@@ -141,7 +141,7 @@ module.exports = {
     countDown: 2,
     role: 0,
     description: "Système de quêtes MMORPG complet connecté de manière dynamique à toutes vos actions.",
-    category: "jeux",
+    category: "game",
     guide: { fr: "{p}quest [sous-commande]", en: "{p}quest [subcommand]" }
   },
 
@@ -174,4 +174,149 @@ module.exports = {
       menu += `│    dans : arena, pirate, bank, slots, dice et mines !\n`;
       menu += `╰───────────────────────────────────────╯`;
       return message.reply(menu);
+    }
+
+    // ==========================================
+    // ⏰ ENGINE DE RESET ET INSTANCIATION TEMPORELLE
+    // ==========================================
+    const nowTime = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+
+    // Reset et génération automatique des quêtes quotidiennes (3 quêtes)
+    if (nowTime - qData.lastDailyReset >= oneDayMs || qData.daily.length === 0) {
+      qData.daily = [
+        generateRandomQuest("daily", "common"),
+        generateRandomQuest("daily", "rare"),
+        generateRandomQuest("daily", "epic")
+      ];
+      qData.lastDailyReset = nowTime;
+      savePlayerQuests(senderID, qData);
+    }
+
+    // Reset et génération automatique des quêtes hebdomadaires (2 quêtes lourdes)
+    if (nowTime - qData.lastWeeklyReset >= oneWeekMs || qData.weekly.length === 0) {
+      qData.weekly = [
+        generateRandomQuest("weekly", "legendary"),
+        generateRandomQuest("weekly", "mythic")
+      ];
+      qData.lastWeeklyReset = nowTime;
+      savePlayerQuests(senderID, qData);
+    }
+
+    // Synchronisation de la quête d'histoire selon le step actuel
+    const currentStoryConfig = STORY_LINE.find(s => s.step === qData.storyStep);
+    if (currentStoryConfig && (!qData.activeStory || qData.activeStory.step !== qData.storyStep)) {
+      qData.activeStory = {
+        step: currentStoryConfig.step,
+        name: currentStoryConfig.name,
+        type: currentStoryConfig.type,
+        text: OBJECTIVE_TEMPLATES[currentStoryConfig.type].text.replace("{count}", currentStoryConfig.target.toLocaleString()),
+        target: currentStoryConfig.target,
+        current: 0,
+        difficulty: currentStoryConfig.diff,
+        claimed: false,
+        reward: currentStoryConfig.reward
+      };
+      savePlayerQuests(senderID, qData);
+    }
+
+    // ==========================================
+    // ☀️ SOUS-COMMANDE : DAILY (MISSIONS QUOTIDIENNES)
+    // ==========================================
+    if (subCommand === "daily") {
+      let view = UI.boxStart("Quêtes Quotidiennes") + `\n`;
+      const remMs = (qData.lastDailyReset + oneDayMs) - nowTime;
+      const hours = Math.floor(remMs / (60 * 60 * 1000));
+      const mins = Math.floor((remMs % (60 * 60 * 1000)) / (60 * 1000));
+      view += `⏳ Réinitialisation dans : **${hours}h ${mins}min**\n${UI.line}\n`;
+
+      qData.daily.forEach(q => {
+        const diff = DIFFICULTIES[q.difficulty];
+        const status = q.claimed ? "✅ ENCAISSÉE" : (q.current >= q.target ? "⭐ PRÊTE (claim)" : "⏳ EN COURS");
+        view += `📌 [ID: **${q.id}**] Rareté: ${diff.color} **${diff.name}**\n`;
+        view += `│ 🎯 Objectif : ${q.text}\n`;
+        view += `│ 📊 Progression : ${UI.progressBar(q.current, q.target)} [${q.current}/${q.target}]\n`;
+        view += `│ 💰 Gains : +${q.reward.money.toLocaleString()}$ | +${q.reward.xp} XP\n`;
+        view += `│ ⚡ État : \`${status}\`\n${UI.line}\n`;
+      });
+
+      view += `ℹ️ *Validez votre gain avec : \`quest claim daily <ID>\`*`;
+      view += `\n` + UI.boxEnd();
+      return message.reply(view);
+    }
+
+    // ==========================================
+    // 🪐 SOUS-COMMANDE : WEEKLY (OBJECTIFS HEBDOMADAIRES)
+    // ==========================================
+    if (subCommand === "weekly") {
+      let view = UI.boxStart("Quêtes Hebdomadaires") + `\n`;
+      const remMs = (qData.lastWeeklyReset + oneWeekMs) - nowTime;
+      const days = Math.floor(remMs / (24 * 60 * 60 * 1000));
+      const hours = Math.floor((remMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+      view += `⏳ Nouveau cycle dans : **${days}j ${hours}h**\n${UI.line}\n`;
+
+      qData.weekly.forEach(q => {
+        const diff = DIFFICULTIES[q.difficulty];
+        const status = q.claimed ? "✅ ENCAISSÉE" : (q.current >= q.target ? "⭐ PRÊTE (claim)" : "⏳ EN COURS");
+        view += `🏅 [ID: **${q.id}**] Rareté: ${diff.color} **${diff.name}**\n`;
+        view += `│ 🎯 Objectif : ${q.text}\n`;
+        view += `│ 📊 Progression : ${UI.progressBar(q.current, q.target)} [${q.current}/${q.target}]\n`;
+        view += `│ 💰 Gains : +${q.reward.money.toLocaleString()}$ | +${q.reward.xp} XP\n`;
+        view += `│ ⚡ État : \`${status}\`\n${UI.line}\n`;
+      });
+
+      view += `ℹ️ *Validez votre gain avec : \`quest claim weekly <ID>\`*`;
+      view += `\n` + UI.boxEnd();
+      return message.reply(view);
+    }
+
+    // ==========================================
+    // 📖 SOUS-COMMANDE : STORY (CAMPAGNE NARRATIVE)
+    // ==========================================
+    if (subCommand === "story") {
+      if (!qData.activeStory) {
+        return message.reply("👑 | Félicitations ! Vous avez achevé la totalité des arcs narratifs de la campagne principale !");
+      }
+
+      const q = qData.activeStory;
+      const diff = DIFFICULTIES[q.difficulty];
+      const status = q.claimed ? "✅ EXPÉDIÉE" : (q.current >= q.target ? "⭐ COMPLÉTÉE (claim)" : "⚔️ ACTIVE");
+
+      let view = UI.boxStart(`Histoire : Chapitre ${q.step}`) + `\n`;
+      view += `🎬 Épopée : **${q.name}**\n`;
+      view += `${UI.line}\n`;
+      view += `│ 🎯 Défi impérial : ${q.text}\n`;
+      view += `│ 📊 Avancement : ${UI.progressBar(q.current, q.target)} [${q.current}/${q.target}]\n`;
+      view += `│ 🛡️ Difficulté narrative : ${diff.color} **${diff.name}**\n`;
+      view += `│ 💰 Dotation royale : +${q.reward.money.toLocaleString()}$ | +${q.reward.xp} XP\n`;
+      view += `│ ⚡ Alignement : \`${status}\`\n`;
+      view += `${UI.line}\nℹ️ *Encaisser la récompense et passer à la suite : \`quest claim story\`*`;
+      view += `\n` + UI.boxEnd();
+      return message.reply(view);
+    }
+
+    // ==========================================
+    // 🕵️ SOUS-COMMANDE : SECRET (CONTRATS CLASSIFIÉS)
+    // ==========================================
+    if (subCommand === "secret") {
+      // Les quêtes secrètes se débloquent à 7% de chance lors des combats arena ou explorations pirate
+      if (!qData.secret || qData.secret.length === 0) {
+        return message.reply("🕵️ | Aucun document classifié n'est disponible. Poursuivez vos actions dans `arena` et `pirate` pour intercepter un signal crypté.");
+      }
+
+      let view = UI.boxStart("Contrats Secrets Résolus") + `\n`;
+      qData.secret.forEach(q => {
+        const diff = DIFFICULTIES[q.difficulty];
+        const status = q.claimed ? "✅ RETIRÉ" : (q.current >= q.target ? "⭐ DECRYPTÉ (claim)" : "📡 EN ÉCOUTE");
+        view += `👁️‍🗨️ [ID: **${q.id}**] Priorité : ${diff.color} **${diff.name}**\n`;
+        view += `│ 🎯 Opération : ${q.text}\n`;
+        view += `│ 📊 État des serveurs : ${UI.progressBar(q.current, q.target)} [${q.current}/${q.target}]\n`;
+        view += `│ 💰 Prime d'agent : +${q.reward.money.toLocaleString()}$\n`;
+        view += `│ ⚡ Statut : \`${status}\`\n${UI.line}\n`;
+      });
+
+      view += `ℹ️ *Évacuer les fonds secrets : \`quest claim secret <ID>\`*`;
+      view += `\n` + UI.boxEnd();
+      return message.reply(view);
     }
