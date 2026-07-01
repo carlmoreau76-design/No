@@ -479,3 +479,201 @@ module.exports = {
 
       return message.reply(collectBox);
         }
+
+    // ==========================================
+    // 💰 SOUS-COMMANDE : SELL (LIQUIDATION ET INTERCONNEXION ÉCONOMIQUE)
+    // ==========================================
+    if (subCommand === "sell") {
+      if (Object.keys(rData.storage).length === 0) {
+        return message.reply("📦 | Votre entrepôt est vide. Lancez une récolte via `~ranch collect` avant de venir au marché.");
+      }
+
+      let totalGains = 0;
+      let soldSummary = "";
+
+      // Parcours du stock et calcul de la valeur nette selon l'encyclopédie
+      for (const [prodName, qty] of Object.entries(rData.storage)) {
+        if (qty > 0) {
+          // Extraction du template de l'animal produisant cette denrée pour connaître sa valeur de base
+          const template = Object.values(ANIMAL_TEMPLATES).find(t => t.product === prodName);
+          const baseValue = template ? template.baseValue : 100;
+          
+          const itemGain = baseValue * qty;
+          totalGains += itemGain;
+          soldSummary += `│ ➔ ${prodName} : **x${qty}** vendu pour **+${itemGain.toLocaleString()}$**\n`;
+          
+          // Vidage de l'emplacement de stockage
+          rData.storage[prodName] = 0;
+        }
+      }
+
+      if (totalGains === 0) {
+        return message.reply("📦 | Vous n'avez aucune marchandise quantifiable prête pour le commerce.");
+      }
+
+      // Crédit immédiat sur le portefeuille global usersData (Interconnexion bank.js / usersData)
+      userMoney += totalGains;
+      await usersData.set(senderID, { money: userMoney });
+
+      // Archivage des statistiques globales du ranch
+      rData.stats.totalEarnings += totalGains;
+      savePlayerRanch(senderID, rData);
+
+      let sellBox = UI.boxStart("Bordereau de Vente") + `\n`;
+      sellBox += `${soldSummary}`;
+      sellBox += `${UI.line}\n`;
+      sellBox += `│ 🪙 Chèque de l'administration : **+${totalGains.toLocaleString()}$**\n`;
+      sellBox += `│ 💰 Votre nouveau solde en poche : **${userMoney.toLocaleString()}$**\n`;
+      sellBox += UI.boxEnd();
+
+      return message.reply(sellBox);
+    }
+
+    // ==========================================
+    // 🏡 SOUS-COMMANDE : UPGRADE (EXTENSION IMMOBILIÈRE DE LA FERME)
+    // ==========================================
+    if (subCommand === "upgrade") {
+      const nextLevel = rData.level + 1;
+      const upgradeConfig = RANCH_UPGRADES.find(u => u.level === nextLevel);
+
+      if (!upgradeConfig) {
+        return message.reply("👑 | Félicitations ! Votre Domaine Agricole a déjà atteint le palier d'évolution maximal (**Ranch Mythique**).");
+      }
+
+      if (userMoney < upgradeConfig.cost) {
+        return message.reply(`❌ | L'expansion foncière vers le rang de **${upgradeConfig.name}** exige des frais de **${upgradeConfig.cost.toLocaleString()}$**. Vos économies sont insuffisantes.`);
+      }
+
+      // Débit des coûts de construction
+      userMoney -= upgradeConfig.cost;
+      await usersData.set(senderID, { money: userMoney });
+
+      // Mutation de niveau du Ranch
+      rData.level = nextLevel;
+      savePlayerRanch(senderID, rData);
+
+      let upBox = UI.boxStart("Extension de Propriété") + `\n`;
+      upBox += `│ 🏛️ Nouveau Statut : **${upgradeConfig.name}** (Niv.${nextLevel})\n`;
+      upBox += `│ 👥 Capacité Maximale : **${upgradeConfig.capacity}** bêtes simultanées\n`;
+      upBox += `│ ⚡ Vitesse de Production : **+${Math.floor((upgradeConfig.speedBonus - 1) * 100)}%** globale\n`;
+      upBox += `${UI.line}\n│ *Investissement foncier réglé : -${upgradeConfig.cost.toLocaleString()}$*\n` + UI.boxEnd();
+
+      return message.reply(upBox);
+    }
+
+    // ==========================================
+    // 🥚 SOUS-COMMANDE : BREED (REPRODUCTION ET CROSS-BREEDING RPG)
+    // ==========================================
+    if (subCommand === "breed") {
+      const idx1 = parseInt(args[1]) - 1;
+      const idx2 = parseInt(args[2]) - 1;
+
+      if (isNaN(idx1) || isNaN(idx2) || idx1 === idx2 || idx1 < 0 || idx2 < 0 || idx1 >= rData.animals.length || idx2 >= rData.animals.length) {
+        return message.reply("❌ | Paramètres erronés. Usage : `~ranch breed <index_parent_1> <index_parent_2>` (Ex: `~ranch breed 1 2`)");
+      }
+
+      const parentA = rData.animals[idx1];
+      const parentB = rData.animals[idx2];
+
+      if (parentA.baseId !== parentB.baseId) {
+        return message.reply("❌ | Hybridation impossible ! Les deux animaux sélectionnés doivent appartenir à la même espèce pour se reproduire.");
+      }
+
+      const currentConfig = RANCH_UPGRADES.find(u => u.level === rData.level) || RANCH_UPGRADES[0];
+      if (rData.animals.length >= currentConfig.capacity) {
+        return message.reply("❌ | Votre incubateur est verrouillé : votre ranch a atteint sa capacité animale maximale.");
+      }
+
+      if (parentA.hunger < 50 || parentB.hunger < 50) {
+        return message.reply("❌ | Vos animaux sont trop affamés pour entamer une période de reproduction. Nourrissez-les d'abord.");
+      }
+
+      // Algorithme de brassage des raretés du nouveau-né (Gacha-breeding)
+      const roll = Math.random();
+      let finalRarity = "common";
+      
+      // Si l'un des parents possède une rareté élevée, cela augmente passivement les chances de mutation
+      const luckFactor = (parentA.rarity === "epic" || parentB.rarity === "epic") ? 0.15 : (parentA.rarity === "legendary" || parentB.rarity === "legendary") ? 0.30 : 0.0;
+
+      if (roll + luckFactor > 0.95) finalRarity = "mythic";
+      else if (roll + luckFactor > 0.82) finalRarity = "legendary";
+      else if (roll + luckFactor > 0.60) finalRarity = "epic";
+      else if (roll + luckFactor > 0.35) finalRarity = "rare";
+
+      const template = ANIMAL_TEMPLATES[parentA.baseId];
+
+      // Génération de l'identité du bébé dans la base de données
+      rData.animals.push({
+        baseId: template.id,
+        customName: `Bébé ${template.name}`,
+        level: 1,
+        xp: 0,
+        rarity: finalRarity,
+        health: 100,
+        hunger: 80,
+        happiness: 100,
+        lastFed: Date.now(),
+        lastCollect: Date.now()
+      });
+
+      // Fatigue des parents suite à la mise bas
+      parentA.hunger = Math.max(10, parentA.hunger - 40);
+      parentB.hunger = Math.max(10, parentB.hunger - 40);
+      parentA.happiness = Math.max(20, parentA.happiness - 20);
+      parentB.happiness = Math.max(20, parentB.happiness - 20);
+
+      rData.stats.successfulBreeds += 1;
+      savePlayerRanch(senderID, rData);
+
+      const rarityDetails = RARITIES[finalRarity];
+      let breedBox = UI.boxStart("Éclosion & Naissance") + `\n`;
+      breedBox += `│ 👶 Un nouveau-né vient de pointer le bout de son nez dans la paille !\n`;
+      breedBox += `${UI.line}\n`;
+      breedBox += `│ ➔ Espèce : ${template.emoji} **${template.name}**\n`;
+      breedBox += `│ ➔ Rareté Mutation : ${rarityDetails.color} **${rarityDetails.name}**\n`;
+      breedBox += `│ *Les parents (ID: ${idx1 + 1} & ID: ${idx2 + 1}) se reposent désormais en étable.*\n`;
+      breedBox += UI.boxEnd();
+
+      return message.reply(breedBox);
+    }
+
+    // ==========================================
+    // 📈 SOUS-COMMANDE : LEADERBOARD (CLASSEMENT DES EXPLOITANTS)
+    // ==========================================
+    if (subCommand === "leaderboard" || subCommand === "top") {
+      const fullDb = readDB(RANCH_FILE);
+      let leaderboardList = [];
+
+      for (const [uid, data] of Object.entries(fullDb)) {
+        if (data.animals && data.animals.length > 0) {
+          leaderboardList.push({
+            uid: uid,
+            count: data.animals.length,
+            earnings: data.stats.totalEarnings,
+            level: data.level
+          });
+        }
+      }
+
+      if (leaderboardList.length === 0) {
+        return message.reply("🏁 | Aucun registre agricole n'est encore enregistré auprès de l'Empire.");
+      }
+
+      // Tri décroissant basé sur le chiffre d'affaires cumulé du ranch
+      leaderboardList.sort((a, b) => b.earnings - a.earnings);
+
+      let topMsg = `🏆 **[CLASSEMENT DES GRANDS EXPLOITANTS AGRICOLES]**\n${UI.line}\n`;
+      for (let i = 0; i < Math.min(10, leaderboardList.length); i++) {
+        const item = leaderboardList[i];
+        const uName = (await usersData.get(item.uid))?.name || "Fermier Anonyme";
+        const configRef = RANCH_UPGRADES.find(u => u.level === item.level) || RANCH_UPGRADES[0];
+        
+        topMsg += `${i + 1}. **${uName}** ➔ **${configRef.name}**\n│ 📋 ${item.count} Bêtes | 💰 CA Historique : ${item.earnings.toLocaleString()}$\n`;
+      }
+
+      return message.reply(topMsg);
+    }
+
+    return message.reply("❌ | Option inconnue. Saisissez la commande principale `~ranch` pour afficher la liste des actions.");
+  }
+};
