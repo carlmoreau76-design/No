@@ -1,719 +1,163 @@
 /**
  * @file ranch.js
- * @description Simulateur d'Élevage RPG Ultra Premium Multi-Ressources pour GoatBot v2
- * @command ranch
- * @credits Format GoatBot v2 & Canvas Engine Premium
+ * @description Simulateur d'Élevage RPG & Gestion de Domaine Agricole pour GoatBot v2
+ * @version 1.0.0
+ * @author Collaborateur IA RPG
  */
 
 const fs = require('fs');
 const path = require('path');
-const { createCanvas, loadImage } = require('canvas');
 
-// Chemins de sauvegarde du Ranch
-const DATA_DIR = path.join(__dirname, 'cache', 'ranchData');
-const RANCH_FILE = path.join(DATA_DIR, 'ranchers.json');
-const COOLDOWNS_FILE = path.join(DATA_DIR, 'cooldowns.json');
+// ==========================================
+// 📁 CONFIGURATION ET PERSISTANCE DES DONNÉES
+// ==========================================
+const DATA_DIR = path.join(__dirname, 'cache', 'ranchMMO');
+const RANCH_FILE = path.join(DATA_DIR, 'player_ranches.json');
 
-// Création des dossiers si inexistants
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(RANCH_FILE)) fs.writeFileSync(RANCH_FILE, JSON.stringify({}, null, 2));
-if (!fs.existsSync(COOLDOWNS_FILE)) fs.writeFileSync(COOLDOWNS_FILE, JSON.stringify({}, null, 2));
 
-// Jeton d'accès Facebook pour les avatars HD (Synchronisé)
-const FB_TOKEN = "6628568379|c1e620fa708a1d5696fb991c1bde5662";
-
-// --- BASE DE DONNÉES DES ANIMAUX ---
-const ANIMALS_DB = {
-  poulet: { id: "poulet", name: "Poulet", emoji: "🐔", cost: 500, rarity: "commune", product: "oeuf", basePrice: 50, time: 60, expGiven: 10 },
-  canard: { id: "canard", name: "Canard", emoji: "🦆", cost: 1200, rarity: "commune", product: "plumes", basePrice: 130, time: 120, expGiven: 18 },
-  lapin: { id: "lapin", name: "Lapin", emoji: "🐇", cost: 2500, rarity: "commune", product: "laine_douce", basePrice: 280, time: 180, expGiven: 25 },
-  mouton: { id: "mouton", name: "Mouton", emoji: "🐑", cost: 6000, rarity: "rare", product: "laine", basePrice: 700, time: 300, expGiven: 50 },
-  chevre: { id: "chevre", name: "Chèvre", emoji: "🐐", cost: 9500, rarity: "rare", product: "fromage", basePrice: 1100, time: 420, expGiven: 75 },
-  cochon: { id: "cochon", name: "Cochon", emoji: "🐖", cost: 15000, rarity: "rare", product: "truffes", basePrice: 1900, time: 600, expGiven: 110 },
-  vache: { id: "vache", name: "Vache", emoji: "🐄", cost: 32000, rarity: "epique", product: "lait", basePrice: 4200, time: 900, expGiven: 220 },
-  cheval: { id: "cheval", name: "Cheval", emoji: "🐎", cost: 55000, rarity: "epique", product: "fer_or", basePrice: 7500, time: 1200, expGiven: 350 },
-  lama: { id: "lama", name: "Lama", emoji: "🦙", cost: 85000, rarity: "epique", product: "fourrure_imperiale", basePrice: 12500, time: 1800, expGiven: 500 },
-  bison: { id: "bison", name: "Bison", emoji: "🦬", cost: 160000, rarity: "legendaire", product: "corne_bison", basePrice: 26000, time: 2700, expGiven: 1000 },
-  cerf: { id: "cerf", name: "Cerf", emoji: "🦌", cost: 240000, rarity: "legendaire", product: "bois_magique", basePrice: 41000, time: 3600, expGiven: 1600 },
-  elephant: { id: "elephant", name: "Éléphant", emoji: "🐘", cost: 500000, rarity: "legendaire", product: "ivoire_ancien", basePrice: 95000, time: 5400, expGiven: 3000 },
-  licorne: { id: "licorne", name: "Licorne", emoji: "🦄", cost: 1500000, rarity: "legendaire", product: "corne_arc_en_ciel", basePrice: 320000, time: 7200, expGiven: 7000 },
-  dragon: { id: "dragon", name: "Dragon", emoji: "🐉", cost: 5000000, rarity: "mythique", product: "ecaille_feu", basePrice: 1200000, time: 14400, expGiven: 20000 },
-  dragon_divin: { id: "dragon_divin", name: "Dragon Divin", emoji: "🐲", cost: 15000000, rarity: "divine", product: "essence_cosmique", basePrice: 4500000, time: 28800, expGiven: 60000 }
+// ==========================================
+// 🧬 ENCYCLOPÉDIE DES ANIMAUX ET RARÈTÉS
+// ==========================================
+const RARITIES = {
+  common: { name: "Commun", color: "⚪", mult: 1.0 },
+  rare: { name: "Rare", color: "🔵", mult: 1.8 },
+  epic: { name: "Épique", color: "🟣", mult: 2.8 },
+  legendary: { name: "Légendaire", color: "🟠", mult: 4.5 },
+  mythic: { name: "Mythique", color: "🔴", mult: 8.0 },
+  divine: { name: "Divin Ultimate", color: "🌈", mult: 15.0 }
 };
 
-// --- BASE DE DONNÉES DES INFRASTRUCTURES ---
-const UPGRADES_DB = [
-  { level: 1, name: "Petite Ferme", maxAnimals: 5, cost: 0, mult: 1.0 },
-  { level: 2, name: "Grande Ferme", maxAnimals: 12, cost: 25000, mult: 1.2 },
-  { level: 3, name: "Ranch Spacieux", maxAnimals: 25, cost: 150000, mult: 1.5 },
-  { level: 4, name: "Domaine de l'Éleveur", maxAnimals: 50, cost: 750000, mult: 2.0 },
-  { level: 5, name: "Ferme Royale", maxAnimals: 100, cost: 3500000, mult: 3.0 },
-  { level: 6, name: "Ranch Mythique", maxAnimals: 250, cost: 12000000, mult: 5.0 }
+const ANIMAL_TEMPLATES = {
+  poulet: { id: "poulet", name: "Poulet", emoji: "🐔", cost: 5000, rarity: "common", prodTime: 60, product: "🥚 Œuf de Ferme", baseValue: 150 },
+  canard: { id: "canard", name: "Canard", emoji: "🦆", cost: 12000, rarity: "common", prodTime: 90, product: "🪶 Plume Soyeuse", baseValue: 400 },
+  lapin: { id: "lapin", name: "Lapin", emoji: "🐇", cost: 25000, rarity: "common", prodTime: 120, product: "🧶 Fourrure Douce", baseValue: 900 },
+  mouton: { id: "mouton", name: "Mouton", emoji: "🐑", cost: 60000, rarity: "common", prodTime: 180, product: "🧶 Pelote de Laine", baseValue: 2200 },
+  chevre: { id: "chevre", name: "Chèvre", emoji: "🐐", cost: 130000, rarity: "rare", prodTime: 240, product: "🧀 Fromage de Chèvre", baseValue: 5500 },
+  cochon: { id: "cochon", name: "Cochon", emoji: "🐖", cost: 280000, rarity: "rare", prodTime: 300, product: "🍖 Viande de Qualité", baseValue: 12000 },
+  vache: { id: "vache", name: "Vache", emoji: "🐄", cost: 650000, rarity: "rare", prodTime: 360, product: "🥛 Litre de Lait", baseValue: 28000 },
+  cheval: { id: "cheval", name: "Cheval", emoji: "🐎", cost: 1500000, rarity: "epic", prodTime: 420, product: "🐎 Fer de Chance", baseValue: 70000 },
+  lama: { id: "lama", name: "Lama", emoji: "🦙", cost: 3500000, rarity: "epic", prodTime: 480, product: "🧶 Laine de Lama Alpaga", baseValue: 180000 },
+  bison: { id: "bison", name: "Bison", emoji: "🦬", cost: 8000000, rarity: "epic", prodTime: 600, product: "🦬 Cuir Épais", baseValue: 450000 },
+  cerf: { id: "cerf", name: "Cerf des Forêts", emoji: "🦌", cost: 18000000, rarity: "legendary", prodTime: 720, product: "🦌 Bois Sacré", baseValue: 1100000 },
+  elephant: { id: "elephant", name: "Éléphant", emoji: "🐘", cost: 45000000, rarity: "legendary", prodTime: 900, product: "🏺 Relique d'Ivoire", baseValue: 3000000 },
+  licorne: { id: "licorne", name: "Licorne Majestueuse", emoji: "🦄", cost: 120000000, rarity: "legendary", prodTime: 1200, product: "🔮 Crine Luminescent", baseValue: 9500000 },
+  dragon: { id: "dragon", name: "Dragon Antique", emoji: "🐉", cost: 350000000, rarity: "mythic", prodTime: 1800, product: "🔥 Écaille de Soufre", baseValue: 32000000 },
+  dragon_divin: { id: "dragon_divin", name: "Dragon Céleste Divin", emoji: "🐲", cost: 1000000000, rarity: "divine", prodTime: 3600, product: "💎 Essence d'Éternité", baseValue: 110000000 }
+};
+
+// ==========================================
+// 🏡 STRUCTURES DE RANCH EVOLUTIVES
+// ==========================================
+const RANCH_UPGRADES = [
+  { level: 1, name: "Petite Ferme", capacity: 4, cost: 0, speedBonus: 1.0 },
+  { level: 2, name: "Grande Ferme", capacity: 8, cost: 250000, speedBonus: 1.05 },
+  { level: 3, name: "Ranch Professionnel", capacity: 15, cost: 1500000, speedBonus: 1.15 },
+  { level: 4, name: "Domaine Agricole", capacity: 30, cost: 10000000, speedBonus: 1.30 },
+  { level: 5, name: "Ferme Royale", capacity: 60, cost: 75000000, speedBonus: 1.50 },
+  { level: 6, name: "Ranch Mythique Interdimensionnel", capacity: 120, cost: 500000000, speedBonus: 2.00 }
 ];
 
-// --- TYPES DE NOURRITURE ---
-const FOOD_DB = {
-  herbe: { name: "Herbe Fraîche", cost: 15, hungerRestore: 20, joyRestore: 5, emoji: "🌿" },
-  ble: { name: "Blé Doré", cost: 40, hungerRestore: 45, joyRestore: 10, emoji: "🌾" },
-  mais: { name: "Maïs Sucré", cost: 90, hungerRestore: 70, joyRestore: 15, emoji: "🌽" },
-  carotte: { name: "Carottes Croquantes", cost: 180, hungerRestore: 90, joyRestore: 25, emoji: "🥕" },
-  premium: { name: "Nourriture Premium", cost: 500, hungerRestore: 100, joyRestore: 60, emoji: "🍱" }
+// ==========================================
+// 🌾 NOURRITURE ET COMPOSANTS DU SILO
+// ==========================================
+const FOOD_TYPES = {
+  herbe: { name: "Herbe Fraîche", cost: 100, restore: 15 },
+  ble: { name: "Blé Doré", cost: 250, restore: 30 },
+  mais: { name: "Maïs Sucré", cost: 600, restore: 50 },
+  carotte: { name: "Carotte Juteuse", cost: 1500, restore: 75 },
+  premium: { name: "Croquettes Alpha Premium", cost: 5000, restore: 100 }
 };
 
-// --- CONFIGURATION DES RARETÉS ---
-const RARITIES = {
-  commune: { name: "Commune", color: "#b0b0b0", statMult: 1.0 },
-  rare: { name: "Rare", color: "#00cf64", statMult: 1.4 },
-  epique: { name: "Épique", color: "#00bfff", statMult: 2.0 },
-  legendaire: { name: "Légendaire", color: "#ff0055", statMult: 3.2 },
-  mythique: { name: "Mythique", color: "#a020f0", statMult: 5.5 },
-  divine: { name: "Divine", color: "#ffd700", statMult: 10.0 }
-};
+// ==========================================
+// 🛠️ OUTILS ET UTILITIES DE SYNCHRONISATION
+// ==========================================
+function readDB(file) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return {}; }
+}
+function writeDB(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+}
 
-// --- FONCTIONS DE PERSISTANCE ---
-function readJSON(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-function writeJSON(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8'); }
-
-function getRanch(uid) {
-  const data = readJSON(RANCH_FILE);
-  if (!data[uid]) {
-    data[uid] = {
-      uid: uid,
-      rankLevel: 1,
+function getPlayerRanch(uid) {
+  const db = readDB(RANCH_FILE);
+  if (!db[uid]) {
+    db[uid] = {
+      level: 1,
       animals: [],
-      warehouse: {},
-      foodStorage: { herbe: 10, ble: 0, mais: 0, carotte: 0, premium: 0 },
-      totals: { collected: 0, earnings: 0, bred: 0 }
+      storage: {}, // Produits récoltés en attente de vente
+      silo: { herbe: 10, ble: 5, mais: 0, carotte: 0, premium: 0 },
+      stats: { totalCollected: 0, totalEarnings: 0, successfulBreeds: 0 }
     };
-    writeJSON(RANCH_FILE, data);
+    writeDB(RANCH_FILE, db);
   }
-  return data[uid];
+  return db[uid];
 }
 
-function updateRanch(uid, obj) {
-  const data = readJSON(RANCH_FILE);
-  data[uid] = obj;
-  writeJSON(RANCH_FILE, data);
+function savePlayerRanch(uid, data) {
+  const db = readDB(RANCH_FILE);
+  db[uid] = data;
+  writeDB(RANCH_FILE, db);
 }
 
-// --- DESSIN DES FORMES AVEC BORDURES ARRONDIES ---
-function drawRoundRect(ctx, x, y, width, height, radius) {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
-}
-
-// --- RENDU CANVAS : CARTE D'INTERFACE DU RANCH ---
-async function drawRanchCard(title, rData, uid) {
-  const canvas = createCanvas(850, 550);
-  const ctx = canvas.getContext('2d');
-  const infra = UPGRADES_DB[rData.rankLevel - 1] || UPGRADES_DB[0];
-
-  // Fond Sombre Cyber-Ranch
-  ctx.fillStyle = '#090a0f';
-  ctx.fillRect(0, 0, 850, 550);
-
-  // Grille technologique néon rouge
-  ctx.strokeStyle = 'rgba(255, 0, 60, 0.02)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 850; i += 30) {
-    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 550); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(850, i); ctx.stroke();
+const UI = {
+  line: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+  boxStart: (title) => `╭───────────── 🚜 ─────────────╮\n│ 🌾  ${title.toUpperCase()}\n├───────────────────────────────`,
+  boxEnd: () => `╰───────────────────────────────╯`,
+  bar: (current, max, filledEmoji = "🟩", emptyEmoji = "⬛") => {
+    const progress = Math.min(10, Math.max(0, Math.round((current / max) * 10)));
+    return filledEmoji.repeat(progress) + emptyEmoji.repeat(10 - progress);
   }
+};
 
-  // Cadre double néon Rouge Impérial et Or
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = '#ff003c';
-  ctx.shadowColor = '#ff003c';
-  ctx.shadowBlur = 18;
-  drawRoundRect(ctx, 25, 25, 800, 500, 18);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#ffd700';
-  drawRoundRect(ctx, 32, 32, 786, 486, 14);
-  ctx.stroke();
-
-  // En-tête de l'interface
-  ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 38px sans-serif';
-  ctx.fillText(title.toUpperCase(), 60, 90);
-
-  ctx.fillStyle = '#66fcf1';
-  ctx.font = 'italic 18px sans-serif';
-  ctx.fillText(`Structure : ${infra.name} (Niv. ${infra.level})`, 60, 125);
-
-  // Ligne de séparation ornementale
-  ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(60, 145); ctx.lineTo(790, 145); ctx.stroke();
-
-  // Statistiques Générales du Domaine
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 20px sans-serif';
-  ctx.fillText(`📊 STATS DU DOMAINE :`, 60, 195);
-  
-  ctx.font = '18px sans-serif';
-  ctx.fillText(`• Population : ${rData.animals.length} / ${infra.maxAnimals} animaux`, 80, 230);
-  ctx.fillText(`• Multiplicateur de gains : x${infra.mult.toFixed(1)}`, 80, 260);
-  ctx.fillText(`• Produits en stock : ${Object.values(rData.warehouse).reduce((a, b) => a + b, 0)} unités`, 80, 290);
-  ctx.fillText(`• Naissances enregistrées : ${rData.totals.bred} bébés`, 80, 320);
-
-  // --- REFUGE ALIMENTAIRE (STOCK DE NOURRITURE) ---
-  ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 20px sans-serif';
-  ctx.fillText(`🌾 SILO DE NOURRITURE :`, 60, 380);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '16px sans-serif';
-  let posX = 80;
-  for (const [key, amount] of Object.entries(rData.foodStorage)) {
-    const foodItem = FOOD_DB[key];
-    ctx.fillText(`${foodItem.emoji} ${foodItem.name} : x${amount}`, posX, 420);
-    posX += 140;
-  }
-
-  // --- RENDU PROGRESSION CAPACITÉ ---
-  const fillPct = Math.min(100, (rData.animals.length / infra.maxAnimals) * 100);
-  ctx.fillStyle = '#14151f';
-  drawRoundRect(ctx, 60, 465, 450, 25, 6);
-  ctx.fill();
-
-  if (fillPct > 0) {
-    const grad = ctx.createLinearGradient(60, 465, 60 + (450 * (fillPct / 100)), 465);
-    grad.addColorStop(0, '#8b0000');
-    grad.addColorStop(1, '#ff003c');
-    ctx.fillStyle = grad;
-    drawRoundRect(ctx, 60, 465, 450 * (fillPct / 100), 25, 6);
-    ctx.fill();
-  }
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 14px sans-serif';
-  ctx.fillText(`Occupation des Terres : ${fillPct.toFixed(0)}%`, 80, 482);
-
-  // --- INTÉGRATION DE L'AVATAR VIA FB_TOKEN ---
-  if (uid) {
-    try {
-      const avatarUrl = `https://graph.facebook.com/${uid}/picture?width=512&height=512&access_token=${encodeURIComponent(FB_TOKEN)}`;
-      const avatar = await loadImage(avatarUrl);
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(680, 270, 85, 0, Math.PI * 2, true);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(avatar, 595, 185, 170, 170);
-      ctx.restore();
-
-      // Cercle d'or
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#ffd700';
-      ctx.shadowColor = '#ffd700';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(680, 270, 85, 0, Math.PI * 2, true);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    } catch (e) {
-      // Évite le blocage si l'avatar échoue à charger
-    }
-  }
-
-  return canvas.toBuffer();
-}
-
-// --- RENDU CANVAS : FOCUS SUR UN ANIMAL SÉLECTIONNÉ ---
-async function drawAnimalFocusCard(animal, index) {
-  const canvas = createCanvas(700, 320);
-  const ctx = canvas.getContext('2d');
-  const rar = RARITIES[animal.rarity] || RARITIES.commune;
-
-  ctx.fillStyle = '#0c0d14';
-  ctx.fillRect(0, 0, 700, 320);
-
-  // Bordure Néon de rareté
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = rar.color;
-  ctx.shadowColor = rar.color;
-  ctx.shadowBlur = 12;
-  drawRoundRect(ctx, 20, 20, 660, 280, 12);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  // Identité
-  ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 30px sans-serif';
-  ctx.fillText(`${animal.emoji} ${animal.customName || animal.name} [Slot #${index + 1}]`, 40, 65);
-
-  ctx.fillStyle = rar.color;
-  ctx.font = 'bold 16px sans-serif';
-  ctx.fillText(`CLASSIFICATION : ${rar.name.toUpperCase()}`, 40, 95);
-
-  // Statistiques vitaux
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '18px sans-serif';
-  ctx.fillText(`• Niveau Évolutif : ${animal.level} (Âge : ${animal.age} cycles)`, 40, 140);
-  ctx.fillText(`• ❤️ Santé : ${animal.health} / 100`, 40, 175);
-  ctx.fillText(`• 🍖 Faim : ${animal.hunger} / 100`, 40, 210);
-  ctx.fillText(`• 😊 Bonheur : ${animal.joy} / 100`, 40, 245);
-
-  // Valeur marchande à droite
-  ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 20px sans-serif';
-  ctx.fillText(`💵 ESTIMATION`, 480, 140);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '18px sans-serif';
-  ctx.fillText(`Valeur : ${animal.sellValue}$`, 480, 175);
-  ctx.fillText(`Revenus : ${animal.revenue}$/h`, 480, 210);
-
-  return canvas.toBuffer();
-              }
-
-// --- ALGORITHME DE REPRODUCTION (BREEDING ENGINE) ---
-function executeBreeding(parent1, parent2) {
-  // Détermination de la rareté du bébé avec bonus si les parents sont rares
-  const roll = Math.random();
-  let finalRarity = "commune";
-  
-  let bonusChance = 0;
-  if (parent1.rarity === "rare" || parent2.rarity === "rare") bonusChance += 0.10;
-  if (parent1.rarity === "epique" || parent2.rarity === "epique") bonusChance += 0.20;
-  if (parent1.rarity === "legendaire" || parent2.rarity === "legendaire") bonusChance += 0.35;
-
-  if (roll + bonusChance > 0.98) finalRarity = "divine";
-  else if (roll + bonusChance > 0.92) finalRarity = "mythique";
-  else if (roll + bonusChance > 0.78) finalRarity = "legendaire";
-  else if (roll + bonusChance > 0.55) finalRarity = "epique";
-  else if (roll + bonusChance > 0.30) finalRarity = "rare";
-
-  // Le bébé hérite du type de l'un des deux parents de manière équitable
-  const chosenTemplateKey = Math.random() > 0.5 ? parent1.id : parent2.id;
-  const template = ANIMALS_DB[chosenTemplateKey];
-  const rarOpt = RARITIES[finalRarity];
-
-  // Calcul des valeurs initiales indexées sur la rareté obtenue
-  const initialValue = Math.floor(template.cost * 0.4 * rarOpt.statMult);
-  const calculatedRevenue = Math.floor(template.basePrice * 0.5 * rarOpt.statMult);
-
-  return {
-    id: template.id,
-    name: template.name,
-    emoji: template.emoji,
-    customName: `Bébé ${template.name}`,
-    level: 1,
-    rarity: finalRarity,
-    health: 100,
-    joy: 100,
-    hunger: 60,
-    age: 0,
-    sellValue: initialValue,
-    revenue: calculatedRevenue,
-    lastCollected: Date.now(),
-    product: template.product
-  };
-}
-
-// --- SIMULATEUR D'ÉVÉNEMENTS ALÉATOIRES IMMERSIFS ---
-function triggerRandomEvent(ranchData, message, usersData) {
-  const roll = Math.random();
-  
-  // 1. L'Animal Brillant (Shiny) - Chance: 4%
-  if (roll < 0.04 && ranchData.animals.length > 0) {
-    const idx = Math.floor(Math.random() * ranchData.animals.length);
-    const target = ranchData.animals[idx];
-    if (!target.customName?.includes("✨")) {
-      target.customName = `✨ ${target.customName || target.name} ✨`;
-      target.sellValue = Math.floor(target.sellValue * 2);
-      target.revenue = Math.floor(target.revenue * 1.5);
-      message.reply(`🌈 | **ÉVÉNEMENT MAGIQUE :** Un de vos animaux a interagi avec une lueur mystique ! Votre **Slot #${idx + 1}** devient un animal **Brillant** ! Sa valeur marchande double.`);
-      return true;
-    }
-  }
-
-  // 2. Le Renard Voleur - Chance: 3% (Événement Malus)
-  if (roll >= 0.04 && roll < 0.07 && ranchData.animals.length > 2) {
-    const idx = Math.floor(Math.random() * ranchData.animals.length);
-    const removed = ranchData.animals[idx];
-    // Protection si l'animal est de rang divin ou mythique
-    if (removed.rarity !== "divine" && removed.rarity !== "mythique") {
-      ranchData.animals.splice(idx, 1);
-      message.reply(`🦊 | **ALERTE RANCH :** Un renard sournois s'est infiltré de nuit et a enlevé votre **${removed.name}** (Slot #${idx + 1}). Renforcez vos clôtures au shop !`);
-      return true;
-    }
-  }
-
-  // 3. La Tempête Dévastatrice - Chance: 3% (Événement Malus)
-  if (roll >= 0.07 && roll < 0.10 && ranchData.animals.length > 0) {
-    ranchData.animals.forEach(ani => {
-      ani.health = Math.max(10, ani.health - Math.floor(Math.random() * 40 + 10));
-      ani.joy = Math.max(10, ani.joy - 30);
-    });
-    message.reply(`🌪️ | **TEMPÊTE VIOLENTE :** Un cyclone a traversé votre domaine. Tous vos animaux perdent de la santé et du bonheur. Pensez à les soigner et les nourrir !`);
-    return true;
-  }
-
-  // 4. Le Fermier Mystérieux ou Marchand Ambulant - Chance: 5% (Bonus)
-  if (roll >= 0.10 && roll < 0.15) {
-    const seedKeys = Object.keys(FOOD_DB);
-    const randomSeed = seedKeys[Math.floor(Math.random() * seedKeys.length)];
-    ranchData.foodStorage[randomSeed] += 5;
-    message.reply(`👨‍🌾 | **VISITEUR INATTENDU :** Un vieux fermier itinérant passe sur vos terres et vous offre amicalement **x5 ${FOOD_DB[randomSeed].emoji} ${FOOD_DB[randomSeed].name}** !`);
-    return true;
-  }
-
-  // 5. La Pluie Bénéfique - Chance: 5% (Bonus)
-  if (roll >= 0.15 && roll < 0.20 && ranchData.animals.length > 0) {
-    ranchData.animals.forEach(ani => {
-      ani.health = Math.min(100, ani.health + 20);
-      ani.joy = Math.min(100, ani.joy + 15);
-    });
-    message.reply(`🌧️ | **PLUIE BÉNÉFIQUE :** Une ondée rafraîchissante nettoie les pâturages. Vos bêtes reprennent des forces (+20 ❤️ Santé / +15 😊 Bonheur).`);
-    return true;
-  }
-
-  return false;
-}
-
-// --- ACTUALISATION PAR CYCLE DE PRODUCTION ---
-function processCycleUpdate(ranchData) {
-  const now = Date.now();
-  let productionCounter = 0;
-
-  ranchData.animals.forEach(ani => {
-    const template = ANIMALS_DB[ani.id] || ANIMALS_DB.poulet;
-    const elapsedSeconds = Math.floor((now - ani.lastCollected) / 1000);
-    
-    // Calcul du nombre de cycles de production achevés depuis le dernier relevé
-    if (elapsedSeconds >= template.time) {
-      const completedCycles = Math.floor(elapsedSeconds / template.time);
-      if (completedCycles > 0) {
-        // Ajout au stockage du hangar
-        const prodKey = ani.product;
-        ranchData.warehouse[prodKey] = (ranchData.warehouse[prodKey] || 0) + completedCycles;
-        ranchData.totals.collected += completedCycles;
-        productionCounter += completedCycles;
-
-        // Dégradation progressive de la faim, de la santé et du bonheur par cycle de travail
-        ani.hunger = Math.max(0, ani.hunger - (completedCycles * 5));
-        ani.joy = Math.max(0, ani.joy - (completedCycles * 3));
-        
-        if (ani.hunger <= 20) {
-          ani.health = Math.max(0, ani.health - (completedCycles * 8));
-        }
-
-        // Gain d'expérience de l'animal
-        ani.age += completedCycles;
-        const totalExp = template.expGiven * completedCycles;
-        ani.level += Math.floor((ani.age) / 25); // Évolution de niveau tous les 25 cycles achevés
-
-        // Recalcul des courbes de valeur dynamiques de l'animal
-        const rarOpt = RARITIES[ani.rarity] || RARITIES.commune;
-        ani.sellValue = Math.floor(template.cost * 0.4 * rarOpt.statMult * (1 + ani.level * 0.1));
-        ani.revenue = Math.floor(template.basePrice * 0.5 * rarOpt.statMult * (1 + ani.level * 0.15));
-
-        ani.lastCollected = now;
-      }
-    }
-  });
-
-  return productionCounter;
-                                }
-
+// ==========================================
+// 🛡️ ACCROCHE ET CONFIGURATION GOATBOT V2
+// ==========================================
 module.exports = {
   config: {
     name: "ranch",
+    aliases: ["ferme", "elevage", "ranching", "farm"],
     version: "1.0.0",
-    author: "Gemini Engine RPG",
-    countDown: 3,
+    author: "Collaborateur IA RPG",
+    countDown: 2,
     role: 0,
-    description: "Simulateur d'élevage et de ranch RPG ultra premium.",
-    category: "game",
-    guide: {
-      fr: "{p}ranch [info | shop | inventory] | buy <type> | feed <slot> <nourriture> | collect | upgrade | breed <slot1> <slot2>",
-      en: "{p}ranch [info | shop | inventory] | buy <type> | feed <slot> <food> | collect | upgrade | breed <slot1> <slot2>"
-    }
+    description: "Simulateur complet de ranching RPG : Élevage, reproduction, cultures, récoltes et commerce.",
+    category: "economy",
+    guide: { fr: "{p}ranch [sous-commande]", en: "{p}ranch [subcommand]" }
   },
 
   onStart: async function ({ api, event, args, usersData, message }) {
-    const { senderID } = event;
-    const ranchData = getRanch(senderID);
-    
-    // Traitement automatique de la production passive à l'ouverture
-    const passiveCount = processCycleUpdate(ranchData);
-    updateRanch(senderID, ranchData);
-
-    let uData = await usersData.get(senderID);
-    let userMoney = uData.money || 0;
-
+    const { senderID, threadID } = event;
+    const rData = getPlayerRanch(senderID);
     const subCommand = args[0]?.toLowerCase();
 
-    // ==========================================
-    // 📊 BASE : INFO / CARTE DU DOMAINE
-    // ==========================================
-    if (!subCommand || subCommand === "info" || subCommand === "map") {
-      try {
-        const titleCard = `Ranch de ${uData.name || "Fermier"}`;
-        const cardBuffer = await drawRanchCard(titleCard, ranchData, senderID);
-        const cachePath = path.join(DATA_DIR, `map_${senderID}.png`);
-        fs.writeFileSync(cachePath, cardBuffer);
-
-        let msgText = `🏡 **[VOTRE DOMAINE AGRICOLE]**\n`;
-        if (passiveCount > 0) msgText += `📦 _Vos structures ont généré +${passiveCount} ressources pendant votre absence !_\n`;
-        msgText += `\n• Utilisez \`ranch inventory\` pour inspecter vos animaux.\n• Utilisez \`ranch shop\` pour agrandir votre cheptel.`;
-
-        return message.reply({ body: msgText, attachment: fs.createReadStream(cachePath) });
-      } catch (err) {
-        return message.reply("❌ | Une erreur est survenue lors de la génération de la carte du ranch.");
-      }
-    }
+    let userData = await usersData.get(senderID);
+    let userMoney = userData.money || 0;
 
     // ==========================================
-    // 🛒 BOUTIQUE / SHOP DU RANCH
+    // 📜 INTERFACE : MENU D'AIDE CENTRALISÉ
     // ==========================================
-    if (subCommand === "shop") {
-      let shopMsg = `🛒 **[MARCHÉ DU RANCH ET DES ÉLEVEURS]**\n\n`;
-      shopMsg += `🔹 **ANIMAUX DISPONIBLES :**\n`;
-      for (const [key, ani] of Object.entries(ANIMALS_DB)) {
-        shopMsg += `• \`ranch buy ${key}\` ➔ ${ani.emoji} **${ani.name}** : ${ani.cost}$ (${ani.rarity})\n`;
-      }
-      shopMsg += `\n🔹 **SACKS DE NOURRITURE :**\n`;
-      for (const [key, food] of Object.entries(FOOD_DB)) {
-        shopMsg += `• \`ranch buy food ${key}\` ➔ ${food.emoji} **${food.name}** : ${food.cost}$ (+${food.hungerRestore} Faim)\n`;
-      }
-      return message.reply(shopMsg);
-    }
-
-    // ==========================================
-    // 💰 ACHATS D'ANIMAUX OU DE NOURRITURE
-    // ==========================================
-    if (subCommand === "buy") {
-      const type = args[1]?.toLowerCase();
-      if (!type) return message.reply("❌ | Précisez l'élément à acheter. Exemple : `ranch buy poulet` ou `ranch buy food ble`.");
-
-      // Cas achat nourriture
-      if (type === "food") {
-        const foodKey = args[2]?.toLowerCase();
-        const foodItem = FOOD_DB[foodKey];
-        if (!foodItem) return message.reply("❌ | Type de nourriture inconnu au marché.");
-        
-        if (userMoney < foodItem.cost) return message.reply(`💰 | Vous n'avez pas assez d'or. Il vous faut ${foodItem.cost}$.`);
-        
-        userMoney -= foodItem.cost;
-        await usersData.set(senderID, { money: userMoney });
-
-        ranchData.foodStorage[foodKey] = (ranchData.foodStorage[foodKey] || 0) + 1;
-        updateRanch(senderID, ranchData);
-
-        return message.reply(`📦 | Vous achetez un sac de ${foodItem.emoji} **${foodItem.name}** pour **${foodItem.cost}$**.`);
-      }
-
-      // Cas achat animal
-      const animalTemplate = ANIMALS_DB[type];
-      if (!animalTemplate) return message.reply("❌ | Cet animal n'est pas répertorié à la foire agricole.");
-
-      const infra = UPGRADES_DB[ranchData.rankLevel - 1];
-      if (ranchData.animals.length >= infra.maxAnimals) {
-        return message.reply(`🏡 | Vos terres sont saturées (${ranchData.animals.length}/${infra.maxAnimals} animaux). Améliorez votre domaine avec \`ranch upgrade\`.`);
-      }
-
-      if (userMoney < animalTemplate.cost) return message.reply(`💰 | Fonds insuffisants. Coût de l'animal : **${animalTemplate.cost}$**.`);
-
-      userMoney -= animalTemplate.cost;
-      await usersData.set(senderID, { money: userMoney });
-
-      const newAnimal = {
-        id: animalTemplate.id,
-        name: animalTemplate.name,
-        emoji: animalTemplate.emoji,
-        customName: null,
-        level: 1,
-        rarity: "commune",
-        health: 100,
-        joy: 100,
-        hunger: 80,
-        age: 0,
-        sellValue: Math.floor(animalTemplate.cost * 0.4),
-        revenue: Math.floor(animalTemplate.basePrice * 0.5),
-        lastCollected: Date.now(),
-        product: animalTemplate.product
-      };
-
-      ranchData.animals.push(newAnimal);
-      updateRanch(senderID, ranchData);
-
-      return message.reply(`🎉 | Félicitations ! Vous accueillez un magnifique **${animalTemplate.name}** ${animalTemplate.emoji} dans votre enclos.`);
-    }
-
-    // ==========================================
-    // 📦 REVISE / INVENTAIRE DES ANIMAUX
-    // ==========================================
-    if (subCommand === "inventory" || subCommand === "inv") {
-      if (ranchData.animals.length === 0) return message.reply("🌾 | Vos granges sont désespérément vides. Visitez le \`ranch shop\`.");
-
-      const slotIdx = parseInt(args[1]) - 1;
-      
-      // Focus sur un animal spécifique si demandé
-      if (!isNaN(slotIdx) && slotIdx >= 0 && slotIdx < ranchData.animals.length) {
-        const targetAnimal = ranchData.animals[slotIdx];
-        try {
-          const focusBuffer = await drawAnimalFocusCard(targetAnimal, slotIdx);
-          const cacheFocusPath = path.join(DATA_DIR, `focus_${senderID}.png`);
-          fs.writeFileSync(cacheFocusPath, focusBuffer);
-          return message.reply({ body: `🔎 Fiche d'élevage détaillée — Slot #${slotIdx + 1}`, attachment: fs.createReadStream(cacheFocusPath) });
-        } catch (e) {
-          return message.reply(`📋 **[SLOT #${slotIdx + 1}]** — ${targetAnimal.emoji} ${targetAnimal.customName || targetAnimal.name} (Niv. ${targetAnimal.level})\n❤️ Santé: ${targetAnimal.health}/100 | 🍖 Faim: ${targetAnimal.hunger}/100`);
+    if (!subCommand) {
+      let menu = `╭───────────────────────────────────────╮\n`;
+      menu += `│ 🚜  𝐒𝐘𝐒𝐓È𝐌𝐄 𝐃𝐄 𝐑𝐀𝐍𝐂𝐇𝐈𝐍𝐆 𝐑𝐏𝐆\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🔹 ~ranch info : Bilan général de votre domaine\n`;
+      menu += `│ 🔹 ~ranch inventory : Consulter votre bétail\n`;
+      menu += `│ 🔹 ~ranch shop : Commander des animaux & semences\n`;
+      menu += `│ 🔹 ~ranch buy <animal|nourriture> <nom> : Achats\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🥩 𝐋𝐎𝐆𝐈𝐒𝐓𝐈𝐐𝐔𝐄 & 𝐏𝐑𝐎𝐃𝐔𝐂𝐓𝐈𝐎𝐍\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🔹 ~ranch feed <index|all> <aliment> : Nourrir\n`;
+      menu += `│ 🔹 ~ranch collect : Récolter la production laitière/œufs\n`;
+      menu += `│ 🔹 ~ranch sell : Liquider le stock au marché local\n`;
+      menu += `│ 🔹 ~ranch breed <index1> <index2> : Lancer une gestation\n`;
+      menu += `│ 🔹 ~ranch upgrade : Agrandir vos infrastructures\n`;
+      menu += `│ 🔹 ~ranch leaderboard : Classement des gros exploitants\n`;
+      menu += `├───────────────────────────────────────┤\n`;
+      menu += `│ 🔄 Vos gains financiers alimentent usersData.money\n`;
+      menu += `│ 🔗 Connecté au module dynamique quest.js !\n`;
+      menu += `╰───────────────────────────────────────╯`;
+      return message.reply(menu);
         }
-      }
-
-      // Liste globale simplifiée
-      let invMsg = `📜 **[REGISTRE DES ANIMAUX EN STABULATION]**\n\n`;
-      ranchData.animals.forEach((ani, idx) => {
-        invMsg += `\`[Slot ${idx + 1}]\` ${ani.emoji} **${ani.customName || ani.name}** (Niv. ${ani.level}) | [❤️${ani.health}% - 🍖${ani.hunger}%]\n`;
-      });
-      invMsg += `\n💡 _Tapez \`ranch inventory <num_slot>\` pour afficher l'interface graphique de l'animal._`;
-      return message.reply(invMsg);
-    }
-
-    // ==========================================
-    // 🍖 ALIMENTATION DES ANIMAUX
-    // ==========================================
-    if (subCommand === "feed") {
-      const slot = parseInt(args[1]) - 1;
-      const foodType = args[2]?.toLowerCase();
-
-      if (isNaN(slot) || slot < 0 || slot >= ranchData.animals.length) return message.reply("❌ | Numéro d'enclos (Slot) invalide.");
-      if (!foodType || !FOOD_DB[foodType]) return message.reply("❌ | Spécifiez une nourriture valide : `herbe`, `ble`, `mais`, `carotte`, `premium`.");
-
-      if ((ranchData.foodStorage[foodType] || 0) <= 0) return message.reply(`❌ | Votre silo ne contient plus de **${FOOD_DB[foodType].name}**.`);
-
-      ranchData.foodStorage[foodType] -= 1;
-      const animal = ranchData.animals[slot];
-      const feedItem = FOOD_DB[foodType];
-
-      animal.hunger = Math.min(100, animal.hunger + feedItem.hungerRestore);
-      animal.joy = Math.min(100, animal.joy + feedItem.joyRestore);
-      animal.health = Math.min(100, animal.health + 10);
-
-      updateRanch(senderID, ranchData);
-      return message.reply(`🍖 | Vous donnez du **${feedItem.name}** au **${animal.customName || animal.name}** (Slot #${slot + 1}). Ses constantes vitaux remontent.`);
-    }
-
-    // ==========================================
-    // 🥚 RECOLTE ET VENTE DES PRODUCTIONS
-    // ==========================================
-    if (subCommand === "collect" || subCommand === "sell") {
-      const totalItems = Object.values(ranchData.warehouse).reduce((a, b) => a + b, 0);
-      if (totalItems === 0) return message.reply("📦 | Vos hangars de stockage sont vides. Laissez vos bêtes produire.");
-
-      let totalGain = 0;
-      let recapText = `🧺 **[BORDEREAU DE LIVRAISON DE LA FERME]**\n\n`;
-
-      for (const [prodKey, amount] of Object.entries(ranchData.warehouse)) {
-        if (amount > 0) {
-          // Recherche du prix de base indexé via les animaux correspondants
-          const associatedAnimal = Object.values(ANIMALS_DB).find(a => a.product === prodKey) || { basePrice: 50, name: "Produit" };
-          const basePrice = associatedAnimal.basePrice;
-          const gainForThis = Math.floor(amount * basePrice * (UPGRADES_DB[ranchData.rankLevel - 1].mult));
-          
-          totalGain += gainForThis;
-          recapText += `• x${amount} Marchandise de ${associatedAnimal.name} ➔ +${gainForThis}$\n`;
-        }
-      }
-
-      // Versement direct sur le compte
-      userMoney += totalGain;
-      await usersData.set(senderID, { money: userMoney });
-
-      // Remise à zéro de l'entrepôt
-      ranchData.warehouse = {};
-      ranchData.totals.earnings += totalGain;
-      updateRanch(senderID, ranchData);
-
-      // Simulation d'un événement aléatoire sur la chaîne de production
-      triggerRandomEvent(ranchData, message, usersData);
-      updateRanch(senderID, ranchData);
-
-      recapText += `\n💰 ** Revenu total crédité : +${totalGain}$**`;
-      return message.reply(recapText);
-    }
-
-    // ==========================================
-    // 🧬 REPRODUCTION DES ANIMAUX (BREED)
-    // ==========================================
-    if (subCommand === "breed") {
-      const s1 = parseInt(args[1]) - 1;
-      const s2 = parseInt(args[2]) - 1;
-
-      if (isNaN(s1) || s1 < 0 || s1 >= ranchData.animals.length || isNaN(s2) || s2 < 0 || s2 >= ranchData.animals.length) {
-        return message.reply("❌ | Sélectionnez deux numéros d'enclos valides. Exemple : `ranch breed 1 2`.");
-      }
-      if (s1 === s2) return message.reply("❌ | Un animal ne peut pas se reproduire avec lui-même.");
-
-      const parent1 = ranchData.animals[s1];
-      const parent2 = ranchData.animals[s2];
-
-      if (parent1.id !== parent2.id) return message.reply("❌ | Hybridation impossible ! Les deux animaux doivent appartenir à la même espèce.");
-
-      const infra = UPGRADES_DB[ranchData.rankLevel - 1];
-      if (ranchData.animals.length >= infra.maxAnimals) {
-        return message.reply("🏡 | Plus de place disponible dans vos étables pour accueillir le nouveau-né.");
-      }
-
-      // Exécution génétique
-      const baby = executeBreeding(parent1, parent2);
-      ranchData.animals.push(baby);
-      ranchData.totals.bred += 1;
-      updateRanch(senderID, ranchData);
-
-      return message.reply(`🧬 | **EXPÉDITION GÉNÉTIQUE :** Accouplement réussi entre vos deux ${parent1.name}s !\n✨ Naissance d'un spécimen de rareté **[${baby.rarity.toUpperCase()}]** placé dans votre dernier slot libre.`);
-    }
-
-    // ==========================================
-    // 🏡 EXPANSION ET AMÉLIORATION DES TERRES
-    // ==========================================
-    if (subCommand === "upgrade") {
-      const nextLevel = ranchData.rankLevel + 1;
-      const upgradeOption = UPGRADES_DB.find(u => u.level === nextLevel);
-
-      if (!upgradeOption) return message.reply("👑 | Votre domaine agricole a atteint le statut légendaire maximal !");
-
-      if (userMoney < upgradeOption.cost) {
-        return message.reply(`💰 | L'extension foncière pour acquérir un **${upgradeOption.name}** réclame **${upgradeOption.cost}$**. Solde insuffisant.`);
-      }
-
-      userMoney -= upgradeOption.cost;
-      await usersData.set(senderID, { money: userMoney });
-
-      ranchData.rankLevel = nextLevel;
-      updateRanch(senderID, ranchData);
-
-      return message.reply(`🎉 | **TRAVAUX TERMINÉS !** Votre domaine s'agrandit. Bienvenue au **${upgradeOption.name}** (Capacité : ${upgradeOption.maxAnimals} bêtes).`);
-    }
-
-    // ==========================================
-    // 🏆 CLASSEMENT DES ÉLEVEURS
-    // ==========================================
-    if (subCommand === "leaderboard" || subCommand === "lb") {
-      const allRanches = readJSON(RANCH_FILE);
-      const sorted = Object.entries(allRanches)
-        .map(([uid, data]) => ({ uid, count: data.animals?.length || 0, gains: data.totals?.earnings || 0 }))
-        .sort((a, b) => b.gains - a.gains)
-        .slice(0, 10);
-
-      let lbMsg = `🏆 **[TOP 10 DES MAGNATS DU RANCH ET DE L'ÉLEVAGE]**\n\n`;
-      for (let i = 0; i < sorted.length; i++) {
-        const nameUser = (await usersData.get(sorted[i].uid)).name || "Grand Éleveur";
-        lbMsg += `${i + 1}. **${nameUser}** — Cheptel: ${sorted[i].count} têtes | Profits: ${sorted[i].gains}$\n`;
-      }
-      return message.reply(lbMsg);
-    }
-  }
-};
