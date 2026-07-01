@@ -432,7 +432,7 @@ module.exports = {
     countDown: 2,
     role: 0,
     description: "Système de Guilde MMORPG Complet (Guerres, Territoires, Économie, Quêtes).",
-    category: "jeux",
+    category: "game",
     guide: { fr: "{p}guild [sous-commande]", en: "{p}guild [subcommand]" }
   },
 
@@ -674,3 +674,193 @@ module.exports = {
       roster += `╰───────────────────────────────────────╯`;
       return message.reply(roster);
   }
+
+    // ==========================================
+    // ✉️ SOUS-COMMANDE : INVITE (ENRÔLEMENT DE SOLDATS)
+    // ==========================================
+    if (subCommand === "invite") {
+      if (!userLink) return message.reply("❌ | Opération impossible. Vous devez posséder une guilde pour inviter des recrues.");
+      const g = guilds[userLink.guildId];
+      
+      // Validation des privilèges de l'appelant
+      if (!ROLES[userLink.role].canInvite) {
+        return message.reply("❌ | Privilège insuffisant. Seuls les Officiers et les dirigeants peuvent émettre des invitations.");
+      }
+
+      if (g.members.length >= getMaxMembers(g.level)) {
+        return message.reply("❌ | Votre garnison est saturée. Améliorez le niveau du bastion pour débloquer des places.");
+      }
+
+      const targetUid = Object.keys(event.mentions)[0] || args[1];
+      if (!targetUid) return message.reply("❌ | Veuillez mentionner le joueur à enrôler : `guild invite @user`");
+
+      if (getUserLink(targetUid)) {
+        return message.reply("❌ | Ce guerrier est déjà sous les drapeaux d'une autre faction du royaume.");
+      }
+
+      // Enrôlement direct automatique
+      g.members.push({ uid: targetUid, role: "MEMBRE" });
+      setUserLink(targetUid, { guildId: g.id, role: "MEMBRE" });
+      
+      addGuildLog(g, `🛡️ Recrutement : Un nouveau combattant a été invité et intégré aux effectifs.`);
+      checkAndProgressMission(g, "members_count", g.members.length);
+      
+      writeDB(GUILDS_FILE, guilds);
+      return message.reply(`🎉 | Recrutement validé ! Le joueur a rejoint les rangs de **${g.name}**.`);
+    }
+
+    // ==========================================
+    // ❌ SOUS-COMMANDE : KICK (EXPULSION DISCIPLINAIRE)
+    // ==========================================
+    if (subCommand === "kick") {
+      if (!userLink) return message.reply("❌ | Vous n'avez pas de guilde.");
+      const g = guilds[userLink.guildId];
+
+      if (!ROLES[userLink.role].canKick) {
+        return message.reply("❌ | Action interdite. Votre grade ne vous donne pas le droit d'exclure des membres.");
+      }
+
+      const targetUid = Object.keys(event.mentions)[0] || args[1];
+      if (!targetUid) return message.reply("❌ | Veuillez mentionner le subordonné à chasser : `guild kick @user`");
+
+      if (targetUid === senderID) return message.reply("❌ | Vous ne pouvez pas vous exclure vous-même. Utilisez `guild leave`.");
+
+      const targetMember = g.members.find(m => m.uid === targetUid);
+      if (!targetMember) return message.reply("❌ | Ce joueur ne figure pas sur le registre de votre contingent.");
+
+      // Sécurité hiérarchique : On ne peut bannir qu'un rang inférieur au sien
+      if (ROLES[userLink.role].rank <= ROLES[targetMember.role].rank && userLink.role !== "LEADER") {
+        return message.reply("❌ | Violation protocolaire. Vous ne pouvez pas expulser un frère d'armes de grade équivalent ou supérieur.");
+      }
+
+      // Destitution logistique
+      g.members = g.members.filter(m => m.uid !== targetUid);
+      setUserLink(targetUid, null);
+      
+      addGuildLog(g, `🚪 Expulsion : Un membre a été banni de la garnison de force.`);
+      checkAndProgressMission(g, "members_count", g.members.length);
+      
+      writeDB(GUILDS_FILE, guilds);
+      return message.reply("🛡️ | Sanction appliquée. Le joueur a été éjecté de la guilde.");
+    }
+
+    // ==========================================
+    // ⬆️ SOUS-COMMANDES : PROMOTE & DEMOTE (GESTION DES RANGS)
+    // ==========================================
+    if (subCommand === "promote" || subCommand === "demote") {
+      if (!userLink) return message.reply("❌ | Vous n'avez pas de guilde.");
+      const g = guilds[userLink.guildId];
+
+      if (!ROLES[userLink.role].canPromote) {
+        return message.reply("❌ | Gestion des grades bloquée. Votre rang actuel ne vous permet pas de modifier la hiérarchie.");
+      }
+
+      const targetUid = Object.keys(event.mentions)[0] || args[1];
+      if (!targetUid) return message.reply(`❌ | Veuillez mentionner la cible : \`guild ${subCommand} @user\``);
+
+      const targetMember = g.members.find(m => m.uid === targetUid);
+      if (!targetMember) return message.reply("❌ | Ce joueur n'appartient pas à votre bastion.");
+
+      if (targetUid === senderID) return message.reply("❌ | Vous ne pouvez pas altérer vos propres privilèges militaires.");
+
+      if (subCommand === "promote") {
+        if (targetMember.role === "MEMBRE") {
+          targetMember.role = "OFFICIER";
+          setUserLink(targetUid, { guildId: g.id, role: "OFFICIER" });
+          addGuildLog(g, `📈 Promotion : Un membre s'élève au rang d'Officier.`);
+          writeDB(GUILDS_FILE, guilds);
+          return message.reply("🛡️ | Élévation approuvée ! Le soldat est désormais **Officier**.");
+        } 
+        else if (targetMember.role === "OFFICIER") {
+          if (userLink.role !== "LEADER") return message.reply("❌ | Seul le Leader en titre peut nommer un Co-Leader.");
+          targetMember.role = "CO_LEADER";
+          setUserLink(targetUid, { guildId: g.id, role: "CO_LEADER" });
+          addGuildLog(g, `⭐ Haute Promotion : Un Officier est élevé au rang de Co-Leader.`);
+          writeDB(GUILDS_FILE, guilds);
+          return message.reply("⭐ | Promotion Suprême ! L'Officier devient **Co-Leader**.");
+        } 
+        else {
+          return message.reply("❌ | Ce gradé a déjà atteint le plafond hiérarchique accessible par promotion standard.");
+        }
+      } 
+      
+      if (subCommand === "demote") {
+        if (ROLES[userLink.role].rank <= ROLES[targetMember.role].rank && userLink.role !== "LEADER") {
+          return message.reply("❌ | Opération impossible. Vous ne surpassez pas la cible dans la chaîne de commandement.");
+        }
+
+        if (targetMember.role === "CO_LEADER") {
+          targetMember.role = "OFFICIER";
+          setUserLink(targetUid, { guildId: g.id, role: "OFFICIER" });
+          addGuildLog(g, `📉 Rétrogradation : Un Co-Leader a été destitué au rang d'Officier.`);
+          writeDB(GUILDS_FILE, guilds);
+          return message.reply("📉 | Sanction hiérarchique. Le Co-Leader est rétrogradé au rang d'**Officier**.");
+        } 
+        else if (targetMember.role === "OFFICIER") {
+          targetMember.role = "MEMBRE";
+          setUserLink(targetUid, { guildId: g.id, role: "MEMBRE" });
+          addGuildLog(g, `📉 Rétrogradation : Un Officier a été destitué au rang de simple Membre.`);
+          writeDB(GUILDS_FILE, guilds);
+          return message.reply("📉 | Sanction hiérarchique. L'Officier est déchu et redevient simple **Membre**.");
+        } 
+        else {
+          return message.reply("❌ | Ce membre occupe déjà l'échelon le plus bas de la hiérarchie.");
+        }
+      }
+    }
+
+    // ==========================================
+    // 🎨 SOUS-COMMANDE : SETTINGS (ÉDITION DU PROFIL)
+    // ==========================================
+    if (subCommand === "settings") {
+      if (!userLink) return message.reply("❌ | Vous n'avez pas de guilde.");
+      const g = guilds[userLink.guildId];
+
+      if (!ROLES[userLink.role].canSettings) {
+        return message.reply("❌ | Droits administratifs insuffisants. Seul le Leader détient les clés de configuration.");
+      }
+
+      const mode = args[1]?.toLowerCase();
+      const payload = args.slice(2).join(" ");
+
+      if (mode === "emoji" || mode === "logo") {
+        if (!payload || payload.length > 4) return message.reply("❌ | Indiquez un seul emoji valide pour illustrer la faction.");
+        g.emoji = payload;
+        addGuildLog(g, `🎨 Édition : L'armoirie visuelle de la guilde a été mise à jour.`);
+        writeDB(GUILDS_FILE, guilds);
+        return message.reply(`✅ | Emblème modifié avec succès : [${payload}]`);
+      } 
+      else if (mode === "desc" || mode === "description" || mode === "bio") {
+        if (!payload || payload.length > 150) return message.reply("❌ | La biographie doit comporter entre 1 et 150 caractères maximum.");
+        g.description = payload;
+        addGuildLog(g, `🎨 Édition : La description officielle de la guilde a été réécrite.`);
+        writeDB(GUILDS_FILE, guilds);
+        return message.reply("✅ | Manifeste et description de guilde mis à jour !");
+      } 
+      else {
+        return message.reply("ℹ️ | Guide technique : \n• `guild settings emoji <Emoji>`\n• `guild settings desc <Votre texte de présentation>`");
+      }
+    }
+
+    // ==========================================
+    // 💥 SOUS-COMMANDE : DISBAND (DISSOLUTION FINALE)
+    // ==========================================
+    if (subCommand === "disband") {
+      if (!userLink) return message.reply("❌ | Vous n'avez pas de guilde.");
+      const g = guilds[userLink.guildId];
+
+      if (userLink.role !== "LEADER") {
+        return message.reply("❌ | Crime de lèse-majesté ! Seul le Leader Suprême de la faction détient l'autorité de dissolution.");
+      }
+
+      // Purge absolue de la totalité des liaisons joueurs affiliées à cette guilde
+      g.members.forEach(member => {
+        setUserLink(member.uid, null);
+      });
+
+      // Annihilation de l'entrée dans le registre central
+      delete guilds[g.id];
+      writeDB(GUILDS_FILE, guilds);
+
+      return message.reply(`💥 | **ANNIHILATION COMPLETE :** La guilde **${g.name}** a été rayée de la carte. Tous ses soldats sont redevenus des mercenaires sans attache.`);
+        }
