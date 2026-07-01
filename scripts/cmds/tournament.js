@@ -183,3 +183,150 @@ module.exports = {
       menu += `╰───────────────────────────────────────╯`;
       return message.reply(menu);
     }
+
+    // ==========================================
+    // 📊 SOUS-COMMANDE : INFO (ÉTAT DU TOURNOI ACTUEL)
+    // ==========================================
+    if (subCommand === "info") {
+      if (!sys.activeTournament) {
+        return message.reply("🏟️ | Aucun tournoi n'est ouvert pour le moment. Revenez plus tard ou attendez le lancement automatique.");
+      }
+
+      const tType = TOURNAMENT_TYPES[sys.activeTournament.type];
+      let infoBox = UI.boxStart("État du Championnat") + `\n`;
+      infoBox += `${UI.field("Événement", `${tType.icon} ${tType.name}`)}\n`;
+      infoBox += `${UI.field("Statut actuel", sys.activeTournament.status === "registration" ? "⏳ Inscriptions Ouvertes" : "⚔️ Matchs en cours")}\n`;
+      infoBox += `${UI.field("Participants", `👥 **${sys.activeTournament.participants.length}** joueurs inscrits`)}\n`;
+      
+      if (sys.activeTournament.status === "registration") {
+        const elapsed = Date.now() - sys.activeTournament.createdAt;
+        const oneHour = 60 * 60 * 1000;
+        const remaining = Math.max(0, Math.ceil((oneHour - elapsed) / (60 * 1000)));
+        infoBox += `${UI.field("Fermeture dans", `${remaining} minute(s)`)}\n`;
+        infoBox += `${UI.line}\n│ ➔ Rejoignez la mêlée via : \`~tournament join\``;
+      }
+      infoBox += UI.boxEnd();
+      return message.reply(infoBox);
+    }
+
+    // ==========================================
+    // 🎟️ SOUS-COMMANDE : JOIN (INSCRIPTION AU TOURNOI)
+    // ==========================================
+    if (subCommand === "join") {
+      if (!sys.activeTournament) {
+        return message.reply("❌ | Aucun tournoi n'est actif pour le moment.");
+      }
+      if (sys.activeTournament.status !== "registration") {
+        return message.reply("❌ | Trop tard ! Les inscriptions sont closes et les duels ont déjà commencé.");
+      }
+      if (sys.activeTournament.participants.includes(senderID)) {
+        return message.reply("❌ | Inscription invalide : Votre nom figure déjà sur le registre des combattants.");
+      }
+
+      // Vérification et prélèvement du ticket d'entrée
+      const fullPlayers = readDB(PLAYER_FILE);
+      let playerProf = fullPlayers[senderID] || getPlayerProfile(senderID, userData.name);
+
+      if (playerProf.tickets <= 0) {
+        return message.reply("🎫 | Vous n'avez plus de ticket de tournoi. Achetez-en un via `~tournament buy ticket` (50,000$).");
+      }
+
+      // Consommation du ticket et enregistrement
+      playerProf.tickets -= 1;
+      fullPlayers[senderID] = playerProf;
+      writeDB(PLAYER_FILE, fullPlayers);
+
+      sys.activeTournament.participants.push(senderID);
+      writeDB(SYSTEM_FILE, sys);
+
+      return message.reply(`🎫 | **INSCRIPTION VALIDÉE :** Vous avez déposé votre ticket d'entrée. Bonne chance pour cette **Saison ${sys.currentSeason}** ! (Inscrits : ${sys.activeTournament.participants.length})`);
+    }
+
+    // ==========================================
+    // 🏃 SOUS-COMMANDE : LEAVE (SE DÉSINSCRIRE)
+    // ==========================================
+    if (subCommand === "leave") {
+      if (!sys.activeTournament || sys.activeTournament.status !== "registration") {
+        return message.reply("❌ | Impossible de vous désister à ce stade du championnat.");
+      }
+      if (!sys.activeTournament.participants.includes(senderID)) {
+        return message.reply("❌ | Vous n'êtes pas inscrit à ce tournoi.");
+      }
+
+      // Retrait de la liste et restitution du ticket
+      sys.activeTournament.participants = sys.activeTournament.participants.filter(id => id !== senderID);
+      writeDB(SYSTEM_FILE, sys);
+
+      const fullPlayers = readDB(PLAYER_FILE);
+      if (fullPlayers[senderID]) {
+        fullPlayers[senderID].tickets += 1;
+        writeDB(PLAYER_FILE, fullPlayers);
+      }
+
+      return message.reply("🏃 | **DÉSISTEMENT :** Vous retirez votre candidature. Votre ticket d'entrée vous a été restitué.");
+    }
+
+    // ==========================================
+    // 💰 SOUS-COMMANDE : BUY TICKET (ACHAT DE TICKET)
+    // ==========================================
+    if (subCommand === "buy" && args[1] === "ticket") {
+      const ticketPrice = 500000; // 500 000$ le ticket supplémentaire
+      if (userMoney < ticketPrice) {
+        return message.reply(`💰 | Vos finances sont insuffisantes. Un ticket d'arène coûte **${ticketPrice.toLocaleString()}$**.`);
+      }
+
+      userMoney -= ticketPrice;
+      await usersData.set(senderID, { money: userMoney });
+
+      const fullPlayers = readDB(PLAYER_FILE);
+      let playerProf = fullPlayers[senderID] || getPlayerProfile(senderID, userData.name);
+      playerProf.tickets += 1;
+      fullPlayers[senderID] = playerProf;
+      writeDB(PLAYER_FILE, fullPlayers);
+
+      return message.reply(`🎫 | **ACHAT EFFECTUÉ :** Vous achetez un ticket de tournoi. (-${ticketPrice.toLocaleString()}$) | Total en réserve : **${playerProf.tickets}** 🎫`);
+    }
+
+    // ==========================================
+    // 🎖️ SOUS-COMMANDE : REWARDS (PROFIL DES TITRES DE COMBAT)
+    // ==========================================
+    if (subCommand === "rewards" || subCommand === "titles") {
+      let titleBox = UI.boxStart("Vos Distinctions") + `\n`;
+      titleBox += `${UI.field("Tickets restants", `**${pProfile.tickets}** 🎫`)}\n`;
+      titleBox += `${UI.field("Titre Actif", pProfile.activeTitle ? `**${pProfile.activeTitle}**` : "Aucun Titre Équipé")}\n`;
+      titleBox += `${UI.line}\n│ 🏅 **TITRES DISPONIBLES / DÉBLOQUÉS :**\n`;
+
+      if (!pProfile.titles || pProfile.titles.length === 0) {
+        titleBox += `│ *Aucun titre honorifique débloqué pour le moment.*\n`;
+      } else {
+        pProfile.titles.forEach(tKey => {
+          const tInfo = TITLES[tKey];
+          titleBox += `│ ➔ ${tInfo.name} ${pProfile.activeTitle === tInfo.name ? "🔹 *(Équipé)*" : ""}\n`;
+        });
+        titleBox += `${UI.line}\n│ *Équipez un titre via : \`~tournament equip <nom_titre>\`*\n`;
+      }
+
+      titleBox += UI.boxEnd();
+      return message.reply(titleBox);
+    }
+
+    // --- LOGIQUE ÉQUIPER TITRE ---
+    if (subCommand === "equip") {
+      const targetTitleKey = args[1]?.toLowerCase();
+      if (!targetTitleKey || !TITLES[targetTitleKey]) {
+        return message.reply("❌ | Titre inconnu. Indiquez la clé du titre (ex: rookie, elite, grand, king, unstoppable, legendary).");
+      }
+
+      const fullPlayers = readDB(PLAYER_FILE);
+      let playerProf = fullPlayers[senderID];
+
+      if (!playerProf.titles.includes(targetTitleKey)) {
+        return message.reply("❌ | Vous n'avez pas encore accompli les hauts faits requis pour arborer ce titre.");
+      }
+
+      playerProf.activeTitle = TITLES[targetTitleKey].name;
+      fullPlayers[senderID] = playerProf;
+      writeDB(PLAYER_FILE, fullPlayers);
+
+      return message.reply(`👑 | **PROFIL MODIFIÉ :** Vous arborez fièrement le titre honorifique : **${TITLES[targetTitleKey].name}** !`);
+    }
