@@ -282,3 +282,171 @@ module.exports = {
       hatchBox += `${UI.line}\n│ *Ce familier a rejoint votre collection et a été assigné par défaut !*\n` + UI.boxEnd();
       return message.reply(hatchBox);
     }
+
+    // ==========================================
+    // 📊 SOUS-COMMANDE : INFO (FICHE DE STATISTIQUES RPG)
+    // ==========================================
+    if (subCommand === "info") {
+      const indexInput = parseInt(args[1]) - 1;
+      let petInstance = null;
+
+      // Si aucun index n'est fourni, on cible le familier équipé par défaut
+      if (isNaN(indexInput)) {
+        if (!player.activePetId) return message.reply("❌ | Vous n'avez aucun familier actif. Équipez-en un ou spécifiez son index : `pet info 1`.");
+        petInstance = player.inventory.find(p => p.uniqueId === player.activePetId);
+      } else {
+        petInstance = player.inventory[indexInput];
+      }
+
+      if (!petInstance) return message.reply("❌ | Aucun familier ne correspond à cet index dans votre collection.");
+
+      const spec = PETS_REGISTRY[petInstance.baseId];
+      const rarityData = RARITY_DETAILS[spec.rarity];
+      const stats = calculateStats(petInstance);
+      const nextXp = petInstance.level * 1200;
+
+      let card = UI.boxStart(`Profil : ${petInstance.customName || spec.baseName}`) + `\n`;
+      card += `${UI.field("Espèce Originelle", spec.baseName)}\n`;
+      card += `${UI.field("Rareté d'Origine", `${rarityData.color} ${rarityData.name}`)}\n`;
+      card += `${UI.field("Âge / Naissance", `${petInstance.age} jours (${petInstance.birthday})`)}\n`;
+      card += `${UI.field("Statut d'Attache", player.activePetId === petInstance.uniqueId ? "⚔️ ÉQUIPÉ (Actif)" : "💤 Au Ranch")}\n`;
+      card += `${UI.line}\n`;
+      card += `${UI.field("Niveau", `Niv. ${petInstance.level} (XP: ${petInstance.xp} / ${nextXp})`)}\n`;
+      card += `${UI.field("Ration / Faim", `${petInstance.hunger} / 100 🍖`)}\n`;
+      card += `${UI.field("Affection / Bonheur", `${petInstance.happiness} / 100 ❤️`)}\n`;
+      card += `${UI.line}\n`;
+      card += `│  📊 STATISTIQUES COMBAT AUTOMATIQUES :\n`;
+      card += `${UI.field("Points de Vie (HP)", stats.hp)}\n`;
+      card += `${UI.field("Puissance (ATK)", stats.atk)}\n`;
+      card += `${UI.field("Robustesse (DEF)", stats.def)}\n`;
+      card += `${UI.field("Coup Critique", `${Math.floor(stats.crit * 100)}%`)}\n`;
+      card += `${UI.field("Esquive Tactique", `${Math.floor(stats.dodge * 100)}%`)}\n`;
+      card += `${UI.line}\n`;
+      card += `${UI.field("Talent Passif", `\`${spec.talent}\``)}\n`;
+      
+      let bonusDesc = "Aucun";
+      if (spec.bonus.type === "moneyMultiplier") bonusDesc = `+${Math.floor(spec.bonus.value * 100)}% Or gagné`;
+      if (spec.bonus.type === "atkMultiplier") bonusDesc = `+${Math.floor(spec.bonus.value * 100)}% DMG globaux`;
+      if (spec.bonus.type === "globalXpMultiplier") bonusDesc = `+${Math.floor(spec.bonus.value * 100)}% XP globale`;
+      if (spec.bonus.type === "treasureChance") bonusDesc = `+${Math.floor(spec.bonus.value * 100)}% Butins Pirate`;
+      card += `${UI.field("Effet Interconnecté", bonusDesc)}\n`;
+      card += UI.boxEnd();
+
+      return message.reply(card);
+    }
+
+    // ==========================================
+    // 📋 SOUS-COMMANDE : LIST (PANORAMA DE LA MÉNAGERIE)
+    // ==========================================
+    if (subCommand === "list") {
+      if (player.inventory.length === 0) {
+        return message.reply("🐾 | Votre ménagerie est totalement vide. Éclairez votre route en achetant un œuf via `pet buy`.");
+      }
+
+      let listMsg = `🐾 **[VOTRE MÉNAGERIE — COLLECTION PRIVÉE]**\n`;
+      if (player.eggsInventory) {
+        let eggsStr = "";
+        for (const [eId, count] of Object.entries(player.eggsInventory)) {
+          if (count > 0) eggsStr += `${EGGS_DB[eId].emoji}x${count} `;
+        }
+        if (eggsStr) listMsg += `🥚 Stock d'œufs : ${eggsStr}\n`;
+      }
+      listMsg += `${UI.line}\n`;
+
+      player.inventory.forEach((p, idx) => {
+        const spec = PETS_REGISTRY[p.baseId];
+        const isEquipped = player.activePetId === p.uniqueId ? "⚔️ [ACTIF]" : "💤";
+        const displayName = p.customName ? `${p.customName} (${spec.baseName})` : spec.baseName;
+        listMsg += `${idx + 1}. ${isEquipped} ${spec.emoji} **${displayName}** | Niv. ${p.level} | 🍖 ${p.hunger}% | ❤️ ${p.happiness}%\n`;
+      });
+
+      listMsg += `${UI.line}\nℹ️ *Pour interagir ou équiper : \`pet equip ${player.inventory.length}\` / \`pet info ${player.inventory.length}\`*`;
+      return message.reply(listMsg);
+    }
+
+    // ==========================================
+    // ⚔️ SOUS-COMMANDES : EQUIP & UNEQUIP (AFFECTATION DU COMPAGNON)
+    // ==========================================
+    if (subCommand === "equip") {
+      const indexInput = parseInt(args[1]) - 1;
+      if (isNaN(indexInput) || !player.inventory[indexInput]) {
+        return message.reply("❌ | Index manquant ou invalide. Utilisation : `pet equip <numéro de la liste>`");
+      }
+
+      const targetPet = player.inventory[indexInput];
+      if (player.activePetId === targetPet.uniqueId) {
+        return message.reply("❌ | Ce familier est déjà à vos côtés sur le champ de bataille.");
+      }
+
+      player.activePetId = targetPet.uniqueId;
+      savePlayerStorage(senderID, player);
+
+      const spec = PETS_REGISTRY[targetPet.baseId];
+      return message.reply(`⚔️ | **DEPLOIEMENT REUSSI :** ${spec.emoji} **${targetPet.customName || spec.baseName}** est désormais votre compagnon de combat officiel.`);
+    }
+
+    if (subCommand === "unequip") {
+      if (!player.activePetId) {
+        return message.reply("❌ | Vous n'avez aucun familier actuellement équipé à vos côtés.");
+      }
+
+      player.activePetId = null;
+      savePlayerStorage(senderID, player);
+      return message.reply("💤 | **RANCH :** Votre compagnon a été retiré du front et renvoyé se reposer dans vos écuries.");
+    }
+
+    // ==========================================
+    // ✒️ SOUS-COMMANDE : RENAME (PERSONNALISATION EMBLEMATHIQUE)
+    // ==========================================
+    if (subCommand === "rename") {
+      const indexInput = parseInt(args[1]) - 1;
+      const newName = args.slice(2).join(" ");
+
+      if (isNaN(indexInput) || !player.inventory[indexInput]) {
+        return message.reply("❌ | Index de familier requis. Usage : `pet rename <index> <nouveau nom>`");
+      }
+      if (!newName || newName.trim() === "") {
+        return message.reply("❌ | Veuillez spécifier un nom digne de ce nom pour votre créature.");
+      }
+      if (newName.length > 16) {
+        return message.reply("❌ | Le nom choisi est trop long (Maximum 16 caractères).");
+      }
+
+      player.inventory[indexInput].customName = newName.trim();
+      savePlayerStorage(senderID, player);
+
+      const spec = PETS_REGISTRY[player.inventory[indexInput].baseId];
+      return message.reply(`✒️ | **BAPTÊME :** Votre ${spec.emoji} **${spec.baseName}** s'appelle désormais officiellement **${newName}** !`);
+    }
+
+    // ==========================================
+    // 💰 SOUS-COMMANDE : SELL (COMMERCE ET REVENTE)
+    // ==========================================
+    if (subCommand === "sell") {
+      const indexInput = parseInt(args[1]) - 1;
+      if (isNaN(indexInput) || !player.inventory[indexInput]) {
+        return message.reply("❌ | Veuillez indiquer l'index du familier à licencier : `pet sell <index>`");
+      }
+
+      const targetPet = player.inventory[indexInput];
+      if (player.activePetId === targetPet.uniqueId) {
+        return message.reply("❌ | Impossible de marchander un familier équipé. Veuillez le déséquiper via `pet unequip` au préalable.");
+      }
+
+      const spec = PETS_REGISTRY[targetPet.baseId];
+      
+      // Algorithme d'estimation marchande indexé sur le niveau et le palier d'œuf
+      const baseValues = { common: 15000, uncommon: 45000, rare: 150000, epic: 450000, legendary: 1500000, mythic: 4500000, divine: 15000000 };
+      const baseVal = baseValues[spec.rarity] || 10000;
+      const finalSellPrice = Math.floor(baseVal * (1 + (targetPet.level - 1) * 0.08));
+
+      // Retrait définitif du tableau
+      player.inventory.splice(indexInput, 1);
+      
+      // Crédit monétaire
+      userMoney += finalSellPrice;
+      await usersData.set(senderID, { money: userMoney });
+      savePlayerStorage(senderID, player);
+
+      return message.reply(`💰 | **CONTRAT COMMERCIAL :** Vous vendez votre ${spec.emoji} **${targetPet.customName || spec.baseName}** (Niv. ${targetPet.level}) au marché noir pour **+${finalSellPrice.toLocaleString()}$**.`);
+        }
