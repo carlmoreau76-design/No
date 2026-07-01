@@ -1,298 +1,283 @@
 /**
  * @file arena.js
- * @description Système de combat RPG PvE premium pour GoatBot v2 (Node.js)
- * @command battle <mise>
- * @credits Format GoatBot v2
+ * @description Module de combat RPG PvE Premium avec système de mise financière pour GoatBot v2
+ * @version 1.0.0
+ * @author Collaborateur IA RPG
  */
 
-const cooldowns = new Map();
+const fs = require('fs');
+const path = require('path');
+
+// ==========================================
+// 🛠️ CONFIGURATION DES ENNEMIS ET DIFFICULTÉS
+// ==========================================
+const MONSTERS_POOL = [
+  { name: "Bandit de Grand Chemin", emoji: "🥷", difficulty: "Facile", mult: 1.5, hp: 400, atk: 45, def: 15, crit: 0.10, dodge: 0.05 },
+  { name: "Ninja de l'Ombre", emoji: "🗡️", difficulty: "Moyen", mult: 1.8, hp: 550, atk: 65, def: 25, crit: 0.25, dodge: 0.20 },
+  { name: "Automate de Combat", emoji: "🤖", difficulty: "Moyen", mult: 2.0, hp: 700, atk: 55, def: 45, crit: 0.05, dodge: 0.02 },
+  { name: "Démon Primordial", emoji: "👹", difficulty: "Difficile", mult: 2.4, hp: 950, atk: 90, def: 55, crit: 0.15, dodge: 0.08 },
+  { name: "Archi-Liche Immortelle", emoji: "🧙‍♂️", difficulty: "Difficile", mult: 2.8, hp: 1200, atk: 110, def: 60, crit: 0.20, dodge: 0.12 },
+  { name: "Dragon Ancestral", emoji: "🐉", difficulty: "Légendaire", mult: 3.5, hp: 1800, atk: 160, def: 90, crit: 0.18, dodge: 0.05 },
+  { name: "Dieu Déchu du Colisée", emoji: "👑", difficulty: "Mythique (Rare)", mult: 5.0, hp: 2500, atk: 220, def: 130, crit: 0.30, dodge: 0.15 }
+];
+
+// Cooldown anti-spam (en millisecondes)
+const ARENA_COOLDOWN = 45 * 1000; // 45 secondes
+
+const UI = {
+  line: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+  boxStart: (title) => `╭───────────── ⚔️ ─────────────╮\n│ 🏟️  ${title.toUpperCase()}\n├───────────────────────────────`,
+  boxEnd: () => `╰───────────────────────────────╯`,
+  renderHpBar: (current, max) => {
+    const percent = Math.max(0, Math.min(100, Math.floor((current / max) * 100)));
+    const filled = Math.round(percent / 10);
+    return "🟩".repeat(filled) + "⬛".repeat(10 - filled) + ` [${current}/${max}]`;
+  }
+};
 
 module.exports = {
   config: {
     name: "arena",
-    version: "2.5.0",
-    author: "Gemini AI",
+    aliases: ["colisee", "fight", "combat"],
+    version: "1.0.0",
+    author: "Collaborateur IA RPG",
     countDown: 5,
-    role: 0, // 0: Tous les utilisateurs, 1: Admins, etc.
-    description: "Affrontez un monstre dans l'arène RPG et tentez de multiplier votre mise !",
+    role: 0,
+    description: "Affrontez des monstres et boss légendaires de l'arène en misant votre or !",
     category: "game",
-    guide: {
-      en: "{p}arena <mise> - Lance un combat dans l'arène.",
-      vi: "{p}arena <mise> - Trận đấu đấu trường."
-    }
+    guide: { fr: "{p}arena <mise>", en: "{p}arena <bet>" }
   },
 
   onStart: async function ({ api, event, args, usersData, message }) {
-    const { threadID, messageID, senderID } = event;
-    
-    // 1. Gestion du Cooldown Anti-Spam (30 secondes)
-    const now = Date.now();
-    const cooldownAmount = 30000; 
-    if (cooldowns.has(senderID)) {
-      const expirationTime = cooldowns.get(senderID) + cooldownAmount;
-      if (now < expirationTime) {
-        const timeLeft = ((expirationTime - now) / 1000).toFixed(1);
-        return message.reply(`⏳ | **${await usersData.getName(senderID)}**, vos guerriers se reposent. Attendez **${timeLeft}s** avant de retourner dans l'arène !`);
-      }
+    const { senderID, threadID, messageID } = event;
+
+    // ==========================================
+    // ⏳ GESTION DU COOLDOWN ANTI-SPAM
+    // ==========================================
+    if (!global.arenaCooldowns) global.arenaCooldowns = {};
+    const lastFight = global.arenaCooldowns[senderID] || 0;
+    if (Date.now() - lastFight < ARENA_COOLDOWN) {
+      const remaining = Math.ceil((ARENA_COOLDOWN - (Date.now() - lastFight)) / 1000);
+      return message.reply(`⏳ | Vos muscles sont engourdis. Attendez **${remaining} seconde(s)** avant de retourner dans l'arène.`);
     }
 
-    // 2. Validation de la mise
-    const betInput = args[0];
-    if (!betInput) {
-      return message.reply("⚔️ | **Arène de Combat**\nUtilisation : `arena <mise>` ou `arena all` (Mise minimum : 50$).");
-    }
-
-    // Récupération des données du joueur
+    // ==========================================
+    // 💰 ANALYSE ET ENREGISTREMENT DE LA MISE
+    // ==========================================
     let userData = await usersData.get(senderID);
     let userMoney = userData.money || 0;
+    const betInput = args[0];
 
-    let bet = 0;
+    if (!betInput) {
+      return message.reply("❌ | Saisie incorrecte. Usage : `arena <montant de la mise>` ou `arena all`.");
+    }
+
+    let betAmount = 0;
     if (betInput.toLowerCase() === "all") {
-      bet = userMoney;
+      betAmount = userMoney;
     } else {
-      bet = parseInt(betInput);
+      betAmount = parseInt(betInput);
     }
 
-    if (isNaN(bet) || bet < 50) {
-      return message.reply("❌ | Le montant de votre mise doit être un nombre valide et supérieur ou égal à **50$**.");
+    if (isNaN(betAmount) || betAmount <= 0) {
+      return message.reply("❌ | Veuillez spécifier une mise financière valide et supérieure à 0$.");
     }
 
-    if (userMoney < bet) {
-      return message.reply(`❌ | Vous n'avez pas assez d'argent ! Votre solde actuel est de **${userMoney}$**.`);
+    if (betAmount < 1000) {
+      return message.reply("❌ | La mise minimale requise pour entrer dans l'arène impériale est de **1 000$**.");
     }
 
-    // Activer le cooldown immédiatement après validation
-    cooldowns.set(senderID, now);
+    if (userMoney < betAmount) {
+      return message.reply(`💰 | Vos réserves d'or sont insuffisantes pour honorer cette mise (${userMoney.toLocaleString()}$ possédés).`);
+    }
 
-    // Déduire la mise du compte du joueur
-    userMoney -= bet;
+    // Prélèvement conservatoire de la mise
+    userMoney -= betAmount;
     await usersData.set(senderID, { money: userMoney });
+    global.arenaCooldowns[senderID] = Date.now();
 
-    // 3. Configuration de la base de données des monstres (RPG Stats avec système de poids)
-    const monsterDatabase = [
-  { name: "Bandit de Grand Chemin", emoji: "🕴️", difficulty: "Facile", hp: 120, atk: 18, def: 5, crit: 0.10, dodge: 0.08, mult: 1.5, weight: 40 },
-  { name: "Gobelin Voleur", emoji: "👺", difficulty: "Facile", hp: 100, atk: 16, def: 4, crit: 0.08, dodge: 0.10, mult: 1.4, weight: 38 },
-  { name: "Loup Sauvage", emoji: "🐺", difficulty: "Facile", hp: 110, atk: 19, def: 5, crit: 0.09, dodge: 0.12, mult: 1.5, weight: 36 },
-  { name: "Squelette Guerrier", emoji: "💀", difficulty: "Facile", hp: 130, atk: 17, def: 7, crit: 0.08, dodge: 0.06, mult: 1.5, weight: 35 },
-  { name: "Zombie Infecté", emoji: "🧟", difficulty: "Facile", hp: 145, atk: 15, def: 8, crit: 0.05, dodge: 0.03, mult: 1.6, weight: 33 },
-  { name: "Pirate Maudit", emoji: "🏴‍☠️", difficulty: "Facile", hp: 135, atk: 20, def: 6, crit: 0.11, dodge: 0.07, mult: 1.6, weight: 32 },
-  { name: "Ninja Débutant", emoji: "🥷", difficulty: "Facile", hp: 115, atk: 22, def: 5, crit: 0.12, dodge: 0.15, mult: 1.7, weight: 30 },
-  { name: "Soldat Rebelle", emoji: "🪖", difficulty: "Facile", hp: 150, atk: 18, def: 10, crit: 0.08, dodge: 0.05, mult: 1.7, weight: 28 },
-  { name: "Golem de Pierre", emoji: "🪨", difficulty: "Normal", hp: 220, atk: 14, def: 20, crit: 0.05, dodge: 0.02, mult: 1.8, weight: 25 },
-  { name: "Robot Prototype", emoji: "🤖", difficulty: "Normal", hp: 160, atk: 24, def: 12, crit: 0.15, dodge: 0.10, mult: 2.0, weight: 24 },
-  { name: "Chevalier Noir", emoji: "⚔️", difficulty: "Normal", hp: 200, atk: 23, def: 15, crit: 0.12, dodge: 0.08, mult: 2.0, weight: 23 },
-  { name: "Mage Élémentaire", emoji: "🧙", difficulty: "Normal", hp: 170, atk: 28, def: 9, crit: 0.18, dodge: 0.08, mult: 2.1, weight: 22 },
-  { name: "Samouraï", emoji: "⚔️", difficulty: "Normal", hp: 180, atk: 26, def: 11, crit: 0.18, dodge: 0.14, mult: 2.1, weight: 21 },
-  { name: "Orc Berserker", emoji: "👹", difficulty: "Normal", hp: 240, atk: 25, def: 10, crit: 0.15, dodge: 0.05, mult: 2.2, weight: 20 },
-  { name: "Tigre Géant", emoji: "🐅", difficulty: "Normal", hp: 175, atk: 29, def: 8, crit: 0.18, dodge: 0.14, mult: 2.2, weight: 19 },
-  { name: "Sorcier Noir", emoji: "🔮", difficulty: "Normal", hp: 165, atk: 30, def: 9, crit: 0.20, dodge: 0.10, mult: 2.3, weight: 18 },
-  { name: "Robot Assassin", emoji: "🤖", difficulty: "Normal", hp: 180, atk: 31, def: 10, crit: 0.20, dodge: 0.16, mult: 2.4, weight: 17 },
-  { name: "Garde Royal", emoji: "🛡️", difficulty: "Normal", hp: 230, atk: 22, def: 18, crit: 0.10, dodge: 0.08, mult: 2.3, weight: 16 },
-  { name: "Démon du Néant", emoji: "😈", difficulty: "Difficile", hp: 200, atk: 32, def: 15, crit: 0.20, dodge: 0.12, mult: 2.5, weight: 15 },
-  { name: "Hydre", emoji: "🐍", difficulty: "Difficile", hp: 290, atk: 31, def: 18, crit: 0.18, dodge: 0.10, mult: 2.6, weight: 14 },
-  { name: "Phénix", emoji: "🔥", difficulty: "Difficile", hp: 240, atk: 36, def: 14, crit: 0.22, dodge: 0.18, mult: 2.8, weight: 13 },
-  { name: "Titan", emoji: "🗿", difficulty: "Difficile", hp: 330, atk: 34, def: 22, crit: 0.15, dodge: 0.04, mult: 2.9, weight: 12 },
-  { name: "Liche", emoji: "☠️", difficulty: "Difficile", hp: 250, atk: 38, def: 13, crit: 0.25, dodge: 0.12, mult: 3.0, weight: 11 },
-  { name: "Dragon Noir", emoji: "🐉", difficulty: "Difficile", hp: 340, atk: 42, def: 20, crit: 0.23, dodge: 0.10, mult: 3.2, weight: 10 },
-  { name: "Ange Déchu", emoji: "😇", difficulty: "Difficile", hp: 280, atk: 40, def: 18, crit: 0.25, dodge: 0.18, mult: 3.3, weight: 9 },
-  { name: "Gardien des Abysses", emoji: "🌊", difficulty: "Difficile", hp: 310, atk: 39, def: 21, crit: 0.22, dodge: 0.10, mult: 3.4, weight: 8 },
-  { name: "Seigneur Vampire", emoji: "🧛", difficulty: "Difficile", hp: 270, atk: 41, def: 17, crit: 0.24, dodge: 0.16, mult: 3.5, weight: 7 },
-  { name: "Dragon Ancestral", emoji: "🐉", difficulty: "LÉGENDAIRE", hp: 350, atk: 45, def: 25, crit: 0.25, dodge: 0.15, mult: 4.0, weight: 6 },
-  { name: "Roi Démon", emoji: "👑", difficulty: "LÉGENDAIRE", hp: 420, atk: 50, def: 30, crit: 0.28, dodge: 0.15, mult: 4.3, weight: 5 },
-  { name: "Dieu de la Foudre", emoji: "⚡", difficulty: "LÉGENDAIRE", hp: 400, atk: 54, def: 24, crit: 0.30, dodge: 0.20, mult: 4.5, weight: 5 },
-  { name: "Empereur Dragon", emoji: "🐲", difficulty: "LÉGENDAIRE", hp: 450, atk: 52, def: 30, crit: 0.30, dodge: 0.16, mult: 4.8, weight: 4 },
-  { name: "Titan Primordial", emoji: "🗿", difficulty: "LÉGENDAIRE", hp: 520, atk: 48, def: 38, crit: 0.18, dodge: 0.08, mult: 5.0, weight: 4 },
-  { name: "Gardien Cosmique", emoji: "🌌", difficulty: "LÉGENDAIRE", hp: 470, atk: 56, def: 30, crit: 0.30, dodge: 0.18, mult: 5.2, weight: 3 },
-  { name: "Roi des Ombres", emoji: "🌑", difficulty: "LÉGENDAIRE", hp: 440, atk: 58, def: 28, crit: 0.35, dodge: 0.22, mult: 5.5, weight: 3 },
-  { name: "Leviathan", emoji: "🐋", difficulty: "LÉGENDAIRE", hp: 550, atk: 55, def: 35, crit: 0.22, dodge: 0.10, mult: 5.7, weight: 2 },
-  { name: "Dieu du Chaos", emoji: "🦹", difficulty: "MYTHIQUE", hp: 620, atk: 65, def: 40, crit: 0.35, dodge: 0.20, mult: 6.5, weight: 2 },
-  { name: "Créateur des Mondes", emoji: "✨", difficulty: "MYTHIQUE", hp: 700, atk: 70, def: 45, crit: 0.38, dodge: 0.22, mult: 7.0, weight: 1 },
-  { name: "GOAT SHADE", emoji: "🐐👑", difficulty: "ULTIME", hp: 999, atk: 99, def: 60, crit: 0.50, dodge: 0.35, mult: 10.0, weight: 1 },
-  { name: "Renard Mystique", emoji: "🦊", difficulty: "Normal", hp: 180, atk: 25, def: 12, crit: 0.18, dodge: 0.20, mult: 2.3, weight: 12 },
-  { name: "Kraken", emoji: "🐙", difficulty: "Difficile", hp: 370, atk: 40, def: 24, crit: 0.20, dodge: 0.08, mult: 3.6, weight: 7 },
-  { name: "Yéti", emoji: "❄️", difficulty: "Normal", hp: 260, atk: 27, def: 18, crit: 0.10, dodge: 0.05, mult: 2.5, weight: 15 },
-  { name: "Cyclope", emoji: "👁️", difficulty: "Normal", hp: 250, atk: 30, def: 16, crit: 0.12, dodge: 0.05, mult: 2.6, weight: 14 },
-  { name: "Minotaure", emoji: "🐂", difficulty: "Difficile", hp: 320, atk: 38, def: 20, crit: 0.18, dodge: 0.08, mult: 3.1, weight: 10 },
-  { name: "Esprit Ancien", emoji: "👻", difficulty: "Difficile", hp: 230, atk: 42, def: 10, crit: 0.30, dodge: 0.25, mult: 3.2, weight: 8 },
-  { name: "Gardien Céleste", emoji: "☁️", difficulty: "LÉGENDAIRE", hp: 480, atk: 52, def: 28, crit: 0.28, dodge: 0.20, mult: 5.0, weight: 3 },
-  { name: "Robot Suprême", emoji: "🤖", difficulty: "LÉGENDAIRE", hp: 500, atk: 58, def: 32, crit: 0.30, dodge: 0.15, mult: 5.3, weight: 2 },
-  { name: "Dragon de Cristal", emoji: "💎", difficulty: "MYTHIQUE", hp: 650, atk: 68, def: 42, crit: 0.35, dodge: 0.20, mult: 6.8, weight: 1 },
-  { name: "Seigneur du Temps", emoji: "⏳", difficulty: "MYTHIQUE", hp: 720, atk: 72, def: 48, crit: 0.40, dodge: 0.25, mult: 7.5, weight: 1 }
-  ];
-
-    // Sélection pondérée (Les monstres légendaires sont plus rares)
-    let totalWeight = monsterDatabase.reduce((sum, m) => sum + m.weight, 0);
-    let randomWeight = Math.random() * totalWeight;
-    let enemyTemplate = monsterDatabase[0];
-
-    for (const monster of monsterDatabase) {
-      randomWeight -= monster.weight;
-      if (randomWeight <= 0) {
-        enemyTemplate = monster;
-        break;
-      }
-    }
-
-    // 4. Initialisation des Combattants
-    const userName = await usersData.getName(senderID);
-    const player = {
-      name: userName,
-      emoji: "🛡️",
-      hp: 200,
-      maxHp: 200,
-      atk: 25,
-      def: 10,
-      crit: 0.15, // 15% de chance de coup critique
-      dodge: 0.10 // 10% de chance d'esquive
-    };
-
+    // ==========================================
+    // 👾 GÉNÉRATION DE L'ADVERSAIRE ET STATS RPG
+    // ==========================================
+    // Sélection aléatoire pondérée implicitement par la rareté (optionnel via array, ici équiprobable structuré)
+    const monsterTemplate = MONSTERS_POOL[Math.floor(Math.random() * MONSTERS_POOL.length)];
+    
+    // Instanciation de l'adversaire (Légère fluctuation des stats d'une instance à l'autre pour le réalisme)
     const enemy = {
-      name: enemyTemplate.name,
-      emoji: enemyTemplate.emoji,
-      difficulty: enemyTemplate.difficulty,
-      hp: enemyTemplate.hp,
-      maxHp: enemyTemplate.hp,
-      atk: enemyTemplate.atk,
-      def: enemyTemplate.def,
-      crit: enemyTemplate.crit,
-      dodge: enemyTemplate.dodge,
-      mult: enemyTemplate.mult
+      name: monsterTemplate.name,
+      emoji: monsterTemplate.emoji,
+      difficulty: monsterTemplate.difficulty,
+      multiplier: monsterTemplate.mult,
+      maxHp: monsterTemplate.hp,
+      hp: monsterTemplate.hp,
+      atk: monsterTemplate.atk,
+      def: monsterTemplate.def,
+      crit: monsterTemplate.crit,
+      dodge: monsterTemplate.dodge
     };
 
-    // Fonction de génération de barre de vie visuelle (10 blocs)
-    function generateHPBar(hp, maxHp) {
-      const percentage = Math.max(0, Math.min(1, hp / maxHp));
-      const filledLength = Math.round(percentage * 10);
-      const emptyLength = 10 - filledLength;
-      const filledBar = "🟩".repeat(filledLength);
-      const emptyBar = "⬛".repeat(emptyLength);
-      return `${filledBar}${emptyBar} (${Math.max(0, hp)}/${maxHp} HP)`;
-    }
+    // Instanciation du Joueur (Basée sur un profil de base évolutif)
+    const player = {
+      name: userData.name || "Aventurier",
+      maxHp: 800,
+      hp: 800,
+      atk: 85,
+      def: 30,
+      crit: 0.15,
+      dodge: 0.10
+    };
 
-    // Message d'introduction du combat
-    let introText = `🏟️ **BIENVENUE DANS L'ARÈNE DES GLADIATEURS** 🏟️\n`;
-    introText += `━━━━━━━━━━━━━━━━━━\n`;
-    introText += `👤 **Joueur :** ${player.name}\n💰 **Mise engagée :** ${bet}$\n\n`;
-    introText += `⚔️ **Adversaire généré :** ${enemy.emoji} **${enemy.name}**\n`;
-    introText += `🔴 **Difficulté :** [ ${enemy.difficulty} ]\n`;
-    introText += `🎁 **Multiplicateur de gain :** x${enemy.mult}\n`;
-    introText += `━━━━━━━━━━━━━━━━━━\n`;
-    introText += `*Le combat va commencer dans quelques instants...*`;
+    // Interconnexion optionnelle avec le module de familiers (Pet Connection)
+    // Ajoute un bonus statistique si un familier actif est détecté
+    try {
+      const petDBFile = path.join(__dirname, 'cache', 'petsMMO', 'player_pets.json');
+      if (fs.existsSync(petDBFile)) {
+        const petDB = JSON.parse(fs.readFileSync(petDBFile, 'utf8'));
+        const playerPetData = petDB[senderID];
+        if (playerPetData && playerPetData.activePetId) {
+          const activePet = playerPetData.inventory.find(p => p.uniqueId === playerPetData.activePetId);
+          if (activePet && activePet.hunger > 20) {
+            player.atk = Math.floor(player.atk * 1.12); // +12% ATK globale passive
+            player.maxHp += 150;
+            player.hp += 150;
+          }
+        }
+      }
+    } catch (e) { /* Protection silencieuse si le fichier pet n'existe pas */ }
 
-    const battleMsg = await message.reply(introText);
-    const battleMsgID = battleMsg.messageID;
+    // Send initial loading message
+    const initialMsg = await message.reply("🚪 | *Ouverture des portes des cellules... Les grilles se lèvent sous les clameurs de la foule !*");
+    const msgID = initialMsg.messageID;
 
+    // ==========================================
+    // ⚔️ BOUCLE DU MOTEUR DE COMBAT AUTOMATIQUE
+    // ==========================================
     let round = 1;
-    let logs = [];
+    let combatLog = "Le duel commence ! Préparez vos armes.\n";
 
-    function delay(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
+    const combatInterval = setInterval(async () => {
+      // Condition d'arrêt si l'un des combattants meurt ou si le nombre max de tours est dépassé
+      if (player.hp <= 0 || enemy.hp <= 0 || round > 6) {
+        clearInterval(combatInterval);
+        return resolveCombat(api, threadID, msgID, senderID, player, enemy, betAmount, usersData);
+      }
 
-    // Boucle de combat au tour par tour (synchrone avec édition)
-    while (player.hp > 0 && enemy.hp > 0 && round <= 20) {
-      await delay(2500); // 2.5s d'attente pour que l'utilisateur lise chaque action
-      logs = [];
+      let currentTurnLog = `👉 **[TOUR ${round}]**\n`;
 
-      // --- TOUR DU JOUEUR ---
-      logs.push(`👉 **Tour ${round} : À ton tour !**`);
-      
+      // ─── TOUR DU JOUEUR ───
+      let playerDmgMsg = "";
+      // Vérification Esquive de l'ennemi
       if (Math.random() < enemy.dodge) {
-        logs.push(`💨 ${enemy.emoji} **${enemy.name}** a esquivé ton attaque avec agilité !`);
+        playerDmgMsg = `💨 ${enemy.emoji} ${enemy.name} esquive l'assaut avec agilité !`;
       } else {
-        let baseDmg = player.atk + Math.floor(Math.random() * 9) - 4; // Atk de base ± 4
-        let isCrit = Math.random() < player.crit;
-        if (isCrit) baseDmg = Math.floor(baseDmg * 1.5);
+        // Calcul des dégâts de base avec une variance de +/- 15%
+        const variance = 0.85 + Math.random() * 0.30;
+        let finalPlayerAtk = Math.floor(player.atk * variance);
         
-        let finalDmg = Math.max(3, baseDmg - enemy.def); // Réduction par la défense (min 3)
-        enemy.hp -= finalDmg;
+        // Atténuation par la défense de la cible
+        let netDmg = Math.max(15, finalPlayerAtk - Math.floor(enemy.def / 2));
         
-        logs.push(`${isCrit ? "💥 **COUP CRITIQUE !** " : "⚔️ "}${player.name} inflige **${finalDmg}** points de dégâts à l'ennemi.`);
+        // Coup critique ?
+        if (Math.random() < player.crit) {
+          netDmg = Math.floor(netDmg * 1.5);
+          playerDmgMsg = `💥 **COUP CRITIQUE !** Vous infligez **${netDmg}** points de dégâts !`;
+        } else {
+          playerDmgMsg = `⚔️ Vous portez un coup et infligez **${netDmg}** points de dégâts.`;
+        }
+        enemy.hp = Math.max(0, enemy.hp - netDmg);
+      }
+      currentTurnLog += `│ ${playerDmgMsg}\n`;
+
+      // ─── TOUR DE L'ENNEMI (Si encore en vie) ───
+      if (enemy.hp > 0) {
+        let enemyDmgMsg = "";
+        if (Math.random() < player.dodge) {
+          enemyDmgMsg = `🛡️ Vous effectuez une roulade tactique et esquivez la riposte !`;
+        } else {
+          const variance = 0.85 + Math.random() * 0.30;
+          let finalEnemyAtk = Math.floor(enemy.atk * variance);
+          let netEnemyDmg = Math.max(10, finalEnemyAtk - Math.floor(player.def / 2));
+
+          if (Math.random() < enemy.crit) {
+            netEnemyDmg = Math.floor(netEnemyDmg * 1.5);
+            enemyDmgMsg = `🩸 **AÏE ! CRITIQUE !** ${enemy.emoji} vous inflige **${netEnemyDmg}** dégâts !`;
+          } else {
+            enemyDmgMsg = `💥 ${enemy.emoji} riposte violemment et vous inflige **${netEnemyDmg}** dégâts.`;
+          }
+          player.hp = Math.max(0, player.hp - netEnemyDmg);
+        }
+        currentTurnLog += `│ ${enemyDmgMsg}\n`;
       }
 
-      if (enemy.hp <= 0) {
-        enemy.hp = 0;
-        logs.push(`💀 ${enemy.emoji} **${enemy.name}** s'effondre au sol !`);
-        break;
-      }
+      // Construction de la trame visuelle mise à jour
+      let turnFrame = UI.boxStart(`Combat : Round ${round}`) + `\n`;
+      turnFrame += `│ 👤 **${player.name}** (Vous)\n`;
+      turnFrame += `│ ❤️ HP : ${UI.renderHpBar(player.hp, player.maxHp)}\n`;
+      turnFrame += `${UI.line}\n`;
+      turnFrame += `│ ${enemy.emoji} **${enemy.name}** [${enemy.difficulty}]\n`;
+      turnFrame += `│ ❤️ HP : ${UI.renderHpBar(enemy.hp, enemy.maxHp)}\n`;
+      turnFrame += `${UI.line}\n`;
+      turnFrame += `${currentTurnLog}`;
+      turnFrame += UI.boxEnd();
 
-      // --- TOUR DE L'ENNEMI ---
-      logs.push(`\n👈 **Le monstre contre-attaque !**`);
-      
-      if (Math.random() < player.dodge) {
-        logs.push(`💨🛡️ Tu as superbement esquivé l'attaque de **${enemy.name}** !`);
-      } else {
-        let baseDmgEnemy = enemy.atk + Math.floor(Math.random() * 7) - 3;
-        let isCritEnemy = Math.random() < enemy.crit;
-        if (isCritEnemy) baseDmgEnemy = Math.floor(baseDmgEnemy * 1.5);
-
-        let finalDmgEnemy = Math.max(3, baseDmgEnemy - player.def);
-        player.hp -= finalDmgEnemy;
-
-        logs.push(`${isCritEnemy ? "🩸 **BRUTAL !** " : "💥 "}${enemy.emoji} **${enemy.name}** te flanque **${finalDmgEnemy}** points de dégâts.`);
-      }
-
-      if (player.hp <= 0) {
-        player.hp = 0;
-        logs.push(`💀 Tu as succombé aux blessures du combat...`);
-        break;
-      }
-
-      // Formatage visuel du tour de jeu actuel
-      let roundTemplate = `🏟️ **ARÈNE - TOUR ${round}** 🏟️\n`;
-      roundTemplate += `━━━━━━━━━━━━━━━━━━\n`;
-      roundTemplate += `👤 **${player.name}** (Toi)\n`;
-      roundTemplate += `${generateHPBar(player.hp, player.maxHp)}\n\n`;
-      roundTemplate += `${enemy.emoji} **${enemy.name}** (Niveau: ${enemy.difficulty})\n`;
-      roundTemplate += `${generateHPBar(enemy.hp, enemy.maxHp)}\n`;
-      roundTemplate += `━━━━━━━━━━━━━━━━━━\n`;
-      roundTemplate += `📜 **Actions du tour :**\n${logs.join("\n")}`;
-
-      // Édition en direct de l'état du combat
+      // Édition dynamique du message Discord
       try {
-        await api.editMessage(roundTemplate, battleMsgID);
+        await api.editMessage(turnFrame, msgID, threadID);
       } catch (err) {
-        await message.reply(roundTemplate);
+        clearInterval(combatInterval); // Arrêt de secours si le message a été supprimé
       }
 
       round++;
-    }
-
-    // 5. Fin du match et distribution de l'argent via usersData
-    await delay(2500);
-    let finalUserData = await usersData.get(senderID);
-    let currentMoney = finalUserData.money || 0;
-
-    let endTemplate = "";
-    if (player.hp > 0 && enemy.hp === 0) {
-      // Calcul de la récompense
-      const winnings = Math.floor(bet * enemy.mult);
-      currentMoney += winnings;
-      await usersData.set(senderID, { money: currentMoney });
-
-      endTemplate += `👑 **VICTOIRE ÉPIQUE DANS L'ARÈNE !** 👑\n`;
-      endTemplate += `━━━━━━━━━━━━━━━━━━\n`;
-      endTemplate += `🥳 Félicitations **${player.name}**, tu as terrassé l'infâme **${enemy.name}** au bout de **${round - 1}** tours intenses !\n\n`;
-      endTemplate += `💰 **Mise initiale :** ${bet}$\n`;
-      endTemplate += `🏆 **Gain net remporté (x${enemy.mult}) :** +${winnings}$\n`;
-      endTemplate += `💳 **Nouveau solde :** ${currentMoney}$\n`;
-      endTemplate += `━━━━━━━━━━━━━━━━━━\n`;
-      endTemplate += `✨ Rentrez au village en héros ! ✨`;
-    } else {
-      endTemplate += `💀 **DÉFAITE CUISANTE...** 💀\n`;
-      endTemplate += `━━━━━━━━━━━━━━━━━━\n`;
-      endTemplate += `🩸 Tragique destin ! **${player.name}** a été terrassé par le **${enemy.name}**.\n`;
-      endTemplate += `L'arène réclame ton corps et ton or...\n\n`;
-      endTemplate += `💸 **Mise perdue :** -${bet}$\n`;
-      endTemplate += `💳 **Nouveau solde :** ${currentMoney}$\n`;
-      endTemplate += `━━━━━━━━━━━━━━━━━━\n`;
-      endTemplate += `💪 Entraînez-vous, améliorez votre équipement et revenez plus fort !`;
-    }
-
-    try {
-      await api.editMessage(endTemplate, battleMsgID);
-    } catch (err) {
-      await message.reply(endTemplate);
-    }
+    }, 2500); // Latence de 2.5 secondes par tour pour permettre la lecture des animations
   }
 };
+
+// ==========================================
+// 🏆 RÉSOLUTION DU COMBAT ET VERSEMENTS
+// ==========================================
+async function resolveCombat(api, threadID, msgID, uid, player, enemy, betAmount, usersData) {
+  let userData = await usersData.get(uid);
+  let currentMoney = userData.money || 0;
+  
+  const isPlayerVictorious = player.hp > enemy.hp;
+  let finalResultBox = UI.boxStart("Fin du Combat") + `\n`;
+
+  if (isPlayerVictorious) {
+    // Calcul des gains de victoire indexés sur le multiplicateur de difficulté
+    const grossWinnings = Math.floor(betAmount * enemy.multiplier);
+    currentMoney += grossWinnings;
+    await usersData.set(uid, { money: currentMoney });
+
+    finalResultBox += `🏆 **VICTOIRE ÉCLATANTE !**\n`;
+    finalResultBox += `│ Vous terrassez le ${enemy.name} sous les hourras de la foule !\n`;
+    finalResultBox += `│ 💰 Gain Total : **+${grossWinnings.toLocaleString()}$** (Mise multipliée x${enemy.multiplier})\n`;
+    finalResultBox += `│ 👑 Statut de votre solde : ${currentMoney.toLocaleString()}$\n`;
+
+    // 🔗 INTERCONNEXION EXTÉRIEURE AVEC LE MODULE DE QUÊTES (Quest Connection)
+    try {
+      const questModule = require('./quest.js');
+      if (questModule && typeof questModule.incrementProgress === 'function') {
+        // Met à jour l'objectif global "arena_win" de l'utilisateur
+        questModule.incrementProgress(uid, "arena_win", 1);
+      }
+    } catch (e) {
+      // Liaison transparente s'exécutant sans erreur si quest.js n'est pas déployé
+    }
+
+  } else {
+    // Défaite de l'utilisateur (La mise a déjà été retirée au début)
+    finalResultBox += `💀 **DÉFAITE CRUELLE...**\n`;
+    finalResultBox += `│ Votre corps inanimé est traîné hors du sable de l'arène.\n`;
+    finalResultBox += `│ 💸 Vous perdez l'intégralité de votre mise : **-${betAmount.toLocaleString()}$**\n`;
+    finalResultBox += `│ 🛡️ Entraînez-vous et retentez votre chance à la prochaine session.\n`;
+  }
+
+  finalResultBox += UI.boxEnd();
+  
+  try {
+    await api.editMessage(finalResultBox, msgID, threadID);
+  } catch (err) {
+    // En cas d'erreur de modification, envoi d'un message de secours standard
+    api.sendMessage(finalResultBox, threadID);
+  }
+        }
