@@ -6,15 +6,17 @@ const path = require("path");
 module.exports = {
   config: {
     name: "uid",
-    version: "1.1",
+    version: "1.2",
     author: "Samycharles × Gemini",
     role: 0,
-    shortDescription: "Carte UID avec avatar sécurisé",
+    shortDescription: "Carte UID avec avatar (supporte le reply)",
     category: "utility"
   },
 
   onStart: async function ({ api, event, usersData }) {
-    const uid = event.senderID;
+    // Détermination de l'UID ciblé (soit la personne à qui on répond, soit l'auteur du message)
+    const uid = event.type === "message_reply" ? event.messageReply.senderID : event.senderID;
+    
     const cacheDir = path.join(__dirname, "cache");
     
     // Création sécurisée du dossier cache si inexistant
