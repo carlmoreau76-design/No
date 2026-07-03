@@ -404,3 +404,182 @@ module.exports = {
 
                 return api.sendMessage(Storage.buildPremiumBox("𝐁𝐔𝐓𝐈𝐍 𝐃𝐄 𝐌𝐄𝐑", winLines), threadID, messageID);
                             }
+
+                // ════════════════════════════════════════════════════════════════════════════════════
+            // 🪙 CHASSE AUX TRESORS & COFFRES (INDEPENDANT & NETTOYE)
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "map": {
+                let mapsCount = p.inventory.treasure_map_common || 0;
+                let lines = [
+                    `🗺️ ${Storage.toStyle2("Cartes au Trésor disponibles :")} **${mapsCount}**`,
+                    ` ───────────────────────`,
+                    `💡 _Utilisez la commande_ \`~pirates dig\` _pour consommer une carte_`,
+                    ` _et déterrer un coffre enfoui sur une plage déserte._`
+                ];
+                return api.sendMessage(Storage.buildPremiumBox("𝐂𝐀𝐑𝐓𝐄𝐒 𝐀𝐔 𝐓𝐑É𝐒𝐎𝐑", lines), threadID, messageID);
+            }
+
+            case "treasure":
+            case "dig": {
+                let mapsCount = p.inventory.treasure_map_common || 0;
+                if (mapsCount <= 0) return api.sendMessage("🛑 Vous ne possédez aucune carte au trésor dans votre inventaire. Partez en expédition (`~pirates explore`).", threadID, messageID);
+
+                p.inventory.treasure_map_common -= 1;
+
+                let rolled = "bois";
+                let dice = Math.floor(Math.random() * 100);
+                if (dice < 5) rolled = "abyssal";
+                else if (dice < 20) rolled = "or";
+                else if (dice < 50) rolled = "argent";
+
+                p.inventory[`chest_${rolled}`] = (p.inventory[`chest_${rolled}`] || 0) + 1;
+                Storage.saveUsers();
+
+                let digLines = [
+                    `🏜️ **${Storage.toStyle2("Fouilles terminées avec succès !")}**`,
+                    ` ───────────────────────`,
+                    `💥 Action : Vous avez suivi les indices de la carte.`,
+                    `📦 Découverte : Vous déterrez un **Coffre en ${rolled.toUpperCase()}** !`,
+                    `✨ _Tapez_ \`~pirates chest\` _pour ouvrir vos coffres stockés._`
+                ];
+                return api.sendMessage(Storage.buildPremiumBox("𝐂𝐇𝐀𝐒𝐒𝐄 𝐀𝐔 𝐓𝐑É𝐒𝐎𝐑", digLines), threadID, messageID);
+            }
+
+            case "chest": {
+                let wood = p.inventory.chest_bois || 0;
+                let silver = p.inventory.chest_argent || 0;
+                let gold = p.inventory.chest_or || 0;
+                let abyssal = p.inventory.chest_abyssal || 0;
+
+                let type = args[1]?.toLowerCase();
+                if (!type || !["bois", "argent", "or", "abyssal"].includes(type)) {
+                    let chestLines = [
+                        `📦 **${Storage.toStyle2("Vos Coffres Verrouillés :")}**`,
+                        ` ───────────────────────`,
+                        `🧳 Coffres en Bois : **${wood}** (\`~pirates chest bois\`)`,
+                        `🥈 Coffres en Argent : **${silver}** (\`~pirates chest argent\`)`,
+                        `🥇 Coffres en Or : **${gold}** (\`~pirates chest or\`)`,
+                        `🔮 Coffres Abyssaux : **${abyssal}** (\`~pirates chest abyssal\`)`
+                    ];
+                    return api.sendMessage(Storage.buildPremiumBox("𝐈𝐍𝐕𝐄𝐍𝐓𝐀𝐈𝐑𝐄 𝐃𝐄𝐒 𝐂𝐎𝐅𝐅𝐑𝐄𝐒", chestLines), threadID, messageID);
+                }
+
+                if ((p.inventory[`chest_${type}`] || 0) <= 0) return api.sendMessage(`🛑 Vous n'avez pas de coffre de type [${type}] à ouvrir.`, threadID, messageID);
+
+                p.inventory[`chest_${type}`] -= 1;
+                let goldReward = 0;
+                let doubloonsReward = 0;
+
+                if (type === "bois") { goldReward = Math.floor(500 + Math.random() * 1000); }
+                if (type === "argent") { goldReward = Math.floor(1500 + Math.random() * 2500); doubloonsReward = 1; }
+                if (type === "or") { goldReward = Math.floor(4000 + Math.random() * 6000); doubloonsReward = 3; }
+                if (type === "abyssal") { goldReward = Math.floor(12000 + Math.random() * 20000); doubloonsReward = 8; }
+
+                p.gold += goldReward;
+                p.doubloons += doubloonsReward;
+                p.stats.chestsOpened += 1;
+                Storage.saveUsers();
+
+                let openLines = [
+                    `🔓 **${Storage.toStyle2("Coffre fracturé !")}**`,
+                    ` ───────────────────────`,
+                    `💰 Économie : **+${Storage.formatMoney(goldReward)}**`,
+                    doubloonsReward > 0 ? `💎 Doublons : **+${doubloonsReward}**` : `🍃 Aucun doublon trouvé.`
+                ];
+                return api.sendMessage(Storage.buildPremiumBox("𝐎𝐔𝐕𝐄𝐑𝐓𝐔𝐑𝐄 𝐃𝐄 𝐂𝐎𝐅𝐅𝐑𝐄", openLines), threadID, messageID);
+            }
+
+            case "loot": {
+                let woodCount = p.inventory.bois || 0;
+                let rhumCount = p.inventory.rhum || 0;
+                let pearlsCount = p.inventory.perles || 0;
+                let ironCount = p.inventory.fer || 0;
+                let relicsCount = p.inventory.reliques || 0;
+
+                let lootLines = [
+                    `📦 **${Storage.toStyle2("Matons et Marchandises de contrebande :")}**`,
+                    ` ───────────────────────`,
+                    `🪵 Bois de charpente : **${woodCount} unités**`,
+                    `🥥 Tonneaux de Rhum : **${rhumCount} unités**`,
+                    `🦪 Perles de nacre : **${pearlsCount} unités**`,
+                    `⛓️ Lingots de Fer : **${ironCount} unités**`,
+                    `🔱 Reliques antiques : **${relicsCount} unités**`,
+                    ` ───────────────────────`,
+                    `💡 _Ces composants serviront prochainement pour l'artisanat._`
+                ];
+                return api.sendMessage(Storage.buildPremiumBox("𝐒𝐎𝐔𝐓𝐄 𝐀𝐔𝐗 𝐌𝐀𝐑𝐂𝐇𝐀𝐍𝐃𝐈𝐒𝐄𝐒", lootLines), threadID, messageID);
+            }
+
+            // ════════════════════════════════════════════════════════════════════════════════════
+            // ⚔️ COMBATS & AFFRONTEMENTS (INDEPENDANT & NETTOYE)
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "duel": {
+                let targetID = Object.keys(event.mentions)[0];
+                if (!targetID) return api.sendMessage("🛑 Mentionnez le pirate que vous souhaitez provoquer en duel à l'épée.", threadID, messageID);
+                if (targetID === senderID) return api.sendMessage("🛑 Vous ne pouvez pas vous battre contre vous-même.", threadID, messageID);
+
+                let targetP = Storage.getUserProfile(targetID);
+                let now = Date.now();
+                if (now - p.cooldowns.duel < 2 * 60 * 1000) {
+                    return api.sendMessage("⏳ Vos muscles sont fatigués. Attendez 2 minutes entre chaque duel.", threadID, messageID);
+                }
+
+                p.cooldowns.duel = now;
+                
+                let playerPower = p.level * 10 + Math.floor(Math.random() * 50);
+                let targetPower = targetP.level * 10 + Math.floor(Math.random() * 50);
+
+                if (playerPower >= targetPower) {
+                    let prize = Math.floor(targetP.gold * 0.10);
+                    if (prize > 10000) prize = 10000;
+
+                    p.gold += prize;
+                    targetP.gold = Math.max(0, targetP.gold - prize);
+                    p.stats.duelsWon += 1;
+
+                    Storage.saveUsers();
+                    return api.sendMessage(`⚔️ **${userName}** a terrassé **${targetP.name}** en duel singulier et pille **${Storage.formatMoney(prize)}** !`, threadID, messageID);
+                } else {
+                    let loss = Math.floor(p.gold * 0.05);
+                    p.gold = Math.max(0, p.gold - loss);
+                    
+                    Storage.saveUsers();
+                    return api.sendMessage(`🍂 **${userName}** a mordu la poussière face à **${targetP.name}** et perd **${Storage.formatMoney(loss)}** en frais médicaux.`, threadID, messageID);
+                }
+            }
+
+            case "raid":
+            case "plunder": {
+                if (!p.crewId) return api.sendMessage("🛑 Vous devez avoir un équipage pour lancer un raid sur une route commerciale.", threadID, messageID);
+                let c = crews[p.crewId];
+                let s = c.ship;
+
+                if (s.hp <= 40) return api.sendMessage("🛑 Navire trop endommagé pour supporter le recul des canons. Réparez d'abord !", threadID, messageID);
+
+                let winChance = Math.min(90, 40 + s.level * 2);
+                let dice = Math.floor(Math.random() * 100);
+
+                if (dice < winChance) {
+                    let goldLooted = Math.floor(10000 + s.level * 2500);
+                    c.vault += goldLooted;
+                    s.hp = Math.max(20, s.hp - Math.floor(Math.random() * 30));
+
+                    Storage.saveCrews();
+                    Storage.logCrewEvent(p.crewId, "RAID", `Attaque réussie d'un convoi. Trésor : +${goldLooted} 🪙`);
+
+                    let raidLines = [
+                        `⚔️ **${Storage.toStyle2("Victoire Navale !")}**`,
+                        ` ───────────────────────`,
+                        `🚢 Navire : **${s.name}** a coulé l'escorte marchande.`,
+                        `🏛️ Trésor d'Équipage : **+${Storage.formatMoney(goldLooted)}** (Ajoutés au Coffre)`,
+                        `❤️ Intégrité de la Coque : **${s.hp} HP** restant.`
+                    ];
+                    return api.sendMessage(Storage.buildPremiumBox("𝐑𝐀𝐈𝐃 𝐍𝐀𝐕𝐀𝐋", raidLines), threadID, messageID);
+                } else {
+                    s.hp = Math.max(10, s.hp - Math.floor(40 + Math.random() * 40));
+                    Storage.saveCrews();
+                    Storage.logCrewEvent(p.crewId, "ECHEC_RAID", "La flotte royale nous a repoussés. Lourdes avaries.");
+
+                    return api.sendMessage(`🚨 **𝖤𝖢𝖧𝖤𝖢 :** Votre navire est tombé sur un bâtiment royal armé de canons lourds. Vous battez en retraite avec **${s.hp} HP** restants. Réparations urgentes nécessaires !`, threadID, messageID);
+                }
+                        }
