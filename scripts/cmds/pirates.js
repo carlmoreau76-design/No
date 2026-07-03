@@ -140,7 +140,7 @@ module.exports = {
                     ` ───────────────────────`,
                     `✨ _${Storage.toStyle2("Votre piraterie commence ! Recrutez à l'aide de l'ID.")}_`
                 ];
-                return api.sendMessage(Storage.buildPremiumBox("É𝐐𝐔local𝐈𝐏local𝐀𝐆local𝐄 𝐅local𝐎local𝐍local𝐃localÉ", render), threadID, messageID);
+                return api.sendMessage(Storage.buildPremiumBox("𝐄́𝐐𝐔𝐈𝐏𝐀𝐆𝐄 𝐅𝐎𝐍𝐃𝐄́", render), threadID, messageID);
             }
 
             case "info":
@@ -158,7 +158,7 @@ module.exports = {
                     `⚔️ ${Storage.toStyle2("Duels Gagnés :")} ${p.stats.duelsWon} │ 🏝️ ${Storage.toStyle2("Explorations :")} ${p.stats.explorations}`,
                     `📦 ${Storage.toStyle2("Coffres Ouverts :")} ${p.stats.chestsOpened}`
                 ];
-                return api.sendMessage(Storage.buildPremiumBox("𝐅𝐈𝐂𝐇𝐄 𝐃local𝐄 𝐏local..."), threadID, messageID);
+                return api.sendMessage(Storage.buildPremiumBox("𝐅𝐈𝐂𝐇𝐄 𝐃𝐄 𝐏𝐈𝐑𝐀𝐓𝐄"), threadID, messageID);
             }
 
             case "list": {
@@ -175,7 +175,7 @@ module.exports = {
                 if(lines.length > 0) lines.pop();
                 else lines.push("Aucune faction pirate ne navigue pour le moment.");
                 
-                return api.sendMessage(Storage.buildPremiumBox("𝐑local𝐄𝐆local𝐈..."), threadID, messageID);
+                return api.sendMessage(Storage.buildPremiumBox("𝐑𝐄𝐆𝐈𝐒𝐓𝐑𝐄 𝐃𝐄𝐒 𝐄́𝐐𝐔𝐈𝐏𝐀𝐆𝐄𝐒"), threadID, messageID);
             }
 
             case "join": {
