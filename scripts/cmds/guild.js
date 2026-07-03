@@ -223,3 +223,157 @@ module.exports = {
 
                 return api.sendMessage("🍃 **𝖣é𝗌𝖾𝗋𝗍𝗂𝗈𝗇 :** 𝖵𝗈𝗎𝗌 𝖺𝗏𝖾𝗓 𝗋𝗈𝗆𝗉𝗎 𝗏𝗈𝗌 𝖾𝗇𝗀𝖺messages𝖾𝗆𝖾𝗇𝗍𝗌 𝖾𝗍 𝖺𝗏𝖾𝗓 𝗊𝗎𝗂𝗍𝗍é 𝗅'𝖺𝗅𝗅𝗂𝖺𝗇𝖼𝖾.", threadID, messageID);
             }
+
+                // ════════════════════════════════════════════════════════════════════════════════════
+            // 👥 INVITATIONS & EFFECTIFS IMPÉRIAUX
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "invite": {
+                if (!Utils.checkPermission(p, "OFFICIER")) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖠𝗎𝗍𝗈𝗋𝗂𝗌𝖺𝗍𝗂𝗈𝗇 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍𝖾 (𝖮𝖿𝖿𝗂𝖼𝗂𝖾𝗋 𝗆𝗂𝗇𝗂𝗆𝗎𝗆).", threadID, messageID);
+                const targetID = Object.keys(event.mentions)[0];
+                if (!targetID) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝖾𝗎𝗂𝗅𝗅𝖾𝗓 𝗆𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗋 (@user) 𝗅𝖾 𝖼𝗈𝗆𝖻𝖺𝗍𝗍𝖺𝗇𝗍 à 𝖾𝗇𝗋ô𝗅𝖾𝗋.", threadID, messageID);
+
+                let targetP = Storage.getUserProfile(targetID);
+                if (targetP.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖢𝖾 𝗀𝗎𝖾𝗋𝗋𝗂𝖾𝗋 𝖺𝗉𝗉𝖺𝗋𝗍𝗂𝖾𝗇𝗍 𝖽é𝗃à à 𝗎𝗇𝖾 𝖺𝗅𝗅𝗂𝖺𝗇𝖼𝖾.", threadID, messageID);
+
+                const g = guilds[p.guildId];
+                if (g.members.length >= Utils.getMaxMembers(g.level)) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗍𝗋𝖾 𝗀𝖺𝗋𝗇𝗂𝗌𝗈𝗇 𝖾𝗌𝗍 𝖺𝗎 𝖼𝗈𝗆𝗉𝗅𝖾𝗍.", threadID, messageID);
+
+                targetP.guildId = p.guildId;
+                targetP.role = "MEMBRE";
+                g.members.push(targetID);
+
+                Storage.saveGuilds(guilds);
+                Storage.saveUsers(Storage.getUsers());
+                Storage.logEvent(p.guildId, "INVITE", `⚔️ ${userName} 𝖺 𝖾𝗇𝗋ô𝗅é 𝗅𝖾 𝗌𝗈𝗅𝖽𝖺𝗍 [${targetID}].`);
+
+                return api.sendMessage(`✨ **𝖤𝗇𝗋ô𝗅𝖾𝗆𝖾𝗇𝗍 :** 𝖫𝖾 𝗃𝗈𝗎𝖾𝗎𝗋 𝖺 é𝗍é 𝗂𝗇𝗍é𝗀𝗋é 𝖺𝗏𝖾𝗓 𝗌𝗎𝖼𝖼è𝗌 𝖽𝖺𝗇𝗌 𝗅'𝖺𝗅𝗅𝗂𝖺𝗇𝖼𝖾 **${g.name}**.`, threadID, messageID);
+            }
+
+            case "members": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗎𝗌 𝗇'𝖺𝗉𝗉𝖺𝗋𝗍𝖾𝗇𝖾𝗓 à 𝖺𝗎𝖼𝗎𝗇𝖾 𝖿𝖺𝖼𝗍𝗂𝗈𝗇.", threadID, messageID);
+                const g = guilds[p.guildId];
+                const users = Storage.getUsers();
+
+                let memberLines = [
+                    `🏠 𝖡𝖺𝗌𝗍𝗂𝗈𝗇 : **${g.name}**`,
+                    `👥 𝖤𝖿𝖿𝖾c𝗍𝗂𝖿 : **${g.members.length} / ${Utils.getMaxMembers(g.level)}**`,
+                    ` ───────────────────────`
+                ];
+
+                g.members.forEach((mId, index) => {
+                    const uProfile = users[mId];
+                    const name = uProfile ? uProfile.name : `𝖲𝗈𝗅𝖽𝖺𝗍_${mId.slice(0,4)}`;
+                    const roleTitle = uProfile ? Utils.ROLES[uProfile.role]?.name || "👤 𝖬𝖾𝗆𝖻𝗋𝖾" : "👤 𝖬𝖾𝗆𝖻𝗋𝖾";
+                    memberLines.push(`[${index + 1}] ${roleTitle} │ **${name}**`);
+                });
+
+                return api.sendMessage(Utils.buildPremiumBox("𝐄𝐅𝐅𝐄𝐂𝐓𝐈𝐅 𝐃𝐄 𝐋'𝐀𝐋𝐋𝐈𝐀𝐍𝐂𝐄", memberLines), threadID, messageID);
+            }
+
+            // ════════════════════════════════════════════════════════════════════════════════════
+            // 💰 BANQUE DE GUILDE & ÉCONOMIE MASSIVE
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "donate": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖥𝖺𝖼𝗍𝗂𝗈𝗇 𝗋𝖾𝗊𝗎𝗂𝗌𝖾 𝗉𝗈𝗎𝗋 𝖼𝗈𝗇𝗍𝗋𝗂𝖦𝗎𝖾𝗋.", threadID, messageID);
+                const g = guilds[p.guildId];
+                const inputVal = args[1];
+
+                if (!inputVal) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖲𝗉é𝖼𝗂𝖿𝗂𝖾𝗓 𝗎𝗇 𝗆𝗈𝗇𝗍𝖺𝗇𝗍 𝗈𝗎 'all'.", threadID, messageID);
+
+                // Simulation de fonds - Remplace par l'économie réelle de ton bot si nécessaire
+                let donation = inputVal === "all" ? 1000000 : parseInt(inputVal);
+                if (isNaN(donation) || donation <= 0) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖬𝗈𝗇𝗍𝖺𝗇𝗍 𝗇𝗎𝗆é𝗋𝗂𝗊𝗎𝖾 𝗂𝗇𝗏𝖺𝗅𝗂𝖽𝖾.", threadID, messageID);
+
+                g.bank += donation;
+                p.stats.contributions += donation;
+                
+                Storage.saveGuilds(guilds);
+                Storage.saveUsers(Storage.getUsers());
+                Storage.logEvent(p.guildId, "DONATE", `💰 ${userName} 𝖺 𝖽é𝗉𝗈𝗌é ${Utils.formatMoney(donation)} 𝖽𝖺𝗇𝗌 𝗅𝖾 𝖼𝗈𝖿𝖿𝗋𝖾.`);
+                
+                MissionSystem.advanceMission(p.guildId, "gold_deposit", donation);
+
+                let lines = [
+                    `💰 𝖵𝖾𝗋𝗌𝖾𝗆𝖾𝗇𝗍 : **+${Utils.formatMoney(donation)}**`,
+                    `🏛️ 𝖭𝗈𝗎𝗏𝖾𝖺𝗎 𝗌𝗈𝗅𝖽𝖾 : **${Utils.formatMoney(g.bank)}**`,
+                    `✨ _𝖬𝖾𝗋𝖼𝗂 𝗉𝗈𝗎𝗋 𝗏𝗈𝗍𝗋𝖾 𝖼𝗈𝗇𝗍𝗋𝗂𝖻𝗎𝗍𝗂𝗈𝗇 𝖺𝗎𝗑 𝖿𝗈𝗇𝖽𝗌 𝖽'𝖾𝗆𝗉观𝗋𝖾._`
+                ];
+                return api.sendMessage(Utils.buildPremiumBox("𝐃É𝐏Ô𝐓 𝐕𝐀𝐋𝐈𝐃É", lines), threadID, messageID);
+            }
+
+            case "withdraw": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗎𝗌 n'𝖺𝗉𝗉𝖺𝗋𝗍𝖾𝗇𝖾𝗓 à 𝖺𝗎𝖼𝗎𝗇𝖾 𝖿𝖺𝖼𝗍𝗂𝗈𝗇.", threadID, messageID);
+                if (!Utils.checkPermission(p, "COLEADER")) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖲𝖾𝗎𝗅𝗌 𝗅𝖾𝗌 𝖢𝗈-𝖫𝖾𝖺𝖽𝖾𝗋𝗌 𝖾𝗍 𝗅𝖾 𝖫𝖾𝖺𝖽𝖾𝗋 𝗉𝖾𝗎𝗏𝖾𝗇𝗍 𝗋𝖾𝗍𝗂𝗋𝖾𝗋.", threadID, messageID);
+                
+                const g = guilds[p.guildId];
+                const amount = parseInt(args[1]);
+                if (isNaN(amount) || amount <= 0) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖲𝗉é𝖼𝗂𝖿𝗂𝖾𝗓 𝗎𝗇 𝗆𝗈𝗇𝗍𝖺𝗇𝗍 𝗏𝖺𝗅𝗂𝖽𝖾.", threadID, messageID);
+                if (g.bank < amount) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖥𝗈𝗇𝖽𝗌 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍𝗌 𝖽𝖺𝗇𝗌 𝗅𝖾 𝖳𝗋é𝗌𝗈𝗋 𝖱𝗈𝗒𝖺𝗅.", threadID, messageID);
+
+                g.bank -= amount;
+                Storage.saveGuilds(guilds);
+                Storage.logEvent(p.guildId, "WITHDRAW", `🚨 Retrait : ${userName} 𝖺 𝗉𝗋é𝗅𝖾𝗏é ${Utils.formatMoney(amount)}.`);
+
+                let lines = [
+                    `💰 Retrait effectué : **-${Utils.formatMoney(amount)}**`,
+                    `🏛️ Trésor restant : **${Utils.formatMoney(g.bank)}**`,
+                    `👤 Opérateur : _${userName}_`
+                ];
+                return api.sendMessage(Utils.buildPremiumBox("𝐅𝐎𝐍𝐃𝐒 𝐏𝐑É𝐋𝐄𝐕É𝐒", lines), threadID, messageID);
+            }
+
+            case "upgrade": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖥𝖺𝖼𝗍𝗂𝗈𝗇 𝗋𝖾𝗊𝗎𝗂𝗌𝖾.", threadID, messageID);
+                if (!Utils.checkPermission(p, "OFFICIER")) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖦𝗋𝖺𝖽𝖾 d'𝖮𝖿𝖿𝗂𝖼𝗂𝖾𝗋 𝗆𝗂𝗇𝗂𝗆𝗎𝗆 𝗋𝖾𝗊𝗎𝗂𝗌.", threadID, messageID);
+
+                const g = guilds[p.guildId];
+                if (g.level >= 50) return api.sendMessage("👑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖡𝖺𝗌𝗍𝗂𝗈𝗇 𝖽é𝗃à 𝖺𝗎 𝖭𝗂𝗏𝖾𝖺𝗎 𝖬𝖺𝗑𝗂𝗆𝗎𝗆 (𝟧𝟢).", threadID, messageID);
+
+                const cost = Utils.getUpgradeCost(g.level);
+                if (g.bank < cost) return api.sendMessage(`🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖨𝗅 𝖿𝖺𝗎𝗍 **${Utils.formatMoney(cost)}** 𝖽𝖺𝗇𝗌 𝗅𝖾 𝖼𝗈𝖿𝖿𝗋𝖾 𝗉𝗈𝗎𝗋 é𝗅𝖾𝗏𝖾𝗋 𝗅𝖾 𝖻𝖺𝗌𝗍𝗂𝗈𝗇.`, threadID, messageID);
+
+                g.bank -= cost;
+                g.level += 1;
+                
+                Storage.saveGuilds(guilds);
+                Storage.logEvent(p.guildId, "UPGRADE", `🏛️ 𝖨𝖭𝖥𝖱𝖠𝖲𝖳𝖱𝖴𝖢𝖳𝖴𝖱𝖤 : 𝖡𝖺𝗌𝗍𝗂𝗈𝗇 é𝗅𝖾𝗏é 𝖺𝗎 𝖭𝗂𝗏𝖾𝖺𝗎 ${g.level}.`);
+                MissionSystem.checkAchievements(p.guildId);
+
+                let upgradeLines = [
+                    `🏛️ **𝖡𝖺𝗌𝗍𝗂𝗈𝗇 É𝗅𝖾𝗏é 𝖺𝗎 𝖭𝗂𝗏𝖾𝖺𝗎 ${g.level} !**`,
+                    ` ───────────────────────`,
+                    `💰 𝖢𝗈û𝗍 𝖽𝖾𝗌 𝖳𝗋𝖺𝗏𝖺𝗎𝗑 : -${Utils.formatMoney(cost)}`,
+                    `👥 𝖢𝖺𝗉𝖺𝖼𝗂𝗍é 𝖬𝖺𝗑 : **${Utils.getMaxMembers(g.level)} 𝖦𝗎𝖾𝗋𝗋𝗂𝖾𝗋𝗌**`,
+                    `⚔️ 𝖡𝗈𝗇𝗎𝗌 𝖽𝖾 𝖦𝗎𝖾𝗋𝗋𝖾 : **+${Utils.getLevelBonus(g.level).warDamageBonus} Dégâts**`
+                ];
+                return api.sendMessage(Utils.buildPremiumBox("𝐈𝐍𝐅𝐑𝐀𝐒𝐓𝐑𝐔𝐂𝐓𝐔𝐑𝐄 𝐀𝐌É𝐋𝐈𝐎𝐑É𝐄", upgradeLines), threadID, messageID);
+            }
+
+            case "daily": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗎𝗌 𝗇𝖾 𝗉𝗈𝗎𝗏𝖾𝗓 𝗉𝖺𝗌 𝗍𝗈𝗎c𝗁𝖾𝗋 𝖽'𝖺𝗅𝗅𝗈𝖼𝖺𝗍𝗂𝗈𝗇 𝗌𝖺𝗇𝗌 𝖿𝖺𝖼𝗍𝗂𝗈𝗇.", threadID, messageID);
+                const now = Date.now();
+                if (now - p.cooldowns.daily < 24 * 60 * 60 * 1000) {
+                    const diff = (24 * 60 * 60 * 1000) - (now - p.cooldowns.daily);
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    return api.sendMessage(`⏳ 𝖢𝗈𝗈𝗅𝖽𝗈𝗐𝗇 : 𝖵𝗈𝗍𝗋𝖾 𝖺𝗅𝗅𝗈𝖼𝖺𝗍𝗂𝗈𝗇 𝗋𝖾𝗏𝗂𝖾𝗇𝖽𝗋𝖺 𝖽𝖺𝗇𝗌 **${hours}𝗁 ${mins}𝗆**.`, threadID, messageID);
+                }
+
+                const g = guilds[p.guildId];
+                const bonus = Utils.getLevelBonus(g.level);
+                const payout = Math.floor(40000 * bonus.moneyMultiplier);
+                const tax = Math.floor(payout * 0.15); // 15% reversés au coffre
+
+                p.cooldowns.daily = now;
+                g.bank += tax;
+
+                Storage.saveUsers(Storage.getUsers());
+                Storage.saveGuilds(guilds);
+                Storage.logEvent(p.guildId, "DAILY", `🎁 ${userName} 𝖺 𝗉𝖾𝗋ç𝗎 𝗌𝗈𝗇 𝖺𝗅𝗅𝗈𝖼𝖺𝗍𝗂𝗈𝗇 (+${tax} 💰 𝗍𝖺𝗑é𝗌 𝗉𝗈𝗎𝗋 𝗅𝖺 𝗀𝗎𝗂𝗅𝖽𝖾).`);
+
+                let dailyLines = [
+                    `🎁 𝖣𝗈𝗍𝖺𝗍𝗂𝗈𝗇 𝖱𝗈𝗒𝖺𝗅𝖾 : **+${Utils.formatMoney(payout - tax)}**`,
+                    `🏛️ 𝖳𝖺𝗑𝖾 𝖽𝖾 𝖡𝖺𝗌𝗍𝗂𝗈𝗇 (𝟣𝟧%) : **+${Utils.formatMoney(tax)}** (𝖠𝗎 𝖼𝗈𝖿𝖿𝗋𝖾)`
+                ];
+                return api.sendMessage(Utils.buildPremiumBox("𝐀𝐋𝐋𝐎𝐂𝐀𝐓𝐈𝐎𝐍 𝐐𝐔𝐎𝐓𝐈𝐃𝐈𝐄𝐍𝐍𝐄", dailyLines), threadID, messageID);
+            }
