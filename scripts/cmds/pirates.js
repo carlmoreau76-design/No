@@ -20,7 +20,7 @@ module.exports = {
         countDown: 2,
         role: 0,
         description: "Vrai mode de jeu de piraterie MMORPG persistant et interconnecté",
-        category: "Jeux",
+        category: "game",
         guide: { fr: "~pirates [sous-commande]" }
     },
 
@@ -225,7 +225,7 @@ module.exports = {
                         lines.push(`• [${u.role}] **${u.name}** │ Niv.${u.level}`);
                     }
                 });
-                return api.sendMessage(Storage.buildPremiumBox("𝐌local𝐈𝐄𝐌local..."), threadID, messageID);
+                return api.sendMessage(Storage.buildPremiumBox("𝐌𝐄𝐌𝐁𝐑𝐄𝐒 𝐃𝐄 𝐋’𝐄𝐐𝐔𝐈𝐏𝐀𝐆𝐄"), threadID, messageID);
         }
 
         // ════════════════════════════════════════════════════════════════════════════════════
