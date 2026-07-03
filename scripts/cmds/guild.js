@@ -546,6 +546,119 @@ module.exports = {
                 return api.sendMessage(Utils.buildPremiumBox("𝐆𝐔𝐈𝐋𝐃 𝐖𝐀𝐑 𝐂𝐎𝐍𝐅𝐋𝐈𝐂𝐓", warLines), threadID, messageID);
             }
 
+                // ════════════════════════════════════════════════════════════════════════════════════
+            // 🎯 TABLEAU DES QUÊTES COLLECTIVES & SUCCÈS
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "missions": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗎𝗌 𝖽𝖾𝗏𝖾𝗓 𝖺𝗉𝗉𝖺𝗋𝗍𝖾𝗇𝗂𝗋 à 𝗎𝗇𝖾 𝖿𝖺𝖼𝗍𝗂𝗈𝗇 𝗉𝗈𝗎𝗋 𝗏𝗈𝗂𝗋 𝗅𝖾𝗌 𝗆𝗂𝗌𝗌𝗂𝗈𝗇𝗌.", threadID, messageID);
+                const g = guilds[p.guildId];
+                
+                // Initialisation sécurisée des objectifs si non existants
+                MissionSystem.ensureMissionsInit(g);
+
+                let mLines = [
+                    `🏰 𝖠𝗅𝗅𝗂𝖺𝗇𝖼𝖾 : **${g.name}**`,
+                    `📊 _𝖢𝗈𝗇𝗍𝗋𝗂𝖻𝗎𝖾𝗓 𝖾𝗇𝗌𝖾𝗆𝖻𝗅𝖾 𝗉𝗈𝗎𝗋 𝗏𝖺𝗅𝗂𝖽𝖾𝗋 𝗅𝖾𝗌 𝗉𝖺𝗅𝗂𝖾𝗋𝗌._`,
+                    ` ───────────────────────`
+                ];
+
+                for (const k in g.missions) {
+                    const m = g.missions[k];
+                    const percent = Math.min(100, Math.floor((m.progress / m.target) * 100));
+                    const barSize = 8;
+                    const blocks = Math.round((percent / 100) * barSize);
+                    const progressBar = "🔷".repeat(blocks) + "🔹".repeat(barSize - blocks);
+
+                    mLines.push(`🎯 **${m.name}**`);
+                    mLines.push(`   𝖯𝗋𝗈𝗀𝗋è𝗌 : [${progressBar}] ${percent}% (${Utils.formatMoney(m.progress)}/${Utils.formatMoney(m.target)})`);
+                    mLines.push(`   𝖲𝗍𝖺𝗍𝗎𝗍  : ${m.done ? "✅ 𝖢𝖮𝖬𝖯𝖫È𝖳𝖤" : "⏳ 𝖤𝖭 𝖢𝖮𝖴𝖱𝖲"}`);
+                    mLines.push(`   𝖦𝖺𝗂𝗇𝗌   : +${Utils.formatMoney(m.reward)} 💰 au Coffre`);
+                    mLines.push(` ───────────────────────`);
+                }
+                if (mLines.length > 3) mLines.pop();
+
+                return api.sendMessage(Utils.buildPremiumBox("𝐐𝐔Ê𝐓𝐄𝐒 𝐃'𝐀𝐋𝐋𝐈𝐀𝐍𝐂𝐄", mLines), threadID, messageID);
+            }
+
+            case "achievements": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖥𝖺𝖼𝗍𝗂𝗇 𝗋𝖾𝗊𝗎𝗂𝗌𝖾 𝗉𝗈𝗎𝗋 𝖺𝖼𝖼é𝖽𝖾𝗋 𝖺𝗎 𝖯𝖺𝗇𝗍𝗁é𝗈𝗇.", threadID, messageID);
+                const g = guilds[p.guildId];
+                
+                // Force la vérification des nouveaux succès débloqués avant affichage
+                MissionSystem.checkAchievements(p.guildId);
+
+                // Récupération de l'interface graphique du Panthéon
+                const renderBox = MissionSystem.getAchievementsRender(g);
+                return api.sendMessage(renderBox, threadID, messageID);
+            }
+
+            // ════════════════════════════════════════════════════════════════════════════════════
+            // 📡 COMMUNICATIONS INTERNES & STRATÉGIE CRYPTÉE
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "chat": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗎𝗌 𝖽𝖾𝗏𝖾𝗓 𝖺𝗉𝗉𝖺𝗋𝗍𝖾𝗇𝗂𝗋 à 𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾 𝗉𝗈𝗎𝗋 𝗎𝗍𝗂𝗅𝗂𝗌𝖾𝗋 𝖼𝖾 𝖼𝖺𝗇𝖺𝗅.", threadID, messageID);
+                const msg = args.slice(1).join(" ");
+                if (!msg) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : Syntaxe correcte : ~guild chat <votre message stratégique>", threadID, messageID);
+
+                // Chiffrement symbolique et enregistrement dans le grand livre de l'alliance
+                const formattedMsg = `💬 [${p.role}] ${userName} : "${msg}"`;
+                Storage.logEvent(p.guildId, "CHAT", formattedMsg);
+
+                // Notification aux officiers ou confirmation d'envoi à l'utilisateur
+                let lines = [
+                    `📡 **𝖢𝖺𝗇𝖺𝗅 𝖢𝗋𝗒𝗉𝗍é 𝖠𝖼𝗍𝗂𝖿**`,
+                    ` ───────────────────────`,
+                    `👤 𝖤𝗆é𝗍𝗍𝖾𝗎𝗋 : _${userName}_`,
+                    `💬 𝖬𝖾𝗌𝗌𝖺𝗀𝖾 : *${msg}*`,
+                    ` ───────────────────────`,
+                    `✨ _𝖢𝖾𝗍 𝗈𝗋𝖽𝗋𝖾 𝖺 é𝗍é 𝖺𝖼𝗁𝖾𝗆𝗂𝗇é 𝖽𝖺𝗇𝗌 𝗅𝖾 𝖩𝗈𝗎𝗋𝗇𝖺𝗅 𝖽𝖾 𝖥𝖺𝖼𝗍𝗂𝗈𝗇 (~guild logs)._`
+                ];
+                return api.sendMessage(Utils.buildPremiumBox("📡 𝐑𝐄𝐋𝐀𝐈 𝐓𝐀𝐂𝐓𝐈𝐐𝐔𝐄", lines), threadID, messageID);
+            }
+
+            case "logs": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖠𝖼𝖼è𝗌 𝗋𝖾𝖿𝗎𝗌é 𝗌𝖺𝗇𝗌 𝖺𝗅𝗅𝗂𝖺𝗇𝖼𝖾.", threadID, messageID);
+                const g = guilds[p.guildId];
+                
+                // Récupération des 8 dernières entrées (Audits, dons, combats, chat)
+                let logLines = (g.logs || [])
+                    .slice(0, 8)
+                    .map(l => `• [${new Date(l.timestamp).toLocaleTimeString()}] **${l.type}** : ${l.message}`);
+
+                if (logLines.length === 0) {
+                    logLines.push("📂 _𝖠𝗎𝖼𝗎𝗇𝖾 𝖺𝖼𝗍𝗂𝗏𝗂𝗍é 𝗋é𝖼𝖾𝗇𝗍𝖾 𝖽𝖺𝗇𝗌 𝗅𝖾 𝗀𝗋𝖺𝗇𝖽 𝗅𝗂𝗏𝗋𝖾._");
+                }
+
+                return api.sendMessage(Utils.buildPremiumBox("𝐆𝐑𝐀𝐍𝐃 𝐋𝐈𝐕𝐑𝐄 𝐃𝐄𝐒 𝐂𝐎𝐌𝐏𝐓𝐄𝐒", logLines), threadID, messageID);
+            }
+
+            // ════════════════════════════════════════════════════════════════════════════════════
+            // 🏆 PANTHÉON MONDIAL (TOP GUILDES MULTI-CRITÈRES)
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "top": {
+                // Classement dynamique basé sur le Niveau d'infrastructure, puis le nombre de trophées PvP
+                let sortedGuilds = Object.values(guilds)
+                    .sort((a, b) => b.level - a.level || b.trophies - a.trophies)
+                    .slice(0, 5);
+
+                let topLines = [
+                    `👑 _𝖫𝖾𝗌 𝟧 𝗉𝗅𝗎𝗌 𝗀𝗋𝖺𝗇𝖽𝗌 𝖤𝗆𝗉𝗂𝗋𝖾𝗌 𝖽𝗎 𝗌𝖾𝗋𝗏𝖾𝗎𝗋._`,
+                    ` ───────────────────────`
+                ];
+
+                const medals = ["🥇", "🥈", "🥉", "🎖️", "🎖️"];
+                sortedGuilds.forEach((g, i) => {
+                    topLines.push(`${medals[i]} **${g.name.toUpperCase()}** [\`${g.id}\`]`);
+                    topLines.push(`   Palier : **𝖭𝗂𝗏𝖾𝖺𝗎 ${g.level}** │ 🏆 Trophées : ${g.trophies}`);
+                    topLines.push(`   Garnison : ${g.members.length} / ${Utils.getMaxMembers(g.level)} │ Bourse : ${Utils.formatMoney(g.bank)}`);
+                    topLines.push(` ───────────────────────`);
+                });
+                if (topLines.length > 2) topLines.pop();
+                else topLines.push("⚠️ _𝖠𝗎𝖼𝗎𝗇𝖾 𝖿𝖺𝖼𝗍𝗂𝗈𝗇 𝖽'é𝗅𝗂𝗍𝖾 𝗇'𝖾𝗌𝗍 𝖾𝗇𝗋𝖾𝗀𝗂𝗌𝗍𝗋é𝖾._");
+
+                return api.sendMessage(Utils.buildPremiumBox("𝐏𝐀𝐍𝐓𝐇É𝐎𝐍 𝐃𝐄𝐒 𝐅𝐀𝐂𝐓𝐈𝐎𝐍𝐒", topLines), threadID, messageID);
+            }
+
             // ════════════════════════════════════════════════════════════════════════════════════
             // 💥 FERMETURE ET ROUTAGE SECURISE
             // ════════════════════════════════════════════════════════════════════════════════════
