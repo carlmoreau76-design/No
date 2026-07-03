@@ -583,3 +583,243 @@ module.exports = {
                     return api.sendMessage(`🚨 **𝖤𝖢𝖧𝖤𝖢 :** Votre navire est tombé sur un bâtiment royal armé de canons lourds. Vous battez en retraite avec **${s.hp} HP** restants. Réparations urgentes nécessaires !`, threadID, messageID);
                 }
                         }
+
+                // ════════════════════════════════════════════════════════════════════════════════════
+            // 🎯 MISSIONS & SUCCÈS (INDEPENDANT & NETTOYE)
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "missions": {
+                let lines = [
+                    `📜 **${Storage.toStyle2("Tableau des Contrats de la Taverne")}**`,
+                    ` ───────────────────────`,
+                    `1️⃣ **Chasse au Contrebandier** (Niv.1+)`,
+                    `   💵 Gain : +1,500 🪙 │ 💠 XP : +100`,
+                    `   Status : _Disponible via expédition classique_`,
+                    ` ───────────────────────`,
+                    `2️⃣ **Pillage d'un Comptoir Royal** (Niv.15+)`,
+                    `   💵 Gain : +5,000 🪙 │ 💠 XP : +350`,
+                    `   Status : _Disponible via les raids d'équipage_`,
+                    ` ───────────────────────`,
+                    `💡 _Accomplissez des explorations ou des raids pour valider indirectement ces objectifs._`
+                ];
+                return api.sendMessage(Storage.buildPremiumBox("𝐌𝐈𝐒𝐒𝐈𝐎𝐍𝐒 𝐃𝐈𝐒𝐏𝐎𝐍𝐈𝐁𝐋𝐄𝐒", lines), threadID, messageID);
+            }
+
+            case "achievements": {
+                let lines = [
+                    `🏆 **${Storage.toStyle2("Vos Faits d'Armes et Distinctions")}**`,
+                    ` ───────────────────────`,
+                    `🥇 **Premier Sang** : Gagner 1 duel singulier.`,
+                    `   Status : ${p.stats.duelsWon >= 1 ? "✅ Débloqué" : "❌ Verrouillé"} (${p.stats.duelsWon}/1)`,
+                    ` ───────────────────────`,
+                    `⚓ **Vieux loup de mer** : Accomplir 10 explorations.`,
+                    `   Status : ${p.stats.explorations >= 10 ? "✅ Débloqué" : "❌ Verrouillé"} (${p.stats.explorations}/10)`,
+                    ` ───────────────────────`,
+                    `📦 **Pilleur de Tombes** : Ouvrir 5 coffres au trésor.`,
+                    `   Status : ${p.stats.chestsOpened >= 5 ? "✅ Débloqué" : "❌ Verrouillé"} (${p.stats.chestsOpened}/5)`
+                ];
+                return api.sendMessage(Storage.buildPremiumBox("𝐒𝐔𝐂𝐂È𝐒 𝐃É𝐁𝐋𝐎𝐔𝐐𝐔É𝐒", lines), threadID, messageID);
+            }
+
+            // ════════════════════════════════════════════════════════════════════════════════════
+            // ⚔️ RIVALITÉS MYTHIQUES & BOSS (INDEPENDANT & NETTOYE)
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "boss":
+            case "kraken": {
+                if (!p.crewId) return api.sendMessage("🛑 Seule une flotte unie sous une bannière d'équipage peut défier les monstres marins.", threadID, messageID);
+                let c = crews[p.crewId];
+                let s = c.ship;
+
+                let now = Date.now();
+                if (now - p.cooldowns.duel < 15 * 60 * 1000) { // Partage du cooldown de combat lourd
+                    return api.sendMessage("⏳ Vos vigies scrutent encore l'horizon. Laissez vos canons refroidir 15 minutes.", threadID, messageID);
+                }
+
+                if (s.hp < 100) return api.sendMessage("🛑 Votre navire est trop endommagé pour affronter le Kraken. Réparez la coque !", threadID, messageID);
+
+                p.cooldowns.duel = now;
+
+                // Algorithme du boss basé sur la puissance cumulée (Vitesse + Canons) du navire
+                let shipPower = s.atk + s.def + s.speed + (s.level * 5);
+                let krakenPower = 150 + Math.floor(Math.random() * 200);
+
+                if (shipPower >= krakenPower) {
+                    let goldReward = 25000 + (s.level * 1000);
+                    c.vault += goldReward;
+                    c.glory += 50;
+                    s.hp = Math.max(10, s.hp - 80); // Dégâts massifs après le combat
+
+                    Storage.saveCrews();
+                    Storage.logCrewEvent(p.crewId, "KRAKEN_VICTOIRE", `Le Kraken a été repoussé au fond des abysses ! Glory +50`);
+
+                    let bossWin = [
+                        `🦑 **${Storage.toStyle2("LE KRAKEN A ÉTÉ VAINCU !")}**`,
+                        ` ───────────────────────`,
+                        `💥 Combat : Vos tirs en chaîne ont brisé les tentacules de la bête !`,
+                        `🏛️ Trésor d'Équipage : **+${Storage.formatMoney(goldReward)}**`,
+                        `🏆 Gloire de la Flotte : **+50 Points de Gloire**`,
+                        `❤️ Structure Navale : Il reste **${s.hp} HP** à votre navire.`
+                    ];
+                    return api.sendMessage(Storage.buildPremiumBox("⚔️ 𝐂𝐎𝐌𝐁𝐀𝐓 𝐃𝐄 𝐁𝐎𝐒𝐒", bossWin), threadID, messageID);
+                } else {
+                    s.hp = Math.max(10, Math.floor(s.hp / 3)); // Le navire subit de très lourds dégâts structuraux
+                    Storage.saveCrews();
+                    Storage.logCrewEvent(p.crewId, "KRAKEN_DEFAITE", `Le Kraken a brisé nos lignes de défense. Le navire bat en retraite.`);
+
+                    let bossLoss = [
+                        `🌊 **${Storage.toStyle2("DÉFAITE FACE AU MONSTRE")}**`,
+                        ` ───────────────────────`,
+                        `🚨 Statut : Le Kraken a broyé le pont supérieur.`,
+                        `📉 Impact : Votre flotte bat en retraite en urgence.`,
+                        `❤️ Structure Navale : Coque endommagée à **${s.hp} HP**.`
+                    ];
+                    return api.sendMessage(Storage.buildPremiumBox("⚔️ 𝐂𝐎𝐌𝐁𝐀𝐓 𝐃𝐄 𝐁𝐎𝐒𝐒", bossLoss), threadID, messageID);
+               }
+
+                // ════════════════════════════════════════════════════════════════════════════════════
+            // 💰 BANQUE PIRATE & COFFRES COMMUNS (INDEPENDANT & NETTOYE)
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "bank": {
+                if (!p.crewId) return api.sendMessage("🛑 Vous devez appartenir à un équipage pour accéder aux services de la banque de flotte.", threadID, messageID);
+                let c = crews[p.crewId];
+
+                let bankLines = [
+                    `🏛️ **${Storage.toStyle2("Trésor d'Équipage")}**`,
+                    ` ───────────────────────`,
+                    `🏠 Faction : **${c.name}**`,
+                    `💰 Solde du Coffre : **${Storage.formatMoney(c.vault)}**`,
+                    `👤 Votre bourse perso : **${Storage.formatMoney(p.gold)}**`,
+                    ` ───────────────────────`,
+                    `💡 _Sous-commandes disponibles :_`,
+                    ` • \`~pirates deposit <montant/all>\` : Déposer de l'or`,
+                    ` • \`~pirates withdraw <montant>\` : Retrait (Gradés uniquement)`
+                ];
+                return api.sendMessage(Storage.buildPremiumBox("𝐁𝐀𝐍𝐐𝐔𝐄 𝐏𝐈𝐑𝐀𝐓𝐄", bankLines), threadID, messageID);
+            }
+
+            case "deposit":
+            case "donate": {
+                if (!p.crewId) return api.sendMessage("🛑 Vous n'avez pas de soute commune (Aucun équipage).", threadID, messageID);
+                let c = crews[p.crewId];
+                let input = args[1];
+
+                if (!input) return api.sendMessage("🛑 Spécifiez un montant numérique ou 'all'.", threadID, messageID);
+                
+                let amount = input === "all" ? p.gold : parseInt(input);
+                if (isNaN(amount) || amount <= 0) return api.sendMessage("🛑 Montant numérique invalide.", threadID, messageID);
+                if (p.gold < amount) return api.sendMessage("🛑 Vous ne possédez pas autant d'or sur vous.", threadID, messageID);
+
+                p.gold -= amount;
+                c.vault += amount;
+                p.stats.goldPlundered += amount;
+
+                Storage.saveUsers();
+                Storage.saveCrews();
+                Storage.logCrewEvent(p.crewId, "DEPOT", `${userName} a déposé ${Storage.formatMoney(amount)} au coffre.`);
+
+                return api.sendMessage(`✅ **𝖣é𝗉ô𝗍 :** **+${Storage.formatMoney(amount)}** transférés avec succès dans le coffre commun de l'équipage.`, threadID, messageID);
+            }
+
+            case "withdraw": {
+                if (!p.crewId) return api.sendMessage("🛑 Vous n'avez pas d'équipage.", threadID, messageID);
+                if (!checkCrewPerm("SECOND")) return api.sendMessage("🛑 Accès refusé. Seuls le Capitaine et le Second peuvent prélever des fonds du coffre.", threadID, messageID);
+                
+                let c = crews[p.crewId];
+                let amount = parseInt(args[1]);
+
+                if (isNaN(amount) || amount <= 0) return api.sendMessage("🛑 Spécifiez un montant valide à retirer.", threadID, messageID);
+                if (c.vault < amount) return api.sendMessage("🛑 Le Trésor d'Équipage ne dispose pas de fonds suffisants.", threadID, messageID);
+
+                c.vault -= amount;
+                p.gold += amount;
+
+                Storage.saveUsers();
+                Storage.saveCrews();
+                Storage.logCrewEvent(p.crewId, "RETRAIT", `🚨 ${userName} a prélevé ${Storage.formatMoney(amount)} de la soute.`);
+
+                return api.sendMessage(`🚨 **𝖯𝗋é𝗅è𝗏𝖾𝗆𝖾𝗇𝗍 :** **${Storage.formatMoney(amount)}** retirés du coffre d'équipage par un officier supérieur.`, threadID, messageID);
+            }
+
+            // ════════════════════════════════════════════════════════════════════════════════════
+            // 🎯 LABEUR DAILY & CHRONO (INDEPENDANT & NETTOYE)
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "daily": {
+                let now = Date.now();
+                if (now - p.cooldowns.daily < 24 * 60 * 60 * 1000) {
+                    let diff = (24 * 60 * 60 * 1000) - (now - p.cooldowns.daily);
+                    let hours = Math.floor(diff / (1000 * 60 * 60));
+                    let mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    return api.sendMessage(`⏳ Votre prime quotidienne a déjà été perçue. Revenez dans **${hours}h ${mins}m**.`, threadID, messageID);
+                }
+
+                p.cooldowns.daily = now;
+                let dailyGold = 3500 + (p.level * 500);
+                let dailyDoubloons = 2;
+
+                p.gold += dailyGold;
+                p.doubloons += dailyDoubloons;
+                Storage.saveUsers();
+
+                let dLines = [
+                    `🎁 **${Storage.toStyle2("Rations de ravitaillement")}**`,
+                    ` ───────────────────────`,
+                    `💰 Or de Subsistance : **+${Storage.formatMoney(dailyGold)}**`,
+                    `💎 Doublons de contrebande : **+${dailyDoubloons} 💎**`,
+                    `✨ _Revenez demain pour votre prochain arrivage._`
+                ];
+                return api.sendMessage(Storage.buildPremiumBox("𝐁𝐎𝐍𝐔𝐒 𝐐𝐔𝐎𝐓𝐈𝐃𝐈𝐄𝐍", dLines), threadID, messageID);
+            }
+
+            case "work": {
+                let now = Date.now();
+                if (now - p.cooldowns.work < 10 * 60 * 1000) {
+                    let rem = Math.ceil((10 * 60 * 1000 - (now - p.cooldowns.work)) / 1000);
+                    return api.sendMessage(`⏳ Vos mains sont fatiguées par le travail manuel. Attendez **${rem}s**.`, threadID, messageID);
+                }
+
+                p.cooldowns.work = now;
+                let workGold = Math.floor(400 + Math.random() * 800);
+                p.gold += workGold;
+                Storage.saveUsers();
+
+                return api.sendMessage(`⚓ **𝖫𝖺𝖻𝖾𝗎𝗋 :** Vous avez aidé à réparer les pontons du quai marchand et gagnez **+${Storage.formatMoney(workGold)}**.`, threadID, messageID);
+            }
+
+            // ════════════════════════════════════════════════════════════════════════════════════
+            // 🏆 PANTHÉONS DES FLOTTES (INDEPENDANT & NETTOYE)
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "top": {
+                let sortedCrews = Object.values(crews)
+                    .sort((a, b) => b.level - a.level || b.glory - a.glory)
+                    .slice(0, 5);
+
+                let topLines = [
+                    `👑 **${Storage.toStyle2("Les 5 Plus Grandes Flottes des Mers")}**`,
+                    ` ───────────────────────`
+                ];
+
+                const medals = ["🥇", "🥈", "🥉", "⚓", "⚓"];
+                sortedCrews.forEach((c, index) => {
+                    topLines.push(`${medals[index]} **${c.name.toUpperCase()}**`);
+                    topLines.push(`   Niveau Flotte : **𝖭𝗂𝗏𝖾𝖺𝗎 ${c.level}** │ Soute : ${Storage.formatMoney(c.vault)}`);
+                    topLines.push(` ───────────────────────`);
+                });
+                if (topLines.length > 2) topLines.pop();
+
+                return api.sendMessage(Storage.buildPremiumBox("𝐏𝐀𝐍𝐓𝐇É𝐎𝐍 𝐃𝐄𝐒 𝐅𝐋𝐎𝐓𝐓𝐄𝐒", topLines), threadID, messageID);
+            }
+
+            case "reset": {
+                if (p.role !== "CAPITAINE") return api.sendMessage("🛑 Seul le Capitaine fondateur peut initier une demande de sabordage.", threadID, messageID);
+                return api.sendMessage("⚠️ Pour dissoudre votre faction pirate, quittez-la manuellement ou contactez l'administration. Le bouton automatique est désactivé par sécurité.", threadID, messageID);
+            }
+
+            default:
+                return api.sendMessage(`🛑 ${Storage.toStyle2("Sous-commande inconnue. Tapez")} \`~pirates\` ${Storage.toStyle2("pour ouvrir l'interface.")}`, threadID, messageID);
+        }
+    }
+};
+
+                
+                
+
+                
