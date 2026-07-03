@@ -377,3 +377,201 @@ module.exports = {
                 ];
                 return api.sendMessage(Utils.buildPremiumBox("𝐀𝐋𝐋𝐎𝐂𝐀𝐓𝐈𝐎𝐍 𝐐𝐔𝐎𝐓𝐈𝐃𝐈𝐄𝐍𝐍𝐄", dailyLines), threadID, messageID);
             }
+
+                // ════════════════════════════════════════════════════════════════════════════════════
+            // 👑 HIÉRARCHIE, grades & MODÉRATION INTERNE
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "promote": {
+                if (!Utils.checkPermission(p, "COLEADER")) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖠𝗎𝗍𝗈𝗋𝗂𝗌𝖺𝗍𝗂𝗈𝗇 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍𝖾.", threadID, messageID);
+                const targetID = Object.keys(event.mentions)[0];
+                if (!targetID) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖬𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗓 𝗅𝖾 𝗌𝗈𝗅𝖽𝖺𝗍 à 𝗀𝗋𝖺𝖽𝗎𝖾𝗋.", threadID, messageID);
+
+                let targetP = Storage.getUserProfile(targetID);
+                if (targetP.guildId !== p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖢𝖾 𝗃𝗈𝗎𝖾𝗎𝗋 𝗇𝖾 𝖿𝖺𝗂𝗍 𝗉𝖺𝗌 𝗉𝖺𝗋𝗍𝗂𝖾 𝖽𝖾 𝗏𝗈𝗍𝗋𝖾 𝖿𝖺𝖼𝗍𝗂𝗈𝗇.", threadID, messageID);
+
+                if (targetP.role === "MEMBRE") {
+                    targetP.role = "OFFICIER";
+                } else if (targetP.role === "OFFICIER" && p.role === "LEADER") {
+                    targetP.role = "COLEADER";
+                } else {
+                    return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖯𝗉𝗈𝗆𝗈𝗍𝗂𝗈𝗇 𝗂𝗆𝗉𝗈𝗌𝗌𝗂𝖻𝗅𝖾 (𝖦𝗋𝖺𝖽𝖾 𝗆𝖺𝗑𝗂𝗆𝗎𝗆 𝗈𝗎 𝗉𝖾𝗋𝗆𝗂𝗌𝗌𝗂𝗈𝗇 𝗋𝖾𝗌𝗍𝗋𝖾𝗂𝗇𝗍𝖾).", threadID, messageID);
+                }
+
+                Storage.saveUsers(Storage.getUsers());
+                Storage.logEvent(p.guildId, "PROMOTE", `👑 ${userName} 𝖺 𝗉𝗋𝗈𝗆𝗎 [${targetP.name}] au 𝗋𝖺𝗇𝗀 𝖽𝖾 ${targetP.role}.`);
+                return api.sendMessage(`✨ **𝖦𝗋𝖺𝖽𝗎𝖺𝗍𝗂𝗈𝗇 :** **${targetP.name}** 𝖾𝗌𝗍 𝖽é𝗌𝗈𝗋𝗆𝖺𝗂𝗌 **${targetP.role}**.`, threadID, messageID);
+            }
+
+            case "demote": {
+                if (!Utils.checkPermission(p, "COLEADER")) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖠𝗎𝗍𝗈𝗋𝗂𝗌𝖺𝗍𝗂𝗈𝗇 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍𝖾.", threadID, messageID);
+                const targetID = Object.keys(event.mentions)[0];
+                if (!targetID) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖬𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗓 𝗅'𝗈𝖿𝖿𝗂𝖼𝗂𝖾𝗋 à 𝗋é𝗍𝗋𝗈区分𝗋𝖺𝖽𝖾𝗋.", threadID, messageID);
+
+                let targetP = Storage.getUserProfile(targetID);
+                if (targetP.guildId !== p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖨𝗅 𝗇'𝖾𝗌𝗍 𝗉𝖺𝗌 𝖽𝖺𝗇𝗌 𝗏𝗈𝗍𝗋𝖾 𝖺𝗅𝗅𝗂𝖺𝗇𝖼𝖾.", threadID, messageID);
+
+                if (targetP.role === "COLEADER" && p.role === "LEADER") {
+                    targetP.role = "OFFICIER";
+                } else if (targetP.role === "OFFICIER") {
+                    targetP.role = "MEMBRE";
+                } else {
+                    return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖱é𝗍𝗋𝗈𝗀𝗋𝖺𝖽𝖺𝗍𝗂𝗈𝗇 𝗂𝗆𝗉𝗈𝗌𝗌𝗂𝖻𝗅𝖾.", threadID, messageID);
+                }
+
+                Storage.saveUsers(Storage.getUsers());
+                Storage.logEvent(p.guildId, "DEMOTE", `📉 ${userName} 𝖺 𝗋é𝗍𝗋𝗈𝗀𝗋𝖺𝖽é [${targetP.name}] au 𝗋𝖺𝗇𝗀 𝖽𝖾 ${targetP.role}.`);
+                return api.sendMessage(`📉 **𝖱é𝗍𝗋𝗈𝗀𝗋𝖺𝖽𝖺𝗍𝗂𝗈𝗇 :** **${targetP.name}** 𝗋𝖾𝖽𝖾𝗏𝗂𝖾𝗇𝗍 **${targetP.role}**.`, threadID, messageID);
+            }
+
+            case "kick": {
+                if (!Utils.checkPermission(p, "OFFICIER")) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖠𝗎𝗍𝗈𝗋𝗂𝗌𝖺𝗍𝗂𝗈𝗇 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍𝖾.", threadID, messageID);
+                const targetID = Object.keys(event.mentions)[0];
+                if (!targetID) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖬𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗓 𝗅𝖾 𝗌𝗎𝖻𝗈𝗋𝖽𝗈𝗇𝗇é à 𝖻𝖺𝗇𝗇𝗂𝗋.", threadID, messageID);
+
+                let targetP = Storage.getUserProfile(targetID);
+                if (targetP.guildId !== p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖨𝗅 𝗇𝖾 𝖿𝖺𝗂𝗍 𝗉𝖺𝗌 𝗉𝖺𝗋𝗍𝗂𝖾 𝖽𝖾 𝗏𝗈𝗍𝗋𝖾 𝖿𝖺𝖼𝗍𝗂𝗈𝗇.", threadID, messageID);
+                
+                if (targetP.role === "LEADER" || targetP.role === "COLEADER" && p.role !== "LEADER") {
+                    return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : Hiérarchie protégée. Vous ne pouvez pas exclure ce membre.", threadID, messageID);
+                }
+
+                const g = guilds[p.guildId];
+                g.members = g.members.filter(id => id !== targetID);
+                targetP.guildId = null;
+                targetP.role = null;
+
+                Storage.saveGuilds(guilds);
+                Storage.saveUsers(Storage.getUsers());
+                Storage.logEvent(p.guildId, "KICK", `🚨 EXCLUSION : ${userName} 𝖺 𝖻𝖺𝗇𝗇𝗂 [${targetP.name}] 𝖽𝖾 𝗅'𝖺建立𝗅𝗂𝖺𝗇𝖼𝖾.`);
+
+                return api.sendMessage(`🚨 **𝖡𝖺𝗇𝗇𝗂𝗌𝗌𝖾𝗆𝖾𝗇𝗍 :** **${targetP.name}** 𝖺 é𝗍é 𝖾𝗑𝖼𝗅𝗎 𝖽𝖾 𝗅𝖺 𝖿𝖺𝖼𝗍𝗂𝗈𝗇.`, threadID, messageID);
+            }
+
+            case "settings": {
+                if (!Utils.checkPermission(p, "COLEADER")) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖦𝗋𝖺𝖽𝖾 𝖽𝖾 𝖢𝗈-𝖫𝖾𝖺𝖽𝖾𝗋 𝗆𝗂𝗇𝗂𝗆𝗎𝗆 𝗋𝖾𝗊𝗎𝗂𝗌.", threadID, messageID);
+                const type = args[1]?.toLowerCase();
+                const value = args.slice(2).join(" ");
+                const g = guilds[p.guildId];
+
+                if (type === "emoji") {
+                    if (!value) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖨𝗇𝖽𝗂𝗊𝗎𝖾𝗓 𝗎𝗇 é𝗆𝗈𝗃𝗂 𝗏𝖺𝗅𝗂𝖽𝖾.", threadID, messageID);
+                    g.emoji = value;
+                    Storage.saveGuilds(guilds);
+                    return api.sendMessage(`✅ **𝖤𝗆𝖻𝗅è𝗆𝖾 :** 𝖫'é𝗆𝗈𝗃𝗂 𝖽𝖾 𝗅𝖺 𝗀𝗎𝗂𝗅𝖽𝖾 𝖾𝗌𝗍 𝖽é𝗌𝗈𝗋𝗆𝖺𝗂𝗌 **${value}**.`, threadID, messageID);
+                } else if (type === "desc") {
+                    if (!value) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖨𝗇𝖽𝗂𝗊𝗎𝖾𝗓 𝗅𝖺 𝗇𝗈𝗎𝗏𝖾𝗅𝗅𝖾 𝖽𝗈𝖼𝗍𝗋𝗂𝗇𝖾.", threadID, messageID);
+                    g.desc = value;
+                    Storage.saveGuilds(guilds);
+                    return api.sendMessage(`✅ **𝖣𝗈𝖼𝗍𝗋𝗂𝗇𝖾 :** 𝖫𝖺 𝖽𝖾𝗌𝖼𝗋𝗂𝗉𝗍𝗂𝗈𝗇 𝖺 é𝗍é 𝗆𝗂𝗌𝖾 à 𝗃𝗈𝗎𝗋.`, threadID, messageID);
+                } else {
+                    let setLines = [
+                        `🔧 **𝖢𝗈𝗇𝖿𝗂𝗀𝗎𝗋𝖺𝗍𝗂𝗈𝗇 𝖺𝗏𝖺𝗇𝖼é𝖾 :**`,
+                        ` ───────────────────────`,
+                        `🔹 ~guild settings emoji <émoji> : Changer l'icône`,
+                        `🔹 ~guild settings desc <texte> : Éditer la bio/doctrine`
+                    ];
+                    return api.sendMessage(Utils.buildPremiumBox("𝖯𝖠𝖱𝖠𝖬È𝖳𝖱𝖤𝖲 𝖣𝖤 𝖥𝖠𝖢𝖳𝖨𝖮𝖭", setLines), threadID, messageID);
+                }
+            }
+
+            // ════════════════════════════════════════════════════════════════════════════════════
+            // ⚔️ INTERACTIONS MILITAIRES (GUILD WAR ACTIVE)
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "war": {
+                const action = args[1]?.toLowerCase();
+                let war = Storage.getWar();
+
+                if (action === "join") {
+                    if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗎𝗌 𝖽𝖾𝗏𝖾𝗓 𝖺𝗉𝗉𝖺𝗋𝗍𝖾𝗇𝗂𝗋 à 𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+                    if (war.phase !== "signup") return api.sendMessage("⏳ 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖠𝗎𝖼𝗎𝗇𝖾 𝗉𝗁𝖺𝗌𝖾 𝖽'𝖾𝗇𝗋ô𝗅𝖾𝗆𝖾𝗇𝗍 𝖺𝖼𝗍𝗂𝗏𝖾 𝗉𝗈𝗎𝗋 𝗅𝖾 𝗆𝗈𝗆𝖾𝗇𝗍.", threadID, messageID);
+                    if (!war.participants.includes(p.guildId)) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗍𝗋𝖾 𝗀𝗎𝗂𝗅𝖽𝖾 𝗇'𝖺 𝗉𝖺𝗌 é𝗍é 𝗌é𝗅𝖾𝖼𝗍𝗂𝗈𝗇𝗇é𝖾 𝗉𝗈𝗎𝗋 𝖼𝖾 𝖼𝗈𝗇𝖿𝗅𝗂𝗍.", threadID, messageID);
+
+                    if (!war.rosters[p.guildId]) war.rosters[p.guildId] = [];
+                    if (war.rosters[p.guildId].includes(senderID)) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗎𝗌 ê𝗍𝖾𝗌 𝖽é𝗃à 𝗂𝗇𝗌𝖼𝗋𝗂𝗍 𝖽𝖺𝗇𝗌 𝗅𝖾 𝗉𝖾𝗅𝗈𝗍𝗈𝗇.", threadID, messageID);
+
+                    war.rosters[p.guildId].push(senderID);
+                    Storage.saveWar(war);
+                    return api.sendMessage(`🎖️ **𝖤𝗇𝗋ô𝗅𝖾𝗆𝖾𝗇𝗍 :** Vous intégrez le peloton d'exécution de **${guilds[p.guildId].name}** !`, threadID, messageID);
+                }
+
+                if (action === "attack") {
+                    if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖥𝖺𝖼𝗍𝗂𝗇 𝗋𝖾𝗊𝗎𝗂𝗌𝖾.", threadID, messageID);
+                    if (war.phase !== "battle") return api.sendMessage("⚔️ 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖫𝖺 𝗀𝗎𝖾𝗋𝗋𝖾 𝗇'𝖾𝗌𝗍 𝗉𝖺𝗌 𝖽é𝖼𝗅𝖺𝗋é𝖾 (𝖧𝗈𝗋𝗌 𝖼𝗈𝗆𝖻𝖺𝗍).", threadID, messageID);
+                    
+                    if (!war.rosters[p.guildId] || !war.rosters[p.guildId].includes(senderID)) {
+                        return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖵𝗈𝗎𝗌 𝗇𝖾 𝗏𝗈𝗎𝗌 ê𝗍𝖾𝗌 𝗉𝖺𝗌 𝖾𝗇𝗋ô𝗅é 𝗉𝖾𝗇𝖽𝖺𝗇𝗍 𝗅𝖺 𝗉𝗁𝖺𝗌𝖾 𝖽'𝗂𝗇𝗌𝖼𝗋𝗂𝗉𝗍𝗂𝗈𝗇.", threadID, messageID);
+                    }
+
+                    const now = Date.now();
+                    if (now - p.cooldowns.warAttack < 45 * 1000) {
+                        return api.sendMessage(`⏳ **𝖠𝗇𝗍𝗂-𝖲𝗉𝖺𝗆 :** Vos armes refroidissent. Attendez **${Math.ceil((45000 - (now - p.cooldowns.warAttack)) / 1000)}s**.`, threadID, messageID);
+                    }
+
+                    // Recherche de la guilde adverse dans le matchmaking
+                    let enemyGuildId = null;
+                    const index = war.participants.indexOf(p.guildId);
+                    if (index % 2 === 0) enemyGuildId = war.participants[index + 1];
+                    else enemyGuildId = war.participants[index - 1];
+
+                    if (!enemyGuildId || !guilds[enemyGuildId]) {
+                        return api.sendMessage("🛑 L'armée ennemie a déserté ou a été dissoute du champ de bataille.", threadID, messageID);
+                    }
+
+                    p.cooldowns.warAttack = now;
+                    // Appel du simulateur de combat de la partie 2
+                    const result = WarSystem.executeAttack(senderID, userName, 10, p.guildId, enemyGuildId); // niveau par défaut simulé à 10
+                    Storage.saveUsers(Storage.getUsers());
+
+                    MissionSystem.advanceMission(p.guildId, "war_participation", 1);
+
+                    return api.sendMessage(result.text, threadID, messageID);
+                }
+
+                // Affichage par défaut de l'interface de guerre globale
+                let warLines = [
+                    `📊 𝖤𝗇𝗀𝖺𝗀𝖾𝗆𝖾𝗇𝗍 : **${war.phase.toUpperCase()}**`,
+                    `⏳ 𝖥𝗂𝗇 𝖽𝖾 𝖯𝗁𝖺𝗌𝖾 : _𝖣𝖺𝗇𝗌 ${Math.ceil((war.nextCycle - Date.now()) / 60000)} min_`,
+                    ` ───────────────────────`
+                ];
+
+                war.participants.forEach((gId) => {
+                    const gName = guilds[gId]?.name || "Inconnue";
+                    const score = war.scores[gId] || 0;
+                    const dmg = war.damage[gId] || 0;
+                    const registered = war.rosters[gId]?.length || 0;
+                    warLines.push(`🛡️ **${gName}** │ 🏆 **${score} Pts**`);
+                    warLines.push(`    💥 Dégâts : ${dmg} │ 👥 Roster : ${registered} guerriers`);
+                });
+
+                return api.sendMessage(Utils.buildPremiumBox("𝐆𝐔𝐈𝐋𝐃 𝐖𝐀𝐑 𝐂𝐎𝐍𝐅𝐋𝐈𝐂𝐓", warLines), threadID, messageID);
+            }
+
+            // ════════════════════════════════════════════════════════════════════════════════════
+            // 💥 FERMETURE ET ROUTAGE SECURISE
+            // ════════════════════════════════════════════════════════════════════════════════════
+            case "disband": {
+                if (!p.guildId) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖠𝗎𝖼𝗎𝗇𝖾 𝖺𝗅𝗅𝗂𝖺𝗇𝖼𝖾 active.", threadID, messageID);
+                const g = guilds[p.guildId];
+                if (g.leader !== senderID) return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : Seul le Leader Suprême peut dissoudre l'Empire.", threadID, messageID);
+
+                const oldId = p.guildId;
+                g.members.forEach(mId => {
+                    let users = Storage.getUsers();
+                    if (users[mId]) {
+                        users[mId].guildId = null;
+                        users[mId].role = null;
+                    }
+                });
+
+                delete guilds[oldId];
+                Storage.saveGuilds(guilds);
+                Storage.saveUsers(Storage.getUsers());
+
+                return api.sendMessage("💥 **𝐀𝐓𝐎𝐌𝐈𝐒𝐀𝐓𝐈𝐎𝐍 :** Le bastion et l'intégralité de ses archives ont été rayés de la carte globale.", threadID, messageID);
+            }
+
+            default:
+                return api.sendMessage("🛑 𝖤𝗋𝗋𝖾𝗎𝗋 : 𝖲𝗈𝗎𝗌-𝖼𝗈𝗆𝗆𝖺𝗇𝖽𝖾 𝗂𝗇𝗏𝖺𝗅𝗂𝖽𝖾. Tapez `~guild` pour l'interface.", threadID, messageID);
+        }
+    }
+};
