@@ -9,11 +9,11 @@ module.exports = {
   config: {
     name: "vip",
     aliases: ["vipmember", "viplist"],
-    version: "4.2.0",
+    version: "5.1.0",
     author: "Shade × Gemini",
     countDown: 5,
     role: 0, 
-    description: "💎 Gestion du club VIP Privé avec base de données persistante et Canvas",
+    description: "💎 Gestion du club VIP Privé avec base de données config.json et Canvas",
     category: "system",
     guide: {
       fr: "{p}{n} list → Afficher le club VIP (Public)\n{p}{n} add [@tag | uid | reply] → Inscrire un VIP (Owner Only)\n{p}{n} remove [@tag | uid | reply] → Révoquer un VIP (Owner Only)"
@@ -22,16 +22,24 @@ module.exports = {
 
   onStart: async function ({ message, args, event, api, usersData }) {
     const { threadID, messageID, senderID } = event;
-    
+        
     try {
-      // Utilisation du stockage global persistant pour éviter les wipes au déploiement
-      if (!global.client.vipStorage) {
-        global.client.vipStorage = [];
+      // 1. Définition du chemin vers config.json
+      const configPath = path.join(process.cwd(), "config.json");
+      
+      // Lecture à la volée du fichier de configuration
+      let botConfig = {};
+      if (fs.existsSync(configPath)) {
+        botConfig = fs.readJsonSync(configPath);
       }
       
-      // On essaie de synchroniser si une variable globale existe déjà dans GoatBot
-      let vipList = global.client.vipStorage;
-
+      // 2. Initialisation automatique de la clé si absente
+      if (!Array.isArray(botConfig.vipuser)) {
+        botConfig.vipuser = [];
+      }
+      
+      // 3. Référence de la liste VIP
+      let vipList = botConfig.vipuser;
       const action = args[0]?.toLowerCase();
 
       // --- COMMANDES ADMINISTRATIVES (OWNER ONLY) ---
@@ -41,18 +49,25 @@ module.exports = {
           return message.reply("⛔ **[ACCÈS REFUSÉ]** Ce terminal de configuration VIP est strictement réservé au Fondateur.");
         }
 
-        let uids = Object.keys(event.mentions || {}).length
-          ? Object.keys(event.mentions)
-          : event.messageReply
-            ? [event.messageReply.senderID]
-            : args.slice(1).filter(id => /^\d+$/.test(id));
+        // Récupération des UIDs via : 1/ Les Mentions, 2/ Le Reply, 3/ Les UIDs écrits en texte brut
+        let uids = [];
+        
+        if (Object.keys(event.mentions || {}).length > 0) {
+          uids = Object.keys(event.mentions);
+        } else if (event.messageReply) {
+          uids = [event.messageReply.senderID];
+        } else {
+          // Filtre tous les arguments après l'action pour ne garder que ceux qui sont purement numériques (UIDs)
+          uids = args.slice(1).filter(id => /^\d+$/.test(id));
+        }
 
-        if (!uids.length) {
-          return message.reply("⚠️ **[CIBLE MANQUANTE]** Veuillez mentionner un utilisateur, faire un reply ou entrer son UID.");
+        if (!uids || uids.length === 0) {
+          return message.reply("⚠️ **[CIBLE MANQUANTE]** Veuillez mentionner un utilisateur, faire un reply ou entrer directement un UID numérique.");
         }
 
         try { api.setMessageReaction("⏳", messageID, () => {}, true); } catch(e){}
 
+        // 4. ACTION : ADD VIP
         if (action === "add" || action === "-a") {
           let added = [];
           let already = [];
@@ -65,23 +80,23 @@ module.exports = {
               added.push(id);
             }
           }
-
-          global.client.vipStorage = vipList;
           
-          // Sauvegarde dans un fichier hors du dossier de build si possible, ou via l'utilitaire GoatBot
-          try {
-            // Tente de sauvegarder dans le config global au cas où l'hébergeur maintient les fichiers (ex: VPS)
-            global.GoatBot.config.vipuser = vipList;
-            writeFileSync(global.client.dirConfig, JSON.stringify(global.GoatBot.config, null, 2));
-          } catch(e){}
+          botConfig.vipuser = vipList;
+          
+          // Sauvegarde persistante synchrone dans config.json
+          fs.writeJsonSync(configPath, botConfig, { spaces: 2 });
+          
+          // Synchronisation globale en mémoire
+          if (global.config) global.config.vipuser = vipList;
+          if (global.GoatBot && global.GoatBot.config) global.GoatBot.config.vipuser = vipList;
 
           try { api.setMessageReaction("👑", messageID, () => {}, true); } catch(e){}
           return message.reply(`🔱 **[VIP REGISTER]**\n━━━━━━━━━━━━━━━━━\n🟩 Nouveaux membres accrédités : ${added.length}\n⚠️ Sujets déjà présents : ${already.length}`);
         }
 
+        // 5. ACTION : REMOVE VIP
         if (action === "remove" || action === "-r") {
           let removed = [];
-
           vipList = vipList.filter(id => {
             if (uids.includes(id)) {
               removed.push(id);
@@ -90,19 +105,21 @@ module.exports = {
             return true;
           });
 
-          global.client.vipStorage = vipList;
-
-          try {
-            global.GoatBot.config.vipuser = vipList;
-            writeFileSync(global.client.dirConfig, JSON.stringify(global.GoatBot.config, null, 2));
-          } catch(e){}
+          botConfig.vipuser = vipList;
+          
+          // Sauvegarde persistante synchrone dans config.json
+          fs.writeJsonSync(configPath, botConfig, { spaces: 2 });
+          
+          // Synchronisation globale en mémoire
+          if (global.config) global.config.vipuser = vipList;
+          if (global.GoatBot && global.GoatBot.config) global.GoatBot.config.vipuser = vipList;
 
           try { api.setMessageReaction("🗑️", messageID, () => {}, true); } catch(e){}
           return message.reply(`🔱 **[VIP REVOCATION]**\n━━━━━━━━━━━━━━━━━\n🟥 Accréditations VIP révoquées : ${removed.length}`);
         }
       }
 
-      // --- COMMANDE PUBLIQUE : LIST CARD LUXE ---
+      // 6. ACTION : LIST VIP
       if (action === "list" || action === "-l") {
         if (!vipList.length) {
           return message.reply("📡 **[DATABASE]** Aucun membre VIP n'est actuellement enregistré dans le club.");
@@ -116,7 +133,7 @@ module.exports = {
         
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext("2d");
-
+        
         const bgGrad = ctx.createLinearGradient(0, 0, width, height);
         bgGrad.addColorStop(0, "#0d0d0d");
         bgGrad.addColorStop(0.5, "#1a160d");
@@ -212,8 +229,7 @@ module.exports = {
         return;
       }
 
-      return message.reply("💡 **[INFO VIP]** Options disponibles :\n• `vip list` : Voir le salon d'honneur.\n• `vip add [@tag / reply]` : Ajouter un membre émérite.\n• `vip remove [@tag / reply]` : Destituer un VIP.");
-
+      return message.reply("💡 **[INFO VIP]** Options disponibles :\n• `vip list` : Voir le salon d'honneur.\n• `vip add [@tag / reply / UID]` : Ajouter un membre émérite.\n• `vip remove [@tag / reply / UID]` : Destituer un VIP.");
     } catch (err) {
       console.error("VIP ERROR:", err);
       try { api.setMessageReaction("❌", messageID, () => {}, true); } catch(e){}
