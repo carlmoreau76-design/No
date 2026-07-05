@@ -744,13 +744,13 @@ module.exports = {
         }
 
         // ==========================================
-        // MOTEUR DE RENDU GRAPHIQUE : STATS PREMIUM (CANVAS)
+        // MOTEUR DE RENDU GRAPHISME : STATS PREMIUM (CANVAS)
         // ==========================================
         if (subCommand === "stats") {
             if (canvasAvailable) {
                 const canvas = Canvas.createCanvas(1400, 800);
                 const ctx = canvas.getContext("2d");
-
+                
                 // Background Marine Dark Cyan
                 const gradient = ctx.createLinearGradient(0, 0, 1400, 800);
                 gradient.addColorStop(0, "#051329");
@@ -794,7 +794,6 @@ module.exports = {
                 makeCard(70, 200, 380, 140, "DOUBLONS EN POCHE", `${formatNumber(profile.gold)} 💰`, "#ffd700");
                 makeCard(490, 200, 380, 140, "PRIME DE RECHERCHE", `${formatNumber(profile.bounty)} ☠️`, "#ff4d4d");
                 makeCard(910, 200, 420, 140, "SANTE DU CAPITAINE", `${profile.hp} / ${profile.maxHp} HP`, "#ff3366");
-
                 makeCard(70, 380, 380, 140, "PUISSANCE DU NAVIRE", `${profile.ship.attack} ATK`, "#00ffcc");
                 makeCard(490, 380, 380, 140, "RÉSISTANCE COQUE", `${profile.ship.durability}% 🔧`, "#99ff33");
                 makeCard(910, 380, 420, 140, "VICTOIRES EN MER", `${profile.battleStats.wins} ⚔️`, "#00ff66");
@@ -802,7 +801,6 @@ module.exports = {
                 // Barre d'expérience en bas
                 const xpNeed = profile.level * 1000;
                 const progress = Math.min(1, profile.xp / xpNeed);
-
                 ctx.fillStyle = "#ffffff";
                 ctx.font = "20px Arial";
                 ctx.fillText(`Progression Notoriété (XP) : ${formatNumber(profile.xp)} / ${formatNumber(xpNeed)}`, 70, 600);
@@ -838,13 +836,14 @@ module.exports = {
             txt += `│ 📊 **𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐐𝐔𝐄𝐒 𝐃𝐔 𝐂𝐎𝐑𝐒𝐀𝐈𝐑𝐄**\n`;
             txt += `├───────────────────────────────────────┤\n`;
             txt += `│ 🔹 𝖭𝗈𝗆 : **${profile.name}**\n`;
-            txt += `│ 💰 𝖮𝗋 : ${formatNumber(profile.gold)} 𝗉𝗂è𝖼𝖾𝗌\n`;
+            txt += `│ 💰 𝖮𝗋 : ${formatNumber(profile.gold)} 𝗉𝗂è𝖼𝖾𝓼\n`;
             txt += `│ ☠️ 𝖯𝗋𝗂𝗆𝖾 : ${formatNumber(profile.bounty)} doublons\n`;
-            txt += `│ ⚔️ 𝖵𝗂𝖼𝗍𝗈𝗂𝗋𝖾𝗌 : ${profile.battleStats.wins} | 𝖣é𝖿𝖺𝗂𝗍𝖾𝗌 : ${profile.battleStats.losses}\n`;
+            txt += `│ ⚔️ 𝖵𝗂𝖼𝗍𝗈ἱ𝗋𝖾𝗌 : ${profile.battleStats.wins} | 𝖣é𝖿𝖺ἱ𝗍𝖾𝗌 : ${profile.battleStats.losses}\n`;
             txt += `╰───────────────────────────────────────╯`;
             return api.sendMessage(txt, threadID, messageID);
         }
 
+        // Si aucune sous-commande ne match
         return api.sendMessage("❌ Sous-commande invalide. Tapez `pirate` pour voir le registre complet.", threadID, messageID);
-    }
-};
+    } // Ferme la fonction onStart
+}; // Ferme le module.exports
