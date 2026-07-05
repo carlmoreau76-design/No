@@ -8,7 +8,8 @@ const path = require("path");
 
 // Importation sécurisée du module de stockage persistant
 // Ajuste le chemin si ton arborescence varie (ex: "./piratesMMO/dungeon.storage.js")
-const storage = require("./piratesMMO/dungeon.storage.js");
+const storage = require("./MMORPG_System/dungeonsMMO/dungeon.storage.js");
+
 
 module.exports = {
     config: {
