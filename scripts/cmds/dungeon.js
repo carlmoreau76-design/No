@@ -18,7 +18,7 @@ module.exports = {
         countDown: 2, // Anti-spam natif de 2 secondes
         role: 0, // Accessible à tous les joueurs
         description: "Explorez des donjons instanciés complexes, affrontez des monstres et pillez du loot mythique !",
-        category: "MMORPG"
+        category: "economy"
     },
 
     onStart: async function ({ api, event, args }) {
@@ -40,7 +40,7 @@ module.exports = {
         // =========================================================================
         if (!subCommand) {
             let menu = `╭───────────────────────────────────────╮\n`;
-            menu += `│ 🏰 𝐛𝐨𝐥𝐝 𝐮𝐧𝐢𝐜𝐨𝐝𝐞 𝐑𝐄𝐆𝐈𝐒𝐓𝐑𝐄 𝐃𝐄𝐒 𝐃𝐎𝐍𝐉𝐎𝐍𝐒\n`;
+            menu += `│ 🏰 𝐑𝐄𝐆𝐈𝐒𝐓𝐑𝐄 𝐃𝐄𝐒 𝐃𝐎𝐍𝐉𝐎𝐍𝐒\n`;
             menu += `├───────────────────────────────────────┤\n`;
             menu += `│ ⚔️ 𝖤𝖷𝖯𝖫𝖮𝖱𝖠𝖳𝖨𝖮𝖭 & 𝖢𝖮𝖬𝖡𝖠𝖳\n`;
             menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝗂𝗇𝖿𝗈 : 𝖫𝗂𝗌𝗍𝖾 𝖽𝖾𝗌 𝗓𝗈𝗇𝖾𝗌 𝖾𝗍 𝖻𝗈𝗌𝗌\n`;
@@ -56,7 +56,7 @@ module.exports = {
             menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝖼𝗁𝖾𝗌𝗍 / 𝖼𝗅𝖺𝗂𝗆 : 𝖮𝗎𝗏𝗋𝗂𝗋 𝗅𝖾𝗌 𝖼𝗈𝖿𝖿𝗋𝖾𝗌\n`;
             menu += `├───────────────────────────────────────┤\n`;
             menu += `│ 🎒 𝖫𝖮𝖮𝖳 & 𝖨𝖭𝖵𝖤𝖭𝖳𝖠𝖨𝖱𝖤\n`;
-            menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝗂𝗇𝗏𝖾𝗇𝗍𝗈𝗋𝗊 / 𝗅𝗈𝗈𝗍 : 𝖵𝗈𝗌 𝗋𝖾𝗅𝗂𝗊𝗎𝖾𝗌\n`;
+            menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝗂𝗇𝗏𝖾𝗇𝗍𝗈𝗋𝗒 / 𝗅𝗈𝗈𝗍 : 𝖵𝗈𝗌 𝗋𝖾𝗅𝗂𝗊𝗎𝖾𝗌\n`;
             menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝖾𝗊𝗎𝗂𝗉 / 𝗎𝗇𝖾𝗊𝗎𝗂𝗉 : 𝖦𝖾𝗌𝗍𝗂𝗈𝗇 𝖺𝗋𝗆𝖾𝗌\n`;
             menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝗎𝗌𝖾 <𝗂𝖽> / 𝗁𝖾𝖺𝗅 / 𝗋𝖾𝗏𝗂𝗏𝖾 : 𝖲𝗎𝗋𝗏𝗂𝖾\n`;
             menu += `├───────────────────────────────────────┤\n`;
@@ -66,9 +66,9 @@ module.exports = {
             menu += `├───────────────────────────────────────┤\n`;
             menu += `│ 🏆 𝖱𝖠𝖨𝖣 & 𝖢𝖫𝖠𝖲𝖲𝖤𝖬𝖤𝖭𝖳𝖲\n`;
             menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝗍𝗈𝗉 / 𝗅𝖾𝖺𝖽𝖾𝗋𝖻𝗈𝖺𝗋𝖽 : 𝖫𝖾𝗌 𝗅é𝗀𝖾𝗇𝖽𝖾𝗌\n`;
-            menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝖽𝖺𝗂𝗅𝗊 / 𝗐𝖾𝖾𝗄𝗅𝗊 : 𝖰𝗎ê𝗍𝖾𝗌 𝖿𝗂𝗑𝖾𝗌\n`;
+            menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝖽𝖺𝗂𝗅𝗒 / 𝗐𝖾𝖾𝗄𝗅𝗒 : 𝖰𝗎ê𝗍𝖾𝗌 𝖿𝗂𝗑𝖾𝗌\n`;
             menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝗋𝖺𝗂𝖽 [𝗃𝗈𝗂𝗇 / 𝖺𝗍𝗍𝖺𝖼𝗄] : 𝖡𝗈𝗌𝗌 𝖬𝗈𝗇𝖽𝗂𝖺𝗅\n`;
-            menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝗁𝗂𝗌𝗍𝗈𝗋𝗊 : 𝖩𝗈𝗎𝗋𝗇𝖺𝗅 𝖽𝖾𝗌 𝗉é𝗋𝗂𝗉é𝗍𝗂𝖾𝗌\n`;
+            menu += `│ 🔹 𝖽𝗎𝗇𝗀𝖾𝗈𝗇 𝗁𝗂𝗌𝗍𝗈𝗋𝗒 : 𝖩𝗈𝗎𝗋𝗇𝖺𝗅 𝖽𝖾𝗌 𝗉é𝗋𝗂𝗉é𝗍𝗂𝖾𝗌\n`;
             menu += `╰───────────────────────────────────────╯`;
             return api.sendMessage(menu, threadID, messageID);
         }
@@ -79,7 +79,7 @@ module.exports = {
         if (subCommand === "info") {
             const dungeons = storage.getDungeons();
             let msg = `╭───────────────────────────────────────╮\n`;
-            msg += `│ 🗺️ 𝐛𝐨𝐥𝐝 𝐮𝐧𝐢𝐜𝐨𝐝𝐞 𝐙𝐎𝐍𝐄𝐒 𝐃'𝖤𝖷𝖯𝖫𝖮𝖱𝖠𝖳𝖨𝖮𝖢\n`;
+            msg += `│ 🗺️ 𝐙𝐎𝐍𝐄𝐒 𝐃'𝖤𝖷𝖯𝖫𝖮𝖱𝖠𝖳𝖨𝖮𝖢\n`;
             msg += `├───────────────────────────────────────┤\n`;
             dungeons.forEach(d => {
                 msg += `│ 📍 [${d.id}] **${d.name}** (${d.rarity})\n`;
@@ -96,7 +96,7 @@ module.exports = {
         // =========================================================================
         if (subCommand === "profile") {
             let pMsg = `╭───────────────────────────────────────╮\n`;
-            pMsg += `│ 👤 𝐛𝐨𝐥𝐝 𝐮𝐧𝐢𝐜𝐨𝐝𝐞 𝐅𝐈𝐂𝐇𝐄 𝐃'𝐀𝐕𝐄𝐍𝐓𝐔𝐑𝐈𝐄𝐑\n`;
+            pMsg += `│ 👤 𝐅𝐈𝐂𝐇𝐄 𝐃'𝐀𝐕𝐄𝐍𝐓𝐔𝐑𝐈𝐄𝐑\n`;
             pMsg += `├───────────────────────────────────────┤\n`;
             pMsg += `│ 🔹 Nom : **${profile.name}**\n`;
             pMsg += `│ 🌟 Niveau : **${profile.level}** (XP: ${formatNum(profile.xp)} / ${formatNum(profile.level * 1200)})\n`;
@@ -131,7 +131,7 @@ module.exports = {
                 return api.sendMessage("🎒 Votre sacoche de donjon ne contient aucun objet pour le moment.", threadID, messageID);
             }
             let invMsg = `╭───────────────────────────────────────╮\n`;
-            invMsg += `│ 🎒 𝐛𝐨𝐥𝐝 𝐮𝐧𝐢𝐜𝐨𝐝𝐞 𝐒𝐀𝐂𝐎𝐂𝐇𝐄 𝐃𝐄 𝐃𝐎𝐍𝐉𝐎𝐍\n`;
+            invMsg += `│ 🎒 𝐒𝐀𝐂𝐎𝐂𝐇𝐄 𝐃𝐄 𝐃𝐎𝐍𝐉𝐎𝐍\n`;
             invMsg += `├───────────────────────────────────────┤\n`;
             profile.inventory.forEach(item => {
                 const qtyStr = item.qty ? ` (x${item.qty})` : "";
@@ -193,7 +193,7 @@ module.exports = {
             storage.logDungeonEvent(profile, "ENTRÉE", `A franchi les portes de : ${dungeon.name}`);
 
             let startMsg = `╭───────────────────────────────────────╮\n`;
-            startMsg += `│ 🏰 𝐛𝐨𝐥𝐝 𝐮𝐧𝐢𝐜𝐨𝐝𝐞 𝐈𝐍𝐒𝐓𝐀𝐍𝐂𝐄 𝐎𝐔𝐕𝐄𝐑𝐓𝐄\n`;
+            startMsg += `│ 🏰 𝐈𝐍𝐒𝐓𝐀𝐍𝐂𝐄 𝐎𝐔𝐕𝐄𝐑𝐓𝐄\n`;
             startMsg += `├───────────────────────────────────────┤\n`;
             startMsg += `│ Vous pénétrez dans **${dungeon.name}**.\n`;
             startMsg += `│ 🔹 Étage : 1 / ${dungeon.floors}\n`;
@@ -533,7 +533,7 @@ module.exports = {
         // =========================================================================
         if (subCommand === "shop") {
             let shopMsg = `╭───────────────────────────────────────╮\n`;
-            shopMsg += `│ 🛒 𝐛𝐨𝐥𝐝 𝐮𝐧𝐢𝐜𝐨𝐝𝐞 𝐌𝐀𝐑𝐂𝐇É 𝐃𝐄𝐒 𝐂𝐎𝐍𝐆𝐑É𝐆𝐀𝐓𝐈𝐎𝐍𝐒\n`;
+            shopMsg += `│ 🛒 𝐌𝐀𝐑𝐂𝐇É 𝐃𝐄𝐒 𝐂𝐎𝐍𝐆𝐑É𝐆𝐀𝐓𝐈𝐎𝐍𝐒\n`;
             shopMsg += `├───────────────────────────────────────┤\n`;
             shopMsg += `│ 🔹 [sh_01] **Potion de Soin Majeure**\n`;
             shopMsg += `│    Prix : 150 🪙 | Effet : Recouvre 120 HP\n`;
@@ -579,7 +579,7 @@ module.exports = {
             allPlayers.sort((a, b) => b.level - a.level);
 
             let topMsg = `╭───────────────────────────────────────╮\n`;
-            topMsg += `│ 🏆 𝐛𝐨𝐥𝐝 𝐮𝐧𝐢𝐜𝐨𝐝𝐞 𝐏𝐀𝐍𝐓𝐇É𝐎𝐍 𝐃𝐄𝐒 𝐀𝐕𝐄𝐍𝐓𝐔𝐑𝐈𝐄𝐑𝐒\n`;
+            topMsg += `│ 🏆 𝐏𝐀𝐍𝐓𝐇É𝐎𝐍 𝐃𝐄𝐒 𝐀𝐕𝐄𝐍𝐓𝐔𝐑𝐈𝐄𝐑𝐒\n`;
             topMsg += `├───────────────────────────────────────┤\n`;
             allPlayers.slice(0, 5).forEach((p, idx) => {
                 topMsg += `│ ${idx + 1}. **${p.name}** | Niv.${p.level} | 🏅 Étage Max: ${p.highestFloor}\n`;
@@ -624,7 +624,7 @@ module.exports = {
 
             if (!raidAction) {
                 let rMsg = `╭───────────────────────────────────────╮\n`;
-                rMsg += `│ 🌋 𝐛𝐨𝐥𝐝 𝐮𝐧𝐢𝐜𝐨𝐝𝐞 𝐑𝐀𝐈𝐃 𝐁𝐎𝐒𝐒 𝐌𝐎𝐍𝐃𝐈𝐀𝐋\n`;
+                rMsg += `│ 🌋 𝐑𝐀𝐈𝐃 𝐁𝐎𝐒𝐒 𝐌𝐎𝐍𝐃𝐈𝐀𝐋\n`;
                 rMsg += `├───────────────────────────────────────┤\n`;
                 rMsg += `│ 👹 Cible : **${raid.bossName}** (Niv.${raid.level})\n`;
                 rMsg += `│ 📊 Vitalité : **${formatNum(raid.hp)} / ${formatNum(raid.maxHp)} HP**\n`;
