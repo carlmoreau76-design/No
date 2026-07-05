@@ -147,7 +147,16 @@ module.exports = {
                     ring: null
                 },
                 skills: [
-                    { id: "sk_01", name: "Frappe Brutale", type: "damage", value: 1.4, cooldown: 0 }
+                    { id: "sk_01", name: "Frappe Brutale", type: "damage", value: 1.4, cooldown: 0 },
+                    { id: "sk_02", name: "Lame Perçante", type: "damage", value: 1.7, cooldown: 1 },
+                    { id: "sk_03", name: "Explosion Ardente", type: "damage", value: 2.1, cooldown: 2 },
+                    { id: "sk_04", name: "Soin Léger", type: "heal", value: 0.25, cooldown: 2 },
+                    { id: "sk_05", name: "Régénération Sacrée", type: "heal", value: 0.4, cooldown: 4 },
+                    { id: "sk_06", name: "Cri de Guerre", type: "buff_attack", value: 0.3, cooldown: 3 },
+                    { id: "sk_07", name: "Mur de Fer", type: "buff_defense", value: 0.35, cooldown: 3 },
+                    { id: "sk_08", name: "Malédiction Obscure", type: "debuff_attack", value: 0.25, cooldown: 3 },
+                    { id: "sk_09", name: "Drain Vital", type: "lifesteal", value: 0.2, cooldown: 2 },
+                    { id: "sk_10", name: "Œil du Prédateur", type: "crit_boost", value: 0.25, cooldown: 4 }
                 ],
                 cooldowns: {
                     daily: 0,
