@@ -7,7 +7,7 @@
 const path = require("path");
 
 // Importation isolée et sécurisée du module de stockage
-const storage = require("./MMORPG_System/marriageSystem/marry.storage.js");
+const storage = require("./MMORPG_System/mariageSystem/marry.storage.js");
 
 module.exports = {
     config: {
