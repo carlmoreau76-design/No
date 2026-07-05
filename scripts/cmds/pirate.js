@@ -435,58 +435,298 @@ module.exports = {
                 storage.saveUserProfile(senderID, profile);
                 return api.sendMessage(`🐋 **ÉCHEC :** Le monstre des abysses a brisé vos lignes de défense. Vous battez en retraite (-${bossDmg} HP).`, threadID, messageID);
             }
-        }
-
+            
         // ==========================================
-        // GESTION DES ÉQUIPAGES : CREW (SOUS-MENU)
+        // GESTION COMPLÈTE DES ÉQUIPAGES : CREW
         // ==========================================
         if (subCommand === "crew") {
             const crewAction = args[1] ? args[1].toLowerCase() : null;
 
+            // --- MENU DE COMPAGNIE DES CREWS ---
             if (!crewAction) {
                 let cMenu = `╭───────────────────────────────────────╮\n`;
                 cMenu += `│ ☠️ 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐄𝐒 𝐃'É𝐐𝐔𝐈𝐏𝐀𝐆𝐄\n`;
                 cMenu += `├───────────────────────────────────────┤\n`;
-                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝖼𝗋𝖾𝖺𝗍𝖾 <𝗇𝗈𝗆> : 𝖥𝗈𝗇𝖽𝗋𝖾 𝗎𝗇 𝖾𝗊𝗎𝗂𝗉𝖺𝗀𝖾\n`;
-                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗂𝗇𝖿𝗈 / 𝗅𝗂𝗌𝗍 : 𝖵𝗈𝗂𝗋 𝗅𝖾𝗌 𝖿𝗅𝗈𝗍𝗍𝖾𝗌\n`;
-                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗂𝗇𝗏𝗂𝗍𝖾 / 𝗄𝗂𝖼𝗄 : 𝖬𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗋 𝗅𝖾𝗌 𝗃𝗈𝗎𝖾𝗎𝗋𝗌\n`;
-                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝖽𝗈𝗇𝖺𝗍𝖾 <𝗆𝗈𝗇𝗍𝖺𝗇𝗍> : 𝖢𝗈𝖿𝖿𝗋𝖾 𝖼𝗈𝗆𝗆𝗎𝗇\n`;
-                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗅𝖾𝖺𝗏𝖾 / 𝖼𝗁𝖺𝗍 : 𝖵𝗂𝖾 𝖽'é𝗉𝖺𝗏𝖾\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝖼𝗋𝖾𝖺𝗍𝖾 <𝗇𝗈𝗆> : 𝖥𝗈𝗇𝖽𝗋𝖾 𝗎𝗇𝖾 𝖿𝗅𝗈𝗍𝗍𝖾\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗂𝗇𝖿𝗈 [𝗂𝖽] / 𝗅𝗂𝗌𝗍 : 𝖵𝗈𝗂𝗋 𝗅𝖾𝗌 𝖼𝗋𝖾𝗐𝗌\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗆𝖾𝗆𝖻𝖾𝗋𝗌 : 𝖫𝗂𝗌𝗍𝖾 𝖽𝖾𝗌 𝗆𝖺𝗋𝗂𝗇𝗌\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗃𝗈𝗂𝗇 <𝗂𝖽> / 𝗅𝖾𝖺𝗏𝖾 : 𝖬𝗈𝗎𝗏𝖾𝗆𝖾𝗇𝗍𝗌\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗂𝗇𝗏𝗂𝗍𝖾 / 𝗄𝗂𝖼𝗄 @𝗎𝗌𝖾𝗋 : 𝖱𝖾𝖼𝗋𝗎𝗍𝖾𝗆𝖾𝗇𝗍\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗉𝗋𝗈𝗆𝗈𝗍𝖾 / 𝖽𝖾𝗆𝗈𝗍𝖾 @𝗎𝗌𝖾𝗋 : 𝖱𝖺𝗇𝗀𝗌\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝖽𝗈𝗇𝖺𝗍𝖾 / 𝗐𝗂𝗍𝗁𝖽𝗋𝖺𝗐 <𝗊𝗍é> : 𝖢𝗈𝖿𝖿𝗋𝖾\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗎𝗉𝗀𝗋𝖺𝖽𝖾 : 𝖠𝗆é𝗅𝗂𝗈𝗋𝖾𝗋 𝗅𝖺 𝖿𝗅𝗈𝗍𝗍𝖾\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝖼𝗁𝖺𝗍 <𝗆𝗌𝗀> / 𝗅𝗈𝗀𝗌 : 𝖵𝗂𝖾 𝖽𝗎 𝖼𝗋𝖾𝗐\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗐𝖺𝗋 : 𝖫𝖺𝗇𝖼𝖾𝗋 𝗎𝗇𝖾 𝖻𝖺𝗍𝖺𝗂𝗅𝗅𝖾\n`;
                 cMenu += `╰───────────────────────────────────────╯`;
                 return api.sendMessage(cMenu, threadID, messageID);
             }
 
+            // --- CREW CREATE ---
             if (crewAction === "create") {
-                if (profile.crewId) return api.sendMessage("❌ Vous appartenez déjà à une flotte.", threadID, messageID);
+                if (profile.crewId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝖺𝗉𝗉𝖺𝗋𝗍𝖾𝗇𝖾𝗋 𝖽é𝗃à à 𝗎𝗇 é𝗊𝗎𝗂𝗉𝖺𝗀𝖾.", threadID, messageID);
                 const cName = args.slice(2).join(" ");
-                if (!cName) return api.sendMessage("❌ Donnez un nom à votre équipage.", threadID, messageID);
+                if (!cName || cName.length < 3) return api.sendMessage("❌ 𝖫𝖾 𝗇𝗈𝗆 𝖽𝗎 𝖼𝗋𝖾𝗐 𝖽𝗈𝗂𝗍 𝖿𝖺𝗂𝗋𝖾 𝖺𝗎 𝗆𝗈𝗂𝗇𝗌 3 𝖼𝖺𝗋𝖺𝖼𝗍è𝗋𝖾𝗌.", threadID, messageID);
 
-                const newId = "CREW_" + Date.now().toString().slice(-6);
-                crews[newId] = { id: newId, name: cName, captain: senderID, bank: 0, members: [senderID] };
+                const newId = "CRW" + Date.now().toString().slice(-5);
+                crews[newId] = {
+                    id: newId,
+                    name: cName,
+                    captain: senderID,
+                    captainName: profile.name,
+                    bank: 0,
+                    level: 1,
+                    maxMembers: 15,
+                    members: [senderID],
+                    logs: []
+                };
+
                 profile.crewId = newId;
+                profile.crewRole = "Capitaine";
 
                 storage.saveCrews(crews);
                 storage.saveUserProfile(senderID, profile);
-                return api.sendMessage(`🏴‍☠️ L'équipage **${cName}** a hissé son pavillon noir !`, threadID, messageID);
+                storage.logEvent(newId, "CREATION", `🏴‍☠️ L'équipage ${cName} a été fondé par le Capitaine ${profile.name}.`);
+
+                return api.sendMessage(`🏴‍☠️ **𝖥𝖫𝖮𝖳𝖳𝖤 𝖢𝖱ÉÉ𝖤 :** L'équipage **${cName}** (ID: ${newId}) vient de hisser son pavillon noir !`, threadID, messageID);
             }
 
-            if (crewAction === "donate") {
+            // --- CREW LIST ---
+            if (crewAction === "list") {
+                const listCrews = Object.values(crews).slice(0, 10);
+                if (listCrews.length === 0) return api.sendMessage("📭 𝖠𝗎𝖼𝗎𝗇 é𝗊𝗎𝗂𝗉𝖺𝗀𝖾 𝗇'𝖾𝗌𝗍 𝖾𝗇𝗉𝖾𝗋𝗋𝖾 𝖺𝖼𝗍𝗎𝖾𝗅𝗅𝖾𝗆𝖾𝗇𝗍.", threadID, messageID);
+
+                let lMsg = `╭───────────────────────────────────────╮\n`;
+                lMsg += `│ 📜 𝐑𝐄𝐆𝐈𝐒𝐓𝐑𝐄 𝐃𝐄𝐒 É𝐐𝐔𝐈𝐏𝐀𝐆𝐄𝐒\n`;
+                lMsg += `├───────────────────────────────────────┤\n`;
+                listCrews.forEach(c => {
+                    lMsg += `│ 🔹 [${c.id}] **${c.name}** | 𝖫𝗏𝗅 ${c.level} | 👥 ${c.members.length}/${c.maxMembers}\n`;
+                });
+                lMsg += `╰───────────────────────────────────────╯`;
+                return api.sendMessage(lMsg, threadID, messageID);
+            }
+
+            // --- CREW INFO ---
+            if (crewAction === "info") {
+                const targetId = args[2] || profile.crewId;
+                if (!targetId || !crews[targetId]) return api.sendMessage("❌ 𝖤𝗊𝗎𝗂𝗉𝖺𝗀𝖾 𝗂𝗇𝗍𝗋𝗈𝗎𝗏𝖺𝖻𝗅𝖾.", threadID, messageID);
+
+                const c = crews[targetId];
+                let iMsg = `╭───────────────────────────────────────╮\n`;
+                iMsg += `│ ☠️ É𝐐𝐔𝐈𝐏𝐀𝐆𝐄 : ${c.name.toUpperCase()}\n`;
+                iMsg += `├───────────────────────────────────────┤\n`;
+                iMsg += `│ 🆔 𝖨𝖣 : ${c.id}\n`;
+                iMsg += `│ 👑 𝖢𝖺𝗉𝗂𝗍𝖺𝗂𝗇𝖾 : ${c.captainName || "Inconnu"}\n`;
+                iMsg += `│ 🌟 𝖭𝗂𝗏𝖾𝖺𝗎 : ${c.level}\n`;
+                iMsg += `│ 👥 𝖬𝖺𝗋𝗂𝗇𝗌 : ${c.members.length} / ${c.maxMembers}\n`;
+                iMsg += `│ 💰 𝖢𝗈𝖿𝖿𝗋𝖾-𝖥𝗈𝗋𝗍 : ${formatNumber(c.bank)} doublons\n`;
+                iMsg += `╰───────────────────────────────────────╯`;
+                return api.sendMessage(iMsg, threadID, messageID);
+            }
+
+            // --- CREW JOIN ---
+            if (crewAction === "join") {
+                if (profile.crewId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 ê𝗍𝖾𝗌 𝖽é𝗃à 𝖽𝖺𝗇𝗌 𝗎𝗇 𝖼𝗋𝖾𝗐.", threadID, messageID);
+                const targetId = args[2];
+                if (!targetId || !crews[targetId]) return api.sendMessage("❌ 𝖨𝖣 𝖽'é𝗊𝗎𝗂𝗉𝖺𝗀𝖾 𝗂𝗇𝗏𝖺𝗅𝗂𝖽𝖾.", threadID, messageID);
+
+                const c = crews[targetId];
+                if (c.members.length >= c.maxMembers) return api.sendMessage("❌ 𝖢𝖾𝗍 é𝗊𝗎𝗂𝗉𝖺𝗀𝖾 𝖾𝗌𝗍 𝖺𝗎 𝗆𝖺𝗑𝗂𝗆𝗎𝗆 𝖽𝖾 𝗌𝖺 𝖼𝖺𝗉𝖺𝖼𝗂𝗍é.", threadID, messageID);
+
+                c.members.push(senderID);
+                profile.crewId = c.id;
+                profile.crewRole = "Membre";
+
+                storage.saveCrews(crews);
+                storage.saveUserProfile(senderID, profile);
+                storage.logEvent(c.id, "RECRUTEMENT", `👤 ${profile.name} a rejoint l'équipage.`);
+
+                return api.sendMessage(`✅ Vous avez rejoint l'équipage **${c.name}** !`, threadID, messageID);
+            }
+
+            // --- CREW LEAVE ---
+            if (crewAction === "leave") {
+                if (!profile.crewId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'𝖺𝗏𝖾𝗓 𝗉𝖺𝗌 𝖽'é𝗊𝗎𝗂𝗉𝖺𝗀𝖾.", threadID, messageID);
+                const c = crews[profile.crewId];
+
+                if (c.captain === senderID) return api.sendMessage("❌ En tant que Capitaine, vous devez dissoudre le crew via `disband` (ou utiliser une autre action) plutôt que de l'abandonner.", threadID, messageID);
+
+                c.members = c.members.filter(id => id !== senderID);
+                profile.crewId = null;
+                profile.crewRole = null;
+
+                storage.saveCrews(crews);
+                storage.saveUserProfile(senderID, profile);
+                storage.logEvent(c.id, "DEPART", `🚪 ${profile.name} a quitté le navire.`);
+
+                return api.sendMessage(`🚪 Vous avez fait vos bagages et quitté l'équipage.`, threadID, messageID);
+            }
+
+            // --- CREW MEMBERS ---
+            if (crewAction === "members") {
+                if (!profile.crewId) return api.sendMessage("❌ Vous n'avez pas d'équipage.", threadID, messageID);
+                const c = crews[profile.crewId];
+
+                let mMsg = `╭───────────────────────────────────────╮\n`;
+                mMsg += `│ 👥 𝐌𝐀𝐑𝐈𝐍𝐒 𝐃𝐄 𝐋'É𝐐𝐔𝐈𝐏𝐀𝐆𝐄\n`;
+                mMsg += `├───────────────────────────────────────┤\n`;
+                c.members.forEach(mId => {
+                    const mProf = pirates[mId] || { name: "Pirate Égaré", crewRole: "Membre" };
+                    mMsg += `│ 🔹 **${mProf.name}** - [${mProf.crewRole || "Membre"}]\n`;
+                });
+                mMsg += `╰───────────────────────────────────────╯`;
+                return api.sendMessage(mMsg, threadID, messageID);
+            }
+
+            // --- CREW WITHDRAW (RETRAIT SÉCURISÉ) ---
+            if (crewAction === "withdraw") {
                 if (!profile.crewId) return api.sendMessage("❌ Vous n'avez pas de crew.", threadID, messageID);
-                const amt = parseInt(args[2]);
-                if (isNaN(amt) || amt <= 0 || profile.gold < amt) return api.sendMessage("❌ Somme invalide.", threadID, messageID);
+                const c = crews[profile.crewId];
 
-                profile.gold -= amt;
-                crews[profile.crewId].bank += amt;
+                if (!["Capitaine", "Second"].includes(profile.crewRole)) {
+                    return api.sendMessage("❌ Seul le Capitaine ou le Second peut retirer des doublons du coffre.", threadID, messageID);
+                }
+
+                const amt = parseInt(args[2]);
+                if (isNaN(amt) || amt <= 0 || c.bank < amt) return api.sendMessage("❌ Montant invalide ou coffre insuffisant.", threadID, messageID);
+
+                c.bank -= amt;
+                profile.gold += amt;
 
                 storage.saveCrews(crews);
                 storage.saveUserProfile(senderID, profile);
-                return api.sendMessage(`💰 +**${formatNumber(amt)}** doublons ajoutés au coffre fort commun.`, threadID, messageID);
-            }
-            
-            return api.sendMessage("❌ Action d'équipage non reconnue ou droits insuffisants.", threadID, messageID);
-        }
+                storage.logEvent(c.id, "COFFRE", `💰 ${profile.name} a retiré ${formatNumber(amt)} doublons.`);
 
-        // ==========================================
+                return api.sendMessage(`💰 Retrait réussi de **${formatNumber(amt)}** doublons du coffre d'équipage.`, threadID, messageID);
+            }
+
+            // --- CREW PROMOTE ---
+            if (crewAction === "promote") {
+                if (!profile.crewId) return api.sendMessage("❌ Pas d'équipage.", threadID, messageID);
+                if (!["Capitaine", "Second"].includes(profile.crewRole)) return api.sendMessage("❌ Droits insuffisants.", threadID, messageID);
+
+                const targetID = Object.keys(event.mentions)[0];
+                if (!targetID) return api.sendMessage("❌ Mentionnez le marin à promouvoir.", threadID, messageID);
+
+                const targetProfile = pirates[targetID];
+                if (!targetProfile || targetProfile.crewId !== profile.crewId) return api.sendMessage("❌ Ce pirate n'est pas à bord de votre navire.", threadID, messageID);
+
+                if (!targetProfile.crewRole || targetProfile.crewRole === "Membre") {
+                    targetProfile.crewRole = "Officier";
+                } else if (targetProfile.crewRole === "Officier") {
+                    if (profile.crewRole !== "Capitaine") return api.sendMessage("❌ Seul le Capitaine peut nommer un Second.", threadID, messageID);
+                    targetProfile.crewRole = "Second";
+                } else {
+                    return api.sendMessage("❌ Impossible de promouvoir plus haut.", threadID, messageID);
+                }
+
+                storage.saveUserProfile(targetID, targetProfile);
+                storage.logEvent(profile.crewId, "PROMOTION", `⭐ ${targetProfile.name} a été promu au rang de ${targetProfile.crewRole}.`);
+                return api.sendMessage(`⭐ **${targetProfile.name}** a été promu **${targetProfile.crewRole}** !`, threadID, messageID);
+            }
+
+            // --- CREW DEMOTE ---
+            if (crewAction === "demote") {
+                if (!profile.crewId) return api.sendMessage("❌ Pas d'équipage.", threadID, messageID);
+                if (profile.crewRole !== "Capitaine") return api.sendMessage("❌ Seul le Capitaine gère la dégradation des officiers.", threadID, messageID);
+
+                const targetID = Object.keys(event.mentions)[0];
+                if (!targetID) return api.sendMessage("❌ Mentionnez le marin à rétrograder.", threadID, messageID);
+
+                const targetProfile = pirates[targetID];
+                if (!targetProfile || targetProfile.crewId !== profile.crewId) return api.sendMessage("❌ Ce pirate ne fait pas partie du crew.", threadID, messageID);
+
+                if (targetProfile.crewRole === "Second") {
+                    targetProfile.crewRole = "Officier";
+                } else if (targetProfile.crewRole === "Officier") {
+                    targetProfile.crewRole = "Membre";
+                } else {
+                    return api.sendMessage("❌ Ce membre est déjà au rang le plus bas.", threadID, messageID);
+                }
+
+                storage.saveUserProfile(targetID, targetProfile);
+                storage.logEvent(profile.crewId, "RÉTROGRADATION", `🔻 ${targetProfile.name} a été rétrogradé au rang de ${targetProfile.crewRole}.`);
+                return api.sendMessage(`🔻 **${targetProfile.name}** a été rétrogradé au rang de **${targetProfile.crewRole}**.`, threadID, messageID);
+            }
+
+            // --- CREW KICK ---
+            if (crewAction === "kick") {
+                if (!profile.crewId) return api.sendMessage("❌ Pas d'équipage.", threadID, messageID);
+                if (!["Capitaine", "Second", "Officier"].includes(profile.crewRole)) return api.sendMessage("❌ Vous n'avez pas l'autorité nécessaire.", threadID, messageID);
+
+                const targetID = Object.keys(event.mentions)[0];
+                if (!targetID) return api.sendMessage("❌ Mentionnez le pirate à jeter par-dessus bord.", threadID, messageID);
+
+                const targetProfile = pirates[targetID];
+                if (!targetProfile || targetProfile.crewId !== profile.crewId) return api.sendMessage("❌ Ce pirate n'est pas dans votre crew.", threadID, messageID);
+
+                if (targetProfile.crewRole === "Capitaine" || (targetProfile.crewRole === "Second" && profile.crewRole !== "Capitaine")) {
+                    return api.sendMessage("❌ Hiérarchie protégée. Vous ne pouvez pas exclure ce membre.", threadID, messageID);
+                }
+
+                const c = crews[profile.crewId];
+                c.members = c.members.filter(id => id !== targetID);
+                targetProfile.crewId = null;
+                targetProfile.crewRole = null;
+
+                storage.saveCrews(crews);
+                storage.saveUserProfile(targetID, targetProfile);
+                storage.logEvent(c.id, "KICK", `🥾 ${targetProfile.name} a été jeté par-dessus bord.`);
+
+                return api.sendMessage(`🥾 **${targetProfile.name}** a été exclu de l'équipage.`, threadID, messageID);
+            }
+
+            // --- CREW CHAT ---
+            if (crewAction === "chat") {
+                if (!profile.crewId) return api.sendMessage("❌ Vous n'avez pas de crew pour chatter.", threadID, messageID);
+                const msg = args.slice(2).join(" ");
+                if (!msg) return api.sendMessage("❌ Écrivez un message destiné à votre flotte.", threadID, messageID);
+
+                const c = crews[profile.crewId];
+                c.members.forEach(mId => {
+                    if (mId !== senderID) {
+                        api.sendMessage(`💬 [𝖢𝖧𝖠𝖳 𝖢𝖱𝖤𝖶 - ${c.name}] **${profile.name}** : ${msg}`, mId);
+                    }
+                });
+                return api.sendMessage("✉️ Message transmis instantanément aux cabines des marins actifs.", threadID, messageID);
+            }
+
+            // --- CREW LOGS ---
+            if (crewAction === "logs") {
+                if (!profile.crewId) return api.sendMessage("❌ Pas d'équipage.", threadID, messageID);
+                const c = crews[profile.crewId];
+                if (!c.logs || c.logs.length === 0) return api.sendMessage("📭 Aucun log enregistré dans le journal de bord.", threadID, messageID);
+
+                let logMsg = `📜 **𝐉𝐎𝐔𝐑𝐍𝐀𝐋 𝐃𝐄 𝐁𝐎𝐑𝐃 (𝐋𝐎𝐆𝐒)**\n\n`;
+                c.logs.slice(0, 10).forEach(l => {
+                    logMsg += `• [${l.type}] ${l.message}\n`;
+                });
+                return api.sendMessage(logMsg, threadID, messageID);
+            }
+
+            // --- CREW UPGRADE ---
+            if (crewAction === "upgrade") {
+                if (!profile.crewId) return api.sendMessage("❌ Pas d'équipage.", threadID, messageID);
+                const c = crews[profile.crewId];
+                
+                const cost = c.level * 50000;
+                if (c.bank < cost) return api.sendMessage(`❌ Fonds du coffre insuffisants. Il faut **${formatNumber(cost)}** 💰 dans le coffre commun.`, threadID, messageID);
+
+                c.bank -= cost;
+                c.level += 1;
+                c.maxMembers += 2;
+
+                storage.saveCrews(crews);
+                storage.logEvent(c.id, "AMÉLIORATION", `📈 L'équipage est passé au niveau ${c.level}.`);
+                return api.sendMessage(`📈 **𝖥𝖫𝖮𝖳𝖳𝖤 𝖠𝖬É𝖫𝖨𝖮𝖱É𝖤 :** L'équipage passe au Niveau **${c.level}** ! Capacité maximale augmentée à ${c.maxMembers} marins.`, threadID, messageID);
+            }
+
+            // --- CREW WAR ---
+            if (crewAction === "war") {
+                if (!profile.crewId) return api.sendMessage("❌ Pas d'équipage.", threadID, messageID);
+                return api.sendMessage("⚔️ **𝖦𝖴𝖤𝖱𝖱𝖤 𝖭𝖠𝖵𝖠𝖫𝖤 :** Les éclaireurs cherchent des flottes ennemies sur l'horizon. La saison d'assaut s'ouvrira sous peu !", threadID, messageID);
+            }
+
+         // ==========================================
         // BUTIN QUOTIDIEN : DAILY
         // ==========================================
         if (subCommand === "daily") {
