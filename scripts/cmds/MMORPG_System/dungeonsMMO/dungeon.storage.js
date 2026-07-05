@@ -45,12 +45,17 @@ function getDefaultRaidState() {
 
 function initDungeonsRegistry() {
     const defaultDungeons = [
-        { id: "d1", name: "Forêt des Murmures", recommendedLevel: 1, staminaCost: 10, floors: 5, baseReward: 500, rarity: "Commun", theme: "Sylvestre", bossName: "Gardien Sylvestre" },
-        { id: "d2", name: "Crypte du Roi Déchu", recommendedLevel: 10, staminaCost: 15, floors: 7, baseReward: 1500, rarity: "Rare", theme: "Mort-vivant", bossName: "Roi Squelette" },
-        { id: "d3", name: "Temple Volcanique", recommendedLevel: 20, staminaCost: 20, floors: 10, baseReward: 3500, rarity: "Épique", theme: "Magma", bossName: "Titan de Lave" },
-        { id: "d4", name: "Tour du Néant", recommendedLevel: 35, staminaCost: 25, floors: 12, baseReward: 8000, rarity: "Légendaire", theme: "Abyssal", bossName: "Dragon du Néant" },
-        { id: "d5", name: "Palais de Givre", recommendedLevel: 50, staminaCost: 30, floors: 15, baseReward: 18000, rarity: "Mythique", theme: "Cryogénique", bossName: "Empereur du Chaos" }
-    ];
+          { id: "d1", name: "Forêt des Murmures", recommendedLevel: 1, staminaCost: 10, floors: 5, baseReward: 500, rarity: "Commun", theme: "Sylvestre", bossName: "Gardien Sylvestre" },
+          { id: "d2", name: "Crypte du Roi Déchu", recommendedLevel: 10, staminaCost: 15, floors: 7, baseReward: 1500, rarity: "Rare", theme: "Mort-vivant", bossName: "Roi Squelette" },
+          { id: "d3", name: "Temple Volcanique", recommendedLevel: 20, staminaCost: 20, floors: 10, baseReward: 3500, rarity: "Épique", theme: "Magma", bossName: "Titan de Lave" },
+          { id: "d4", name: "Tour du Néant", recommendedLevel: 35, staminaCost: 25, floors: 12, baseReward: 8000, rarity: "Légendaire", theme: "Abyssal", bossName: "Dragon du Néant" },
+          { id: "d5", name: "Palais de Givre", recommendedLevel: 50, staminaCost: 30, floors: 15, baseReward: 18000, rarity: "Mythique", theme: "Cryogénique", bossName: "Empereur du Chaos" },
+          { id: "d6", name: "Sanctuaire des Tempêtes", recommendedLevel: 65, staminaCost: 35, floors: 18, baseReward: 32000, rarity: "Mythique", theme: "Foudre", bossName: "Seigneur des Orages" },
+          { id: "d7", name: "Catacombes Sanglantes", recommendedLevel: 80, staminaCost: 40, floors: 20, baseReward: 50000, rarity: "Mythique", theme: "Sanguinaire", bossName: "Reine Vampire Écarlate" },
+          { id: "d8", name: "Cité Engloutie d’Atlantis", recommendedLevel: 100, staminaCost: 45, floors: 22, baseReward: 80000, rarity: "Divin", theme: "Aquatique", bossName: "Léviathan des Abysses" },
+          { id: "d9", name: "Faille du Jugement Céleste", recommendedLevel: 125, staminaCost: 50, floors: 25, baseReward: 120000, rarity: "Divin", theme: "Céleste", bossName: "Archange du Jugement" },
+          { id: "d10", name: "Trône de l’Apocalypse", recommendedLevel: 150, staminaCost: 60, floors: 30, baseReward: 200000, rarity: "Transcendant", theme: "Fin du monde", bossName: "Roi de l’Apocalypse" }
+      ];
     fs.writeFileSync(PATHS.DUNGEONS, JSON.stringify(defaultDungeons, null, 4), "utf8");
 }
 
