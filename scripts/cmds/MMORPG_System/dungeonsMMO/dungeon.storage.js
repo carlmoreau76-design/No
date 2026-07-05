@@ -130,7 +130,16 @@ module.exports = {
                 critDamage: 1.5,
                 luck: 5,
                 inventory: [
-                    { id: "pot_hp_01", name: "Potion de Soin Mineure", type: "potion", effect: 50, qty: 2 }
+                    { id: "pot_hp_01", name: "Potion de Soin Mineure", type: "potion", effect: 50, qty: 2 },
+                    { id: "pot_hp_02", name: "Potion de Soin Standard", type: "potion", effect: 120, qty: 1 },
+                    { id: "pot_hp_03", name: "Grande Potion de Soin", type: "potion", effect: 250, qty: 1 },
+                    { id: "pot_hp_04", name: "Potion de Régénération", type: "regen", effect: 30, qty: 1 },
+                    { id: "pot_mp_01", name: "Potion de Mana Mineure", type: "mana", effect: 40, qty: 2 },
+                    { id: "pot_mp_02", name: "Potion de Mana Supérieure", type: "mana", effect: 100, qty: 1 },
+                    { id: "pot_atk_01", name: "Élixir de Force", type: "buff_attack", effect: 0.2, qty: 1 },
+                    { id: "pot_def_01", name: "Élixir de Défense", type: "buff_defense", effect: 0.2, qty: 1 },
+                    { id: "pot_crit_01", name: "Flacon du Prédateur", type: "buff_crit", effect: 0.15, qty: 1 },
+                    { id: "pot_revive_01", name: "Pierre de Résurrection", type: "revive", effect: 0.5, qty: 1 }
                 ],
                 equipment: {
                     weapon: null,
