@@ -211,3 +211,164 @@ module.exports = {
             });
             return api.sendMessage(topMsg, threadID, messageID);
         }
+
+        // --- LOGIQUE DE CHEMIN ADAPTÉE À TA STRUCTURE DE SOUS-DOSSIERS ---
+        // Vu que pirate.js et le sous-dossier piratesMMO/ sont tous les deux dans MMORPG_System :
+        // const storage = require("./piratesMMO/pirate.storage.js");
+
+        // ==========================================
+        // ECO & PROGRESSION : WORK / HUNT / FISH / LOOT
+        // ==========================================
+        
+        if (subCommand === "work") {
+            if (now - profile.cooldowns.work < 5 * 60 * 1000) {
+                const rem = Math.ceil((5 * 60 * 1000 - (now - profile.cooldowns.work)) / 1000);
+                return api.sendMessage(`⏳ 𝖵𝗈𝗌 𝗆𝖺𝗋𝗂𝗇𝗌 𝗌𝗈𝗇𝗍 𝖿𝖺𝗍𝗂𝗀𝗎é𝗌. 𝖱𝖾𝗉𝗋𝗂𝗌𝖾 𝖽𝗎 𝗀𝗎𝖾𝗎𝗅𝖺𝗋𝖽 𝖽𝖺𝗇𝗌 ${rem}𝗌.`, threadID, messageID);
+            }
+            
+            const gain = Math.floor(200 + Math.random() * 300) * profile.level;
+            profile.gold += gain;
+            profile.xp += 30;
+            profile.cooldowns.work = now;
+            
+            storage.saveUserProfile(senderID, profile);
+            return api.sendMessage(`⚓ **${profile.name}** 𝖺 𝖺𝗂𝖽é à 𝖼𝗁𝖺𝗋𝗀𝖾𝗋 𝗎𝗇 𝗀𝖺𝗅𝗂𝗈𝗇 𝗆𝖺𝗋𝖼𝗁𝖺𝗇𝖽. 𝖦𝖺𝗂𝗇 : +**${formatNumber(gain)}** 💰 & +30 ⭐ 𝖷𝖯.`, threadID, messageID);
+        }
+
+        if (subCommand === "hunt") {
+            if (now - profile.cooldowns.hunt < 10 * 60 * 1000) {
+                const rem = Math.ceil((10 * 60 * 1000 - (now - profile.cooldowns.hunt)) / 1000);
+                return api.sendMessage(`⏳ 𝖯𝖺𝗌 𝖽𝖾 𝗉𝗋𝗂𝗆𝖾𝗌 𝖽𝗂𝗌𝗉𝗈𝗇𝗂𝖻𝗅𝖾𝗌. 𝖱𝖾𝗏𝖾𝗇𝖾𝗓 𝖽𝖺𝗇𝗌 ${rem}𝗌.`, threadID, messageID);
+            }
+            
+            const targetBounty = Math.floor(500 + Math.random() * 800) * profile.level;
+            profile.gold += targetBounty;
+            profile.bounty += Math.floor(targetBounty / 2);
+            profile.cooldowns.hunt = now;
+            
+            storage.saveUserProfile(senderID, profile);
+            return api.sendMessage(`⚔️ 𝖢𝗁𝖺𝗌𝗌𝖾 𝖺𝗎𝗑 𝖼𝗈𝗋𝗌𝖺𝗂𝗋𝖾𝗌 𝗋é𝗎𝗌𝗌𝗂𝖾 ! +**${formatNumber(targetBounty)}** 💰 et votre prime grimpe de +**${formatNumber(Math.floor(targetBounty/2))}** ☠️.`, threadID, messageID);
+        }
+
+        if (subCommand === "fish") {
+            if (now - profile.cooldowns.fish < 3 * 60 * 1000) {
+                return api.sendMessage("⏳ 𝖫𝖺 𝗆𝖾𝗋 𝖾𝗌𝑡 𝖼𝖺𝗅𝗆𝖾, 𝗅𝖺𝗂𝗌𝗌𝖾𝗓 𝗅𝖾𝗌 𝗉𝗈𝗂𝗌𝗌𝗈𝗇𝗌 𝗆𝗈𝗋𝖽𝗋𝖾 un peu plus tard.", threadID, messageID);
+            }
+            
+            const fishTypes = ["Carpe de Mer", "Thon Rouge", "Requin Marteau", "Espadon Doré"];
+            const caught = fishTypes[Math.floor(Math.random() * fishTypes.length)];
+            profile.inventory.push({ name: caught, type: "fish", value: profile.level * 150 });
+            profile.cooldowns.fish = now;
+            
+            storage.saveUserProfile(senderID, profile);
+            return api.sendMessage(`🎣 **${profile.name}** 𝖺 𝗋𝖾𝗆𝗈𝗇𝗍é 𝗎𝗇 [**${caught}**] ! 𝖵𝖾𝗇𝖽𝖾𝗓-𝗅𝖾 𝖺𝗎 𝗋𝖾𝗉𝖺𝗂𝗋𝖾 pour faire de la place.`, threadID, messageID);
+        }
+
+        if (subCommand === "loot") {
+            const lootItems = ["Vieux Compas", "Coffre en Bois", "Rhum Premium", "Carte au Trésor Déchirée"];
+            const looted = lootItems[Math.floor(Math.random() * lootItems.length)];
+            profile.inventory.push({ name: looted, type: "loot", value: profile.level * 250 });
+            
+            storage.saveUserProfile(senderID, profile);
+            return api.sendMessage(`🎒 𝖥𝗈𝗎𝗂𝗅𝗅𝖾𝗌 𝖽𝖾𝗌 é𝗉𝖺𝗏𝖾𝗌 : 𝖵𝗈𝗎𝗌 𝗋𝖺𝗆𝖺𝗌𝗌𝖾𝗓 [**${looted}**].`, threadID, messageID);
+        }
+
+        // ==========================================
+        // COMMERCE : SELL / BUY / REPAIR / HEAL
+        // ==========================================
+        
+        if (subCommand === "sell") {
+            if (!profile.inventory || profile.inventory.length === 0) return api.sendMessage("❌ 𝖵𝗈𝗍𝗋𝖾 𝗂𝗇𝗏𝖾𝗇𝗍𝖺𝗂𝗋𝖾 𝖾𝗌𝗍 𝗏𝗂𝖽𝖾.", threadID, messageID);
+            
+            let totalGain = 0;
+            profile.inventory.forEach(item => {
+                totalGain += item.value || 100;
+            });
+            
+            profile.gold += totalGain;
+            profile.inventory = [];
+            storage.saveUserProfile(senderID, profile);
+            
+            return api.sendMessage(`💰 **𝖬𝖺𝗋𝖼𝗁é 𝗇𝗈𝗂𝗋 :** 𝖳𝗈𝗎𝗍 𝗏𝗈𝗍𝗋𝖾 𝖻𝗎𝗍𝗂𝗇 𝖺 é𝗍é 𝗏𝖾𝗇𝖽𝗎 𝗉𝗈𝗎𝗋 **${formatNumber(totalGain)}** doublons !`, threadID, messageID);
+        }
+
+        if (subCommand === "buy") {
+            const itemToBuy = args[1];
+            if (!itemToBuy) return api.sendMessage("💡 Usage: `pirate buy <canon/voile>`", threadID, messageID);
+            
+            if (itemToBuy.toLowerCase() === "canon") {
+                if (profile.gold < 15000) return api.sendMessage("❌ 𝖴𝗇 𝖼𝖺𝗇𝗈𝗇 𝗅𝗈𝗎𝗋𝖽 𝖼𝗈û𝗍𝖾 15,000 doublons.", threadID, messageID);
+                profile.gold -= 15000;
+                profile.ship.attack += 15;
+                profile.ship.cannons += 1;
+                storage.saveUserProfile(senderID, profile);
+                return api.sendMessage("💣 Nouveau canon lourd installé à bord ! (+15 Attaque)", threadID, messageID);
+            }
+            return api.sendMessage("❌ Article indisponible sur les quais actuels.", threadID, messageID);
+        }
+
+        if (subCommand === "repair") {
+            if (profile.ship.durability >= 100) return api.sendMessage("🚢 Votre navire est déjà comme neuf !", threadID, messageID);
+            const cost = (100 - profile.ship.durability) * 50;
+            if (profile.gold < cost) return api.sendMessage(`❌ Réparation impossible, il vous faut ${formatNumber(cost)} 💰.`, threadID, messageID);
+            
+            profile.gold -= cost;
+            profile.ship.durability = 100;
+            profile.ship.hp = profile.ship.maxHp;
+            storage.saveUserProfile(senderID, profile);
+            return api.sendMessage("🔧 Les charpentiers du port ont remis votre navire à neuf !", threadID, messageID);
+        }
+
+        if (subCommand === "heal") {
+            if (profile.hp >= profile.maxHp) return api.sendMessage("❤️ Votre pirate est en pleine forme !", threadID, messageID);
+            const cost = (profile.maxHp - profile.hp) * 10;
+            if (profile.gold < cost) return api.sendMessage("❌ Pas assez de pièces pour payer le médecin de bord.", threadID, messageID);
+            
+            profile.gold -= cost;
+            profile.hp = profile.maxHp;
+            storage.saveUserProfile(senderID, profile);
+            return api.sendMessage("🧪 Tournée de Rhum médical ! Vos HP sont restaurés.", threadID, messageID);
+        }
+
+        // ==========================================
+        // NAVIGATION & COMBAT : SAIL / EXPLORE / ISLANDS
+        // ==========================================
+        
+        if (subCommand === "islands") {
+            let islMsg = `╭───────────────────────────────────────╮\n`;
+            islMsg += `│ 🗺️ 𝐂𝐀𝐑𝐓𝐄 𝐃𝐄𝐒 𝐀𝐑𝐂𝐇𝐈𝐏𝐄𝐋𝐒\n`;
+            islMsg += `├───────────────────────────────────────┤\n`;
+            islands.forEach(isl => {
+                islMsg += `│ 📍 **${isl.name}** [${isl.rarity}]\n`;
+                islMsg += `│ 📊 Danger: Niv.${isl.dangerLevel} | Butin Moyen: ${formatNumber(isl.baseReward)} 💰\n`;
+                islMsg += `├───────────────────────────────────────┤\n`;
+            });
+            islMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(islMsg, threadID, messageID);
+        }
+
+        if (subCommand === "sail" || subCommand === "explore") {
+            if (profile.ship.durability < 20) return api.sendMessage("⚠️ Navire trop endommagé pour lever l'ancre. Utilisez `pirate repair`.", threadID, messageID);
+            
+            const randomIsland = islands[Math.floor(Math.random() * islands.length)];
+            
+            // Simulation de voyage et résolution d'événement
+            const successChance = 0.5 + (profile.ship.speed / 200);
+            const roll = Math.random();
+            
+            if (roll < successChance) {
+                // Succès de l'expédition
+                const finalGold = randomIsland.baseReward + Math.floor(Math.random() * 200);
+                profile.gold += finalGold;
+                profile.xp += randomIsland.xpReward;
+                profile.ship.durability -= Math.floor(Math.random() * 8);
+                
+                storage.saveUserProfile(senderID, profile);
+                return api.sendMessage(`🧭 **𝖵𝗈𝗒𝖺𝗀𝖾 :** 𝖵𝗈𝗎𝗌 𝖺𝖼𝖼𝗈𝗋𝗍𝖾𝗓 à **${randomIsland.name}** !\n🎁 Butin pillé : +**${formatNumber(finalGold)}** 💰 & +${randomIsland.xpReward} ⭐ XP.`, threadID, messageID);
+            } else {
+                // Rencontre hostile ou tempête
+                profile.ship.durability -= 25;
+                profile.hp = Math.max(10, profile.hp - 20);
+                storage.saveUserProfile(senderID, profile);
+                return api.sendMessage(`⛈️ **𝖳𝖾𝗆𝗉ê𝗍𝖾 / Embouscade :** Votre navire a heurté des récifs près de ${randomIsland.name}. Coque endommagée !`, threadID, messageID);
+            }
