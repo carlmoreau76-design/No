@@ -82,7 +82,7 @@ module.exports = {
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗐𝗂𝗍𝗁𝖽𝗋𝖺𝗐 <montant> : 𝖱𝖾𝗍𝗂𝗋𝖾𝗋 𝖽𝖾𝗌 𝖿𝗈𝗇𝖽𝗌\n`;
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗎𝗉𝗀𝗋𝖺𝖽𝖾 : 𝖠𝗆é𝗅𝗂𝗈𝗋𝖾𝗋 𝗅𝖺 𝗀𝗎𝗂𝗅𝖽𝖾\n`;
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝖽𝖺𝗂𝗅𝗒 : 𝖱é𝖼𝗅𝖺𝗆𝖾𝗋 𝗅𝖺 𝗋é𝖼𝗈𝗆𝗉𝖾𝗇𝗌𝖾 𝗊𝗎𝗈𝗍𝗂𝖽𝗂𝖾𝗇𝗇𝖾\n`;
-            menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗌𝖾fet𝗍𝗂𝗇𝗀𝗌 : 𝖬𝗈𝖽𝗂𝖿𝗂𝖾𝗋 𝖾𝗆𝗈𝗃𝗂 / 𝖻𝗂𝗈 / 𝗉𝗋𝗈𝖿𝗂𝗅\n`;
+            menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗌et𝗍𝗂𝗇𝗀𝗌 : 𝖬𝗈𝖽𝗂𝖿𝗂𝖾𝗋 𝖾𝗆𝗈𝗃𝗂 / 𝖻𝗂𝗈 / 𝗉𝗋𝗈𝖿𝗂𝗅\n`;
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗅𝗈𝗀𝗌 : 𝖢𝗈𝗇𝗌𝗎𝗅𝗍𝖾𝗋 𝗅’𝗁𝗂𝗌𝗍𝗈𝗋𝗂𝗊𝗎𝖾\n`;
             menu += `├───────────────────────────────────────┤\n`;
             menu += `│ 👑 𝐇𝐈𝐄́𝐑𝐀𝐑𝐂𝐇𝐈𝐄 & 𝐎𝐅𝐅𝐈𝐂𝐈𝐄𝐑𝐒\n`;
@@ -228,3 +228,188 @@ module.exports = {
 
             return api.sendMessage(`🚀 𝖦𝗎𝗂𝗅𝖽𝖾 𝖺𝗆é𝗅𝗂𝗈𝗋é𝖾 𝖺𝗏𝖾𝖼 𝗌𝗎𝖼𝖼è𝗌 ! 𝖭𝗂𝗏𝖾𝖺𝗎 : **${guild.level}** (𝖢𝖺𝗉𝖺𝖼𝗂𝗍é : ${guild.maxMembers} 𝗆𝖾𝗆𝖻𝗋𝖾𝗌).`, threadID, messageID);
                  }
+
+        // --- SUB-COMMAND : INVITE ---
+        if (subCommand === "invite") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            const guild = guilds[userProfile.guildId];
+
+            if (!["Leader", "Co-Leader", "Officier"].includes(userProfile.role)) {
+                return api.sendMessage("❌ 𝖯𝖾𝗋𝗆𝗂𝗌𝗌𝗂𝗈𝗇 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍𝖾 𝗉𝗈𝗎𝗋 𝗂𝗇𝗏𝗂𝗍𝖾𝗋.", threadID, messageID);
+            }
+
+            if (guild.members.length >= guild.maxMembers) {
+                return api.sendMessage("❌ 𝖫𝖺 𝗀𝗎𝗂𝗅𝖽𝖾 𝖾𝗌𝗍 𝗉𝗅𝖾𝗂𝗇𝖾. 𝖠𝗆é𝗅𝗂𝗈𝗋𝖾𝗓-𝗅𝖺 𝗉𝗈𝗎𝗋 𝗉𝗅𝗎𝗌 𝖽𝖾 𝗉𝗅𝖺𝖼𝖾𝗌.", threadID, messageID);
+            }
+
+            const targetID = Object.keys(event.mentions)[0];
+            if (!targetID) return api.sendMessage("❌ 𝖵𝖾𝗎𝗂𝗅𝗅𝖾𝗓 𝗆𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗋 𝗅𝖾 𝗃𝗈𝗎𝖾𝗎𝗋 à 𝗂𝗇𝗏𝗂𝗍𝖾𝗋.", threadID, messageID);
+
+            const targetProfile = storage.getUserProfile(targetID);
+            if (targetProfile.guildId) return api.sendMessage("❌ 𝖢𝖾 𝗃𝗈𝗎𝖾𝗎𝗋 𝖿𝖺𝗂𝗍 𝖽é𝗃à 𝗉𝖺𝗋𝗍𝗂𝖾 𝖽'𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+
+            // Injection directe (Acceptation automatique simplifiée pour GoatBot sans collecteur complexe)
+            guild.members.push(targetID);
+            targetProfile.guildId = guild.id;
+            targetProfile.role = "Membre";
+            targetProfile.joinedAt = Date.now();
+
+            storage.saveGuilds(guilds);
+            storage.saveUserProfile(targetID, targetProfile);
+            storage.logEvent(guild.id, "JOIN", `👤 ${targetProfile.name} a rejoint la guilde.`);
+
+            return api.sendMessage(`✅ **${targetProfile.name}** 𝖺 𝗋𝖾𝗃𝗈𝗂𝗇𝗍 𝗅𝖺 𝗀𝗎𝗂𝗅𝖽𝖾 **${guild.name}** !`, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : KICK ---
+        if (subCommand === "kick") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            const guild = guilds[userProfile.guildId];
+
+            if (!["Leader", "Co-Leader", "Officier"].includes(userProfile.role)) {
+                return api.sendMessage("❌ 𝖯𝖾𝗋𝗆𝗂𝗌𝗌𝗂𝗈𝗇 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍𝖾.", threadID, messageID);
+            }
+
+            const targetID = Object.keys(event.mentions)[0];
+            if (!targetID) return api.sendMessage("❌ 𝖵𝖾𝗎𝗂𝗅𝗅𝖾𝗓 𝗆𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗋 𝗅𝖾 𝗆𝖾𝗆𝖻𝗋𝖾 à 𝖾𝗑𝖼𝗅𝗎𝗋𝖾.", threadID, messageID);
+            if (targetID === senderID) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇𝖾 𝗉𝗈𝗎𝗏𝖾𝗓 𝗉𝖺𝗌 𝗏𝗈𝗎𝗌 𝖾𝗑𝖼𝗅𝗎𝗋𝖾 𝗏𝗈𝗎𝗌-𝗆ê𝗆𝖾.", threadID, messageID);
+
+            const targetProfile = users[targetID];
+            if (!targetProfile || targetProfile.guildId !== guild.id) {
+                return api.sendMessage("❌ 𝖢𝖾 𝗃𝗈𝗎𝖾𝗎𝗋 𝗇𝖾 𝖿𝖺𝗂𝗍 𝗉𝖺抄𝗌 𝗉𝖺𝗋𝗍𝗂𝖾 𝖽𝖾 𝗏𝗈𝗍𝗋𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            }
+
+            // Sécurité hiérarchique : Un co-leader ou officier ne peut pas kick un membre de rang égal ou supérieur
+            if (userProfile.role === "Officier" && ["Leader", "Co-Leader", "Officier"].includes(targetProfile.role)) {
+                return api.sendMessage("❌ 𝖧𝗂é𝗋𝖺𝗋𝖼𝗁𝗂𝖾 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍𝖾.", threadID, messageID);
+            }
+            if (userProfile.role === "Co-Leader" && targetProfile.role === "Leader") {
+                return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇𝖾 𝗉𝗈𝗎𝗏𝖾𝗓 𝗉𝖺𝗌 𝖾𝗑𝖼𝗅𝗎𝗋𝖾 𝗅𝖾 𝖫𝖾𝖺𝖽𝖾𝗋.", threadID, messageID);
+            }
+
+            guild.members = guild.members.filter(id => id !== targetID);
+            targetProfile.guildId = null;
+            targetProfile.role = null;
+
+            storage.saveGuilds(guilds);
+            storage.saveUserProfile(targetID, targetProfile);
+            storage.logEvent(guild.id, "LEAVE", `❌ ${targetProfile.name} a été exclu par ${senderName}.`);
+
+            return api.sendMessage(`👞 **${targetProfile.name}** 𝖺 é𝗍é 𝖾𝗑𝖼𝗅𝗎 𝖽𝖾 𝗅𝖺 𝗀𝗎𝗂𝗅𝖽𝖾.`, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : PROMOTE ---
+        if (subCommand === "promote") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            if (userProfile.role !== "Leader") return api.sendMessage("❌ 𝖲𝖾𝗎𝗅 𝗅𝖾 𝖫𝖾𝖺𝖽𝖾𝗋 𝗉𝖾𝗎𝗍 𝗀é𝗋𝖾𝗋 𝗅𝖾𝗌 𝗋𝖺𝗇𝗀𝗌.", threadID, messageID);
+
+            const targetID = Object.keys(event.mentions)[0];
+            if (!targetID) return api.sendMessage("❌ 𝖬𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗓 𝗅𝖾 𝗆𝖾𝗆𝖻𝗋𝖾 à 𝗉𝗋𝗈𝗆𝗈𝗎𝗏𝗈𝗂𝗋.", threadID, messageID);
+
+            const targetProfile = users[targetID];
+            if (!targetProfile || targetProfile.guildId !== userProfile.guildId) return api.sendMessage("❌ 𝖩𝗈𝗎𝖾𝗎𝗋 𝗂𝗇𝗍𝗋𝗈𝗎𝗏𝖺𝖻𝗅𝖾 𝖽𝖺𝗇𝗌 𝗏𝗈𝗍𝗋𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+
+            if (targetProfile.role === "Membre") {
+                targetProfile.role = "Officier";
+            } else if (targetProfile.role === "Officier") {
+                targetProfile.role = "Co-Leader";
+            } else {
+                return api.sendMessage("❌ 𝖢𝖾 𝗆𝖾𝗆𝖻𝗋𝖾 𝖾𝗌𝗍 𝖽é𝗃à 𝖺𝗎 𝗋𝖺𝗇𝗀 𝗆𝖺𝗑𝗂𝗆𝗎𝗆 (𝖢𝗈-𝖫𝖾𝖺𝖽𝖾𝗋).", threadID, messageID);
+            }
+
+            storage.saveUserProfile(targetID, targetProfile);
+            storage.logEvent(userProfile.guildId, "RANK", `⚡ ${targetProfile.name} a été promu au rang de ${targetProfile.role}.`);
+            return api.sendMessage(`🔼 **${targetProfile.name}** 𝖺 é𝗍é 𝗉𝗋𝗈𝗆𝗎 **${targetProfile.role}** !`, threadID, messageID);
+        }
+
+        // --- SYSTEM DE GUERRE AUTOMATIQUE : ENTRÉE CORE ---
+        const warState = storage.getWar();
+
+        // Engine de cycle automatique (Simulé à l'appel de la commande pour économiser les timers système en arrière-plan)
+        const now = Date.now();
+        if (warState.currentPhase === "idle" && now - warState.lastMatchmakingTime >= 18 * 60 * 60 * 1000) {
+            // Déclenchement automatique de la phase d'inscription (30 minutes)
+            warState.currentPhase = "registration";
+            warState.phaseEndTime = now + 30 * 60 * 1000;
+            warState.registeredGuilds = [];
+            warState.playerParticipants = {};
+            warState.playerStats = {};
+            warState.matches = [];
+            storage.saveWar(warState);
+        } else if (warState.currentPhase === "registration" && now >= warState.phaseEndTime) {
+            // Fin de l'inscription -> Lancement de la Phase de Combat (30 minutes)
+            warState.currentPhase = "combat";
+            warState.phaseEndTime = now + 30 * 60 * 1000;
+
+            // Matchmaking logique
+            const pool = [...warState.registeredGuilds];
+            if (pool.length > 1) {
+                while (pool.length > 1) {
+                    const guildA = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+                    const guildB = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+                    warState.matches.push({
+                        guildA, guildB,
+                        scoreA: 0, scoreB: 0,
+                        totalDamageA: 0, totalDamageB: 0
+                    });
+                }
+                // Si guilde impaire, la dernière gagne par forfait
+                if (pool.length === 1) {
+                    const luckyGuildId = pool[0];
+                    if (guilds[luckyGuildId]) {
+                        guilds[luckyGuildId].bank += 25000;
+                        guilds[luckyGuildId].wins += 1;
+                        storage.logEvent(luckyGuildId, "WAR", "🏳️ Victoire par forfait (Pas d'adversaire trouvé).");
+                    }
+                }
+            } else if (pool.length === 1) {
+                // Une seule guilde inscrite au total
+                const luckyGuildId = pool[0];
+                if (guilds[luckyGuildId]) guilds[luckyGuildId].wins += 1;
+            }
+            
+            warState.lastMatchmakingTime = now;
+            storage.saveWar(warState);
+            storage.saveGuilds(guilds);
+        }
+
+        // --- SUB-COMMAND : WAR ---
+        if (subCommand === "war") {
+            let warMsg = `╭───────────────────────────────────────╮\n`;
+            warMsg += `│ ⚔️ 𝐒𝐓𝐀𝐓𝐔𝐓 𝐃𝐄 𝐋𝐀 𝐆𝐔𝐄𝐑𝐑𝐄 𝐃𝐄 𝐆𝐔𝐈𝐋𝐃𝐄𝐒\n`;
+            warMsg += `├───────────────────────────────────────┤\n`;
+            warMsg += `│ 🔹 𝖤𝗍𝖺𝗍 𝖺𝖼𝗍𝗎𝖾𝗅 : **${warState.currentPhase.toUpperCase()}**\n`;
+            
+            if (warState.currentPhase !== "idle") {
+                const timeLeft = Math.max(0, Math.floor((warState.phaseEndTime - now) / 1000 / 60));
+                warMsg += `│ 🔹 𝖳𝖾𝗆𝗉𝗌 𝗋𝖾𝗌𝗍𝖺𝗇𝗍 : ${timeLeft} 𝗆𝗂𝗇𝗎𝗍𝖾𝗌\n`;
+                warMsg += `│ 🔹 𝖦𝗎𝗂𝗅𝖽𝖾𝗌 𝗂𝗇𝗌𝖼𝗋𝗂𝗍𝖾𝗌 : ${warState.registeredGuilds.length}\n`;
+            } else {
+                const nextWar = Math.max(0, Math.floor(((warState.lastMatchmakingTime + 18*60*60*1000) - now) / 1000 / 60 / 60));
+                warMsg += `│ 💤 𝖯𝗋𝗈𝖼𝗁𝖺𝗂𝗇𝖾 𝗀𝗎𝖾𝗋𝗋𝖾 𝖽𝖺𝗇𝗌 : ${nextWar} 𝗁𝖾𝗎𝗋𝖾𝗌\n`;
+            }
+            warMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(warMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : WAR JOIN ---
+        if (subCommand === "war" && args[1] === "join") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            if (warState.currentPhase !== "registration") return api.sendMessage("❌ 𝖫𝖺 𝗉𝗁𝖺𝗌𝖾 𝖽'𝗂𝗇𝗌𝖼𝗋𝗂𝗉𝗍𝗂𝗈𝗇 𝖾𝗌𝗍 𝖿𝖾𝗋𝗆é𝖾.", threadID, messageID);
+
+            const gId = userProfile.guildId;
+            if (!warState.registeredGuilds.includes(gId)) {
+                warState.registeredGuilds.push(gId);
+            }
+
+            if (!warState.playerParticipants[gId]) warState.playerParticipants[gId] = [];
+            if (warState.playerParticipants[gId].includes(senderID)) {
+                return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 ê𝗍𝖾𝗌 𝖽é𝗃à 𝗂𝗇𝗌𝖼𝗋𝗂𝗍 𝗉𝗈𝗎𝗋 𝖼𝖾𝗍𝗍𝖾 𝗀𝗎𝖾𝗋𝗋𝖾.", threadID, messageID);
+            }
+
+            warState.playerParticipants[gId].push(senderID);
+            warState.playerStats[senderID] = { damage: 0, attacks: 0, points: 0, name: senderName, guildId: gId };
+            
+            storage.saveWar(warState);
+            return api.sendMessage("⚔️ 𝖨𝗇𝗌𝖼𝗋𝗂𝗉𝗍𝗂𝗈𝗇 𝗏𝖺𝗅𝗂𝖽é𝖾 ! 𝖵𝗈𝗎𝗌 ê𝗍𝖾𝗌 𝗉𝗋ê𝗍 𝗉𝗈𝗎𝗋 𝗅𝖾 𝖼𝗈𝗆𝖻𝖺𝗍.", threadID, messageID);
+        }
