@@ -349,3 +349,303 @@ module.exports = {
 
             return api.sendMessage(infoMsg, threadID, messageID);
                 }
+
+        // =========================================================================
+        // 🎁 SOUS-COMMANDE : MARRY GIFT (ÉCONOMIE RELIÉE)
+        // =========================================================================
+        if (subCommand === "gift") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Vous devez être marié(e) pour envoyer des présents à votre conjoint.", threadID, messageID);
+            }
+
+            const amount = parseInt(args[1]);
+            if (!amount || isNaN(amount) || amount <= 0) {
+                return api.sendMessage("💡 Usage: `marry gift <montant>` (Ex: `marry gift 5000`)", threadID, messageID);
+            }
+
+            // [SÉCURITÉ ÉCONOMIE GOATBOT]
+            // Extraction et vérification de la balance de l'utilisateur depuis l'objet global du bot
+            // Si ton système utilise une structure différente (ex: Users.get), ajuste cette ligne.
+            const userBalance = global.data ? (global.data.allUserData?.[senderID]?.money || 0) : 0;
+            
+            if (userBalance < amount) {
+                return api.sendMessage(`❌ Fonds insuffisants ! Vous ne possédez pas ${amount} Or dans votre portefeuille.`, threadID, messageID);
+            }
+
+            // Déduction de l'argent de l'économie globale si disponible
+            if (global.data && global.data.allUserData?.[senderID]) {
+                global.data.allUserData[senderID].money -= amount;
+            }
+
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            // Mise à jour des compteurs relationnels
+            coupleData.giftCount += 1;
+            coupleData.totalGiftMoney += amount;
+            coupleData.stats.totalGiftMoney += amount;
+            coupleData.stats.giftsSent += 1;
+            coupleData.stats.lovePoints += Math.floor(amount / 100);
+
+            // Attribution d'XP de couple (1 XP par tranche de 10 pièces d'Or offertes)
+            const xpGained = Math.floor(amount / 10);
+            const leveledUp = storage.addCoupleXp(coupleData, xpGained);
+
+            storage.logMarriageEvent(coupleData, "CADEAU", `${userProfile.name} a offert ${amount} Or à son partenaire (+${xpGained} XP).`);
+            storage.saveMarriages(marriages);
+
+            let giftMsg = `🎁 **PRÉSENT ENVOYÉ !** Vous offrez **${amount} Or** à votre moitié.\n`;
+            giftMsg += `✨ Votre couple gagne **+${xpGained} XP** de lien et de précieux Points d'Amour !`;
+            if (leveledUp) giftMsg += `\n🌟 **LEVEL UP D'ALLIANCE !** Votre couple atteint le **Niveau ${coupleData.bondLevel}** !`;
+
+            return api.sendMessage(giftMsg, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 💎 SOUS-COMMANDE : MARRY RING (STATUT DE LA BAGUE)
+        // =========================================================================
+        if (subCommand === "ring") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Vous devez posséder une alliance pour inspecter vos joyaux.", threadID, messageID);
+            }
+
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            let ringDesc = `💍 **STATUT DE L'ANNEAU SACRÉ**\n\n`;
+            ringDesc += `Rang de l'Alliance : **[ ${coupleData.ringTier} ]** (Niveau de Lien : ${coupleData.bondLevel})\n\n`;
+            ringDesc += `📜 *Les paliers d'évolution se débloquent automatiquement via votre niveau d'amour :*\n`;
+            ringDesc += `🔸 Niv.1  ➔ Bronze\n🔸 Niv.5  ➔ Argent\n🔸 Niv.10 ➔ Or\n🔸 Niv.20 ➔ Saphir\n🔸 Niv.35 ➔ Rubis\n🔸 Niv.50 ➔ Mythique`;
+
+            return api.sendMessage(ringDesc, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 🎁 SOUS-COMMANDE : MARRY DAILY (DOTATION DE FIDÉLITÉ)
+        // =========================================================================
+        if (subCommand === "daily") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Le bonus quotidien de couple requiert d'être marié(e).", threadID, messageID);
+            }
+
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            if (now - (coupleData.dailyClaim || 0) < 24 * 60 * 60 * 1000) {
+                const remain = (24 * 60 * 60 * 1000) - (now - coupleData.dailyClaim);
+                const hours = Math.floor(remain / (1000 * 60 * 60));
+                return api.sendMessage(`⏳ Votre dotation quotidienne de couple est verrouillée. Réessayez dans ${hours}h.`, threadID, messageID);
+            }
+
+            // Attribution des gains
+            coupleData.dailyClaim = now;
+            coupleData.stats.dailyClaimCount += 1;
+            const xpBonus = coupleData.bondLevel * 50;
+            const leveledUp = storage.addCoupleXp(coupleData, xpBonus);
+
+            storage.logMarriageEvent(coupleData, "DAILY", `${userProfile.name} a collecté les récompenses quotidiennes de couple.`);
+            storage.saveMarriages(marriages);
+
+            let dlyMsg = `🎁 **FIDÉLITÉ DE COUPLE RECONNUE !**\n`;
+            dlyMsg += `⭐ Vos vœux quotidiens rapportent **+${xpBonus} XP** à votre alliance.`;
+            if (leveledUp) dlyMsg += `\n🌟 **LEVEL UP !** Votre couple progresse au **Niveau ${coupleData.bondLevel}** !`;
+
+            return api.sendMessage(dlyMsg, threadID, messageID);
+        }
+
+        // =========================================================================
+        // ❤️ SOUS-COMMANDE : MARRY COMPATIBILITY
+        // =========================================================================
+        if (subCommand === "compatibility") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Cette analyse requiert une union active.", threadID, messageID);
+            }
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            return api.sendMessage(`🔮 **ALCHIMIE DES ÂMES :** Le taux d'affinité astrale et émotionnelle entre vous et votre conjoint est évalué à **${coupleData.compatibilityScore}%**.`, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 🏆 SOUS-COMMANDE : MARRY TOP (CLASSEMENT GLOBAL)
+        // =========================================================================
+        if (subCommand === "top") {
+            const allMarriages = Object.values(storage.getMarriages());
+            if (allMarriages.length === 0) return api.sendMessage("📭 Aucune union enregistrée pour le moment.", threadID, messageID);
+
+            allMarriages.sort((a, b) => b.bondLevel - a.bondLevel);
+
+            let topMsg = `╭───────────────────────────────────────╮\n`;
+            topMsg += `│ 🏆 𝐏𝐀𝐍𝐓𝐇É𝐎𝐍 𝐃𝐄𝐒 𝐀𝐋𝐋𝐈𝐀𝐍𝐂𝐄𝐒\n`;
+            topMsg += `├───────────────────────────────────────┤\n`;
+            allMarriages.slice(0, 5).forEach((c, idx) => {
+                topMsg += `│ ${idx + 1}. **${c.coupleName}** | Niv. Lvl ${c.bondLevel}\n`;
+                topMsg += `│    💍 Anneau : ${c.ringTier} | 💞 Cadeaux : ${c.giftCount}\n`;
+                topMsg += `├───────────────────────────────────────┤\n`;
+            });
+            topMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(topMsg, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 🎨 SOUS-COMMANDE V2 GRAPHISME PREMIUM : MARRY STATS (CANVAS ENGYNE)
+        // =========================================================================
+        if (subCommand === "stats") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Vous devez être marié(e) pour générer votre dashboard graphique.", threadID, messageID);
+            }
+
+            const marriages = storage.getMarriages();
+            const couple = marriages[userProfile.coupleId];
+
+            // Chargement dynamique de la librairie Node Canvas
+            let canvasModule;
+            try {
+                canvasModule = require("canvas");
+            } catch (e) {
+                return api.sendMessage("⚠️ Module de rendu graphique non installé sur le serveur. Utilisez `npm install canvas` ou tapez `marry info` pour la version texte.", threadID, messageID);
+            }
+
+            const { createCanvas, loadImage } = canvasModule;
+            const fs = require("fs");
+
+            // Dimensions exactes demandées (Horizontal Premium Dashboard)
+            const width = 1400;
+            const height = 850;
+            const canvas = createCanvas(width, height);
+            const ctx = canvas.getContext("2d");
+
+            // 1️⃣ Création du fond Dégradé Cosmique Néon
+            const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+            bgGrad.addColorStop(0, "#0b0514"); // Violet profond très sombre
+            bgGrad.addColorStop(0.5, "#16071a"); // Nuances sombres intermédiaires
+            bgGrad.addColorStop(1, "#280718"); // Rouge/Rose néon tamisé
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Effets de lumière lointaine en arrière-plan (Glow ambiant)
+            ctx.fillStyle = "rgba(235, 64, 121, 0.04)";
+            ctx.beginPath(); ctx.arc(200, 200, 300, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "rgba(141, 112, 222, 0.04)";
+            ctx.beginPath(); ctx.arc(1200, 650, 400, 0, Math.PI * 2); ctx.fill();
+
+            // 2️⃣ Panneau Principal Central (Coins arrondis et bordure fine)
+            ctx.fillStyle = "rgba(18, 11, 26, 0.85)";
+            ctx.strokeStyle = "rgba(235, 64, 121, 0.25)";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(60, 60, width - 120, height - 160, 25);
+            ctx.fill(); ctx.stroke();
+
+            // 3️⃣ En-tête : Nom du couple et dates majeures
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 46px sans-serif";
+            ctx.fillText(couple.coupleName.toUpperCase(), 100, 140);
+
+            const daysCount = Math.floor(Math.abs(now - couple.marriedAt) / (1000 * 60 * 60 * 24));
+            ctx.fillStyle = "#eb4079";
+            ctx.font = "26px sans-serif";
+            ctx.fillText(`✨ Unis depuis le ${new Date(couple.marriedAt).toLocaleDateString("fr-FR")}  •  💞 ${daysCount} Jours Ensemble`, 100, 190);
+
+            // Badge du Rang / Bague (En haut à droite)
+            ctx.fillStyle = "#ffd700";
+            ctx.font = "bold 32px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(`👑 ALLIANCE : ${couple.ringTier.toUpperCase()}`, width - 100, 140);
+            ctx.textAlign = "left"; // Reset alignement
+
+            // 4️⃣ Blocs d'informations statistiques (Panneaux sub-grid)
+            const drawStatBox = (x, y, w, h, title, value) => {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.02)";
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.fill(); ctx.stroke();
+                
+                ctx.fillStyle = "#8d70de"; ctx.font = "18px sans-serif"; ctx.fillText(title, x + 20, y + 35);
+                ctx.fillStyle = "#ffffff"; ctx.font = "bold 28px sans-serif"; ctx.fillText(value, x + 20, y + 80);
+            };
+
+            const formatNum = (num) => new Intl.NumberFormat("fr-FR").format(num);
+
+            drawStatBox(100, 480, 270, 110, "NIVEAU D'AMOUR", `Niv. ${couple.loveLevel}`);
+            drawStatBox(400, 480, 270, 110, "AFFINITÉ ASTROLE", `${couple.compatibilityScore}%`);
+            drawStatBox(700, 480, 270, 110, "PRÉSENTS OFFERTS", `${couple.giftCount} Cadeaux`);
+            drawStatBox(1000, 480, 300, 110, "VALEUR DU BUTIN", `${formatNum(couple.totalGiftMoney)} Or`);
+
+            // Zone Citation & Biographie
+            ctx.fillStyle = "rgba(235, 64, 121, 0.05)";
+            ctx.beginPath(); ctx.roundRect(100, 620, width - 200, 100, 10); ctx.fill();
+            ctx.fillStyle = "#ffffff"; ctx.font = "italic 24px sans-serif";
+            ctx.fillText(couple.quote, 130, 660);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.6)"; ctx.font = "20px sans-serif";
+            ctx.fillText(`Bio : ${couple.bio}`, 130, 700);
+
+            // 5️⃣ Barre d'expérience inférieure (Progression)
+            const progressY = height - 60;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.beginPath(); ctx.roundRect(60, progressY, width - 120, 20, 10); ctx.fill();
+
+            const xpNeeded = couple.bondLevel * 500;
+            const pct = Math.min(1, couple.bondXp / xpNeeded);
+            ctx.fillStyle = "#eb4079";
+            ctx.beginPath(); ctx.roundRect(60, progressY, (width - 120) * pct, 20, 10); ctx.fill();
+
+            ctx.fillStyle = "#ffffff"; ctx.font = "bold 16px sans-serif";
+            let statusText = "🔗 UNION SACRÉE MYTHIQUE";
+            if (couple.bondLevel < 10) statusText = "🌱 ALLIANCE COMPAGNON NAISSANT";
+            else if (couple.bondLevel < 30) statusText = "🔮 ÂMES SŒURS SOUDÉES";
+            ctx.fillText(`${statusText}  (${couple.bondXp} / ${xpNeeded} XP)`, 70, progressY - 15);
+
+            // 6️⃣ Traitement sécurisé des Photos de Profil Facebook réelles
+            // Utilisation de l'API Graph officielle via le token d'accès fourni par l'utilisateur
+            const fbToken = "6628568379%7Cc1e620fa708a1d5696fb991c1bde5662";
+            const urlAvatarA = `https://graph.facebook.com/${couple.user1Id}/picture?width=300&access_token=${fbToken}`;
+            const urlAvatarB = `https://graph.facebook.com/${couple.user2Id}/picture?width=300&access_token=${fbToken}`;
+
+            const drawAvatar = async (url, x, y, size, name) => {
+                try {
+                    const img = await loadImage(url);
+                    ctx.save();
+                    ctx.beginPath(); ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2); ctx.clip();
+                    ctx.drawImage(img, x, y, size, size);
+                    ctx.restore();
+                } catch (e) {
+                    // Fallback graphique premium en cas d'échec de chargement réseau
+                    ctx.fillStyle = "#8d70de";
+                    ctx.beginPath(); ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2); ctx.fill();
+                }
+                // Écriture du nom sous l'avatar
+                ctx.fillStyle = "#ffffff"; ctx.font = "bold 26px sans-serif";
+                ctx.fillText(name, x + 10, y + size + 40);
+            };
+
+            // Exécution asynchrone parallèle des deux avatars pour des performances maximales
+            await Promise.all([
+                drawAvatar(urlAvatarA, 300, 240, 160, couple.user1Name),
+                drawAvatar(urlAvatarB, 900, 240, 160, couple.user2Name)
+            ]);
+
+            // Lien visuel entre les deux avatars (Icône de cœur central)
+            ctx.fillStyle = "#eb4079"; ctx.font = "60px sans-serif";
+            ctx.fillText("❤️", 665, 330);
+
+            // 7️⃣ Sauvegarde atomique du fichier tampon et transmission
+            const tmpPath = path.join(__dirname, `marry_stats_${senderID}.png`);
+            const out = fs.createWriteStream(tmpPath);
+            const stream = canvas.createPNGStream();
+            stream.pipe(out);
+
+            out.on("finish", () => {
+                api.sendMessage({
+                    body: `📊 **DASHBOARD RELATIONNEL V2**\nVoici la carte de fidélité de votre alliance !`,
+                    attachment: fs.createReadStream(tmpPath)
+                }, threadID, () => {
+                    try { fs.unlinkSync(tmpPath); } catch (err) {} // Nettoyage immédiat du cache disque après envoi
+                }, messageID);
+            });
+            return;
+        }
+
+        return api.sendMessage("❌ Sous-commande introuvable. Tapez `marry` pour afficher la grille des modules.", threadID, messageID);
+    }
+};
