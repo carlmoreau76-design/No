@@ -372,3 +372,239 @@ module.exports = {
                 storage.saveUserProfile(senderID, profile);
                 return api.sendMessage(`⛈️ **𝖳𝖾𝗆𝗉ê𝗍𝖾 / Embouscade :** Votre navire a heurté des récifs près de ${randomIsland.name}. Coque endommagée !`, threadID, messageID);
             }
+
+            // ==========================================
+        // COMBAT ET AFFRONTEMENT : DUEL & BOSS
+        // ==========================================
+        if (subCommand === "duel") {
+            const targetID = Object.keys(event.mentions)[0];
+            if (!targetID) return api.sendMessage("❌ 𝖬𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗓 𝗅𝖾 𝗉𝗂𝗋𝖺𝗍𝖾 à 𝖽é𝖿𝗂𝖾𝗋.", threadID, messageID);
+            if (targetID === senderID) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇𝖾 𝗉𝗈𝗎𝗏𝖾𝗓 𝗉𝖺𝗌 𝗏𝗈𝗎𝗌 𝗍𝗂𝗋𝖾𝗋 𝖽𝖾𝗌𝗌𝗎𝗌 𝗏𝗈𝗎𝗌-𝗆ê𝗆𝖾 !", threadID, messageID);
+
+            const opponent = pirates[targetID];
+            if (!opponent) return api.sendMessage("❌ 𝖢𝖾𝗍 𝗎𝗍𝗂𝗅𝗂𝗌𝖺𝗍𝖾𝗎𝗋 𝗇'𝖺 𝗉𝖺𝗌 𝖾𝗇𝖼𝗈𝗋𝖾 𝖼𝗋éé 𝖽𝖾 𝗉𝗂𝗋𝖺𝗍𝖾.", threadID, messageID);
+
+            // Calcul du vainqueur basé sur la puissance d'attaque des navires
+            const myPower = profile.ship.attack + (profile.level * 2);
+            const oppPower = opponent.ship.attack + (opponent.level * 2);
+            
+            const total = myPower + oppPower;
+            const myChance = myPower / total;
+
+            profile.battleStats.played += 1;
+            opponent.battleStats.played += 1;
+
+            if (Math.random() < myChance) {
+                const winGold = Math.floor(opponent.gold * 0.1); // Vol de 10% de l'or
+                profile.gold += winGold;
+                opponent.gold -= winGold;
+                profile.bounty += 500;
+                profile.battleStats.wins += 1;
+                opponent.battleStats.losses += 1;
+                
+                storage.saveUserProfile(senderID, profile);
+                storage.saveUserProfile(targetID, opponent);
+                return api.sendMessage(`⚔️ **𝖵𝖨𝖢𝖳𝖮𝖨𝖱𝖤 !** Vous coulez les défenses de **${opponent.name}** et lui pilotez **${formatNumber(winGold)}** 💰 !`, threadID, messageID);
+            } else {
+                const loseGold = Math.floor(profile.gold * 0.1);
+                profile.gold -= loseGold;
+                opponent.gold += loseGold;
+                opponent.bounty += 500;
+                profile.battleStats.losses += 1;
+                opponent.battleStats.wins += 1;
+
+                storage.saveUserProfile(senderID, profile);
+                storage.saveUserProfile(targetID, opponent);
+                return api.sendMessage(`💀 **𝖣É𝖥𝖠𝖨𝖳𝖤...** **${opponent.name}** a mieux ajusté ses tirs de canon. Vous perdez **${formatNumber(loseGold)}** 💰.`, threadID, messageID);
+            }
+        }
+
+        if (subCommand === "boss") {
+            if (profile.hp < 30) return api.sendMessage("❌ Vous êtes trop blessé pour affronter le Léviathan.", threadID, messageID);
+            
+            const bossDmg = 40 + Math.floor(Math.random() * 40);
+            profile.hp -= bossDmg;
+
+            if (Math.random() > 0.6) {
+                const bossReward = 50000;
+                profile.gold += bossReward;
+                profile.battleStats.bossKilled += 1;
+                storage.saveUserProfile(senderID, profile);
+                return api.sendMessage(`🐋 **💥 LÉGENDE !** Vous avez terrassé le Kraken ! Butin mythique : +**50,000** 💰 !`, threadID, messageID);
+            } else {
+                storage.saveUserProfile(senderID, profile);
+                return api.sendMessage(`🐋 **ÉCHEC :** Le monstre des abysses a brisé vos lignes de défense. Vous battez en retraite (-${bossDmg} HP).`, threadID, messageID);
+            }
+        }
+
+        // ==========================================
+        // GESTION DES ÉQUIPAGES : CREW (SOUS-MENU)
+        // ==========================================
+        if (subCommand === "crew") {
+            const crewAction = args[1] ? args[1].toLowerCase() : null;
+
+            if (!crewAction) {
+                let cMenu = `╭───────────────────────────────────────╮\n`;
+                cMenu += `│ ☠️ 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐄𝐒 𝐃'É𝐐𝐔𝐈𝐏𝐀𝐆𝐄\n`;
+                cMenu += `├───────────────────────────────────────┤\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝖼𝗋𝖾𝖺𝗍𝖾 <𝗇𝗈𝗆> : 𝖥𝗈𝗇𝖽𝗋𝖾 𝗎𝗇 𝖾𝗊𝗎𝗂𝗉𝖺𝗀𝖾\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗂𝗇𝖿𝗈 / 𝗅𝗂𝗌𝗍 : 𝖵𝗈𝗂𝗋 𝗅𝖾𝗌 𝖿𝗅𝗈𝗍𝗍𝖾𝗌\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗂𝗇𝗏𝗂𝗍𝖾 / 𝗄𝗂𝖼𝗄 : 𝖬𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗋 𝗅𝖾𝗌 𝗃𝗈𝗎𝖾𝗎𝗋𝗌\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝖽𝗈𝗇𝖺𝗍𝖾 <𝗆𝗈𝗇𝗍𝖺𝗇𝗍> : 𝖢𝗈𝖿𝖿𝗋𝖾 𝖼𝗈𝗆𝗆𝗎𝗇\n`;
+                cMenu += `│ 🔹 𝗉𝗂𝗋𝖺𝗍𝖾 𝖼𝗋𝖾𝗐 𝗅𝖾𝖺𝗏𝖾 / 𝖼𝗁𝖺𝗍 : 𝖵𝗂𝖾 𝖽'é𝗉𝖺𝗏𝖾\n`;
+                cMenu += `╰───────────────────────────────────────╯`;
+                return api.sendMessage(cMenu, threadID, messageID);
+            }
+
+            if (crewAction === "create") {
+                if (profile.crewId) return api.sendMessage("❌ Vous appartenez déjà à une flotte.", threadID, messageID);
+                const cName = args.slice(2).join(" ");
+                if (!cName) return api.sendMessage("❌ Donnez un nom à votre équipage.", threadID, messageID);
+
+                const newId = "CREW_" + Date.now().toString().slice(-6);
+                crews[newId] = { id: newId, name: cName, captain: senderID, bank: 0, members: [senderID] };
+                profile.crewId = newId;
+
+                storage.saveCrews(crews);
+                storage.saveUserProfile(senderID, profile);
+                return api.sendMessage(`🏴‍☠️ L'équipage **${cName}** a hissé son pavillon noir !`, threadID, messageID);
+            }
+
+            if (crewAction === "donate") {
+                if (!profile.crewId) return api.sendMessage("❌ Vous n'avez pas de crew.", threadID, messageID);
+                const amt = parseInt(args[2]);
+                if (isNaN(amt) || amt <= 0 || profile.gold < amt) return api.sendMessage("❌ Somme invalide.", threadID, messageID);
+
+                profile.gold -= amt;
+                crews[profile.crewId].bank += amt;
+
+                storage.saveCrews(crews);
+                storage.saveUserProfile(senderID, profile);
+                return api.sendMessage(`💰 +**${formatNumber(amt)}** doublons ajoutés au coffre fort commun.`, threadID, messageID);
+            }
+            
+            return api.sendMessage("❌ Action d'équipage non reconnue ou droits insuffisants.", threadID, messageID);
+        }
+
+        // ==========================================
+        // BUTIN QUOTIDIEN : DAILY
+        // ==========================================
+        if (subCommand === "daily") {
+            if (now - profile.dailyState.lastClaim < 24 * 60 * 60 * 1000) {
+                const rem = Math.ceil((24 * 60 * 60 * 1000 - (now - profile.dailyState.lastClaim)) / 1000 / 60 / 60);
+                return api.sendMessage(`⏳ Votre coffre de bonus quotidien est vide. Revenez dans ${rem}h.`, threadID, messageID);
+            }
+
+            const dailyGold = 2000 + (profile.level * 300);
+            profile.gold += dailyGold;
+            profile.dailyState.lastClaim = now;
+            storage.saveUserProfile(senderID, profile);
+
+            return api.sendMessage(`🎁 **💥 BUTIN DU JOUR :** Vous ouvrez une vieille caisse échouée. Gain : +**${formatNumber(dailyGold)}** 💰 !`, threadID, messageID);
+        }
+
+        // ==========================================
+        // MOTEUR DE RENDU GRAPHIQUE : STATS PREMIUM (CANVAS)
+        // ==========================================
+        if (subCommand === "stats") {
+            if (canvasAvailable) {
+                const canvas = Canvas.createCanvas(1400, 800);
+                const ctx = canvas.getContext("2d");
+
+                // Background Marine Dark Cyan
+                const gradient = ctx.createLinearGradient(0, 0, 1400, 800);
+                gradient.addColorStop(0, "#051329");
+                gradient.addColorStop(0.5, "#081c3b");
+                gradient.addColorStop(1, "#020a17");
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 1400, 800);
+
+                // Bordures style Or Vieilli Néon
+                ctx.strokeStyle = "#d4af37";
+                ctx.lineWidth = 6;
+                ctx.strokeRect(20, 20, 1360, 760);
+
+                // Header / Infos Principales
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 56px Arial";
+                ctx.fillText(`🏴‍☠️ ${profile.name.toUpperCase()}`, 70, 100);
+
+                ctx.fillStyle = "#d4af37";
+                ctx.font = "26px Arial";
+                ctx.fillText(`Titre: ${profile.title}  |  Niveau Capitaine: ${profile.level}`, 70, 145);
+
+                // Grid des Statistiques du Dashboard
+                const makeCard = (x, y, w, h, label, val, color) => {
+                    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, w, h, 15);
+                    ctx.fill();
+                    ctx.strokeStyle = "rgba(212, 175, 55, 0.3)";
+                    ctx.stroke();
+
+                    ctx.fillStyle = "#a0aab8";
+                    ctx.font = "20px Arial";
+                    ctx.fillText(label, x + 25, y + 40);
+
+                    ctx.fillStyle = color;
+                    ctx.font = "bold 36px Arial";
+                    ctx.fillText(val, x + 25, y + 95);
+                };
+
+                makeCard(70, 200, 380, 140, "DOUBLONS EN POCHE", `${formatNumber(profile.gold)} 💰`, "#ffd700");
+                makeCard(490, 200, 380, 140, "PRIME DE RECHERCHE", `${formatNumber(profile.bounty)} ☠️`, "#ff4d4d");
+                makeCard(910, 200, 420, 140, "SANTE DU CAPITAINE", `${profile.hp} / ${profile.maxHp} HP`, "#ff3366");
+
+                makeCard(70, 380, 380, 140, "PUISSANCE DU NAVIRE", `${profile.ship.attack} ATK`, "#00ffcc");
+                makeCard(490, 380, 380, 140, "RÉSISTANCE COQUE", `${profile.ship.durability}% 🔧`, "#99ff33");
+                makeCard(910, 380, 420, 140, "VICTOIRES EN MER", `${profile.battleStats.wins} ⚔️`, "#00ff66");
+
+                // Barre d'expérience en bas
+                const xpNeed = profile.level * 1000;
+                const progress = Math.min(1, profile.xp / xpNeed);
+
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "20px Arial";
+                ctx.fillText(`Progression Notoriété (XP) : ${formatNumber(profile.xp)} / ${formatNumber(xpNeed)}`, 70, 600);
+
+                ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+                ctx.beginPath();
+                ctx.roundRect(70, 630, 1260, 30, 10);
+                ctx.fill();
+
+                ctx.fillStyle = "#d4af37";
+                ctx.beginPath();
+                ctx.roundRect(70, 630, 1260 * progress, 30, 10);
+                ctx.fill();
+
+                const tempImgPath = path.join(__dirname, "pirate_stats_temp.png");
+                const out = fs.createWriteStream(tempImgPath);
+                const stream = canvas.createPNGStream();
+                stream.pipe(out);
+
+                out.on("finish", () => {
+                    api.sendMessage({
+                        body: `📊 **𝖣𝖺𝗌𝗁𝖻𝗈𝖺𝗋𝖽 𝖢𝖺𝗇𝗏𝖺𝗌 : Fiche de ${profile.name}**`,
+                        attachment: fs.createReadStream(tempImgPath)
+                    }, threadID, () => {
+                        try { fs.unlinkSync(tempImgPath); } catch (e) {}
+                    }, messageID);
+                });
+                return;
+            }
+
+            // Fallback Texte Premium (Si Canvas n'est pas chargé)
+            let txt = `╭───────────────────────────────────────╮\n`;
+            txt += `│ 📊 **𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐐𝐔𝐄𝐒 𝐃𝐔 𝐂𝐎𝐑𝐒𝐀𝐈𝐑𝐄**\n`;
+            txt += `├───────────────────────────────────────┤\n`;
+            txt += `│ 🔹 𝖭𝗈𝗆 : **${profile.name}**\n`;
+            txt += `│ 💰 𝖮𝗋 : ${formatNumber(profile.gold)} 𝗉𝗂è𝖼𝖾𝗌\n`;
+            txt += `│ ☠️ 𝖯𝗋𝗂𝗆𝖾 : ${formatNumber(profile.bounty)} doublons\n`;
+            txt += `│ ⚔️ 𝖵𝗂𝖼𝗍𝗈𝗂𝗋𝖾𝗌 : ${profile.battleStats.wins} | 𝖣é𝖿𝖺𝗂𝗍𝖾𝗌 : ${profile.battleStats.losses}\n`;
+            txt += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(txt, threadID, messageID);
+        }
+
+        return api.sendMessage("❌ Sous-commande invalide. Tapez `pirate` pour voir le registre complet.", threadID, messageID);
+    }
+};
