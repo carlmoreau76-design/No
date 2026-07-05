@@ -160,3 +160,192 @@ module.exports = {
             storage.removeProposal(senderID);
             return api.sendMessage(`💔 Vous avez poliment décliné la demande en mariage de **${activeProposal.senderName}**. Le registre a été mis à jour.`, threadID, messageID);
         }
+
+        // =========================================================================
+        // 💔 SOUS-COMMANDE : MARRY DIVORCE
+        // =========================================================================
+        if (subCommand === "divorce") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Vous n'êtes actuellement pas marié(e).", threadID, messageID);
+            }
+
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            if (!coupleData) {
+                userProfile.isMarried = false;
+                userProfile.coupleId = null;
+                storage.saveUserMarriageProfile(senderID, userProfile);
+                return api.sendMessage("🔧 Anomalie détectée et réparée : Votre statut a été réinitialisé à célibataire.", threadID, messageID);
+            }
+
+            const partnerId = senderID === coupleData.user1Id ? coupleData.user2Id : coupleData.user1Id;
+            const partnerName = senderID === coupleData.user1Id ? coupleData.user2Name : coupleData.user1Name;
+
+            // Dissolution définitive de l'alliance
+            storage.removeMarriage(userProfile.coupleId);
+
+            let divMsg = `💔 **RUPTURE DE SCELLÉ** 💔\n\n`;
+            divMsg += `L'alliance unissant **${userProfile.name}** et **${partnerName}** a été brisée.\n`;
+            divMsg += `⚖️ Le nom de couple *${coupleData.coupleName}* est effacé des registres officiels. Chacun reprend sa route en solo.`;
+
+            return api.sendMessage(divMsg, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 📝 SOUS-COMMANDE : MARRY BIO
+        // =========================================================================
+        if (subCommand === "bio") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Vous devez être marié(e) pour modifier la biographie du couple.", threadID, messageID);
+            }
+
+            const text = args.slice(1).join(" ");
+            if (!text) return api.sendMessage("💡 Usage: `marry bio <votre texte>`", threadID, messageID);
+
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            coupleData.bio = text.slice(0, 200); // Limite de sécurité de 200 caractères
+            storage.logMarriageEvent(coupleData, "BIO", `Biographie modifiée par ${userProfile.name}`);
+            storage.saveMarriages(marriages);
+
+            return api.sendMessage("📝 Biographie du couple mise à jour avec succès !", threadID, messageID);
+        }
+
+        // =========================================================================
+        // 💬 SOUS-COMMANDE : MARRY QUOTE
+        // =========================================================================
+        if (subCommand === "quote") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Vous devez être marié(e) pour définir une citation de couple.", threadID, messageID);
+            }
+
+            const text = args.slice(1).join(" ");
+            if (!text) return api.sendMessage("💡 Usage: `marry quote <votre citation>`", threadID, messageID);
+
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            coupleData.quote = `« ${text.slice(0, 80)} »`; // Limite esthétique de 80 caractères
+            storage.logMarriageEvent(coupleData, "CITATION", `Citation mise à jour par ${userProfile.name}`);
+            storage.saveMarriages(marriages);
+
+            return api.sendMessage("💬 Nouvelle citation enregistrée pour votre alliance !", threadID, messageID);
+        }
+
+        // =========================================================================
+        // 🏷️ SOUS-COMMANDE : MARRY RENAME
+        // =========================================================================
+        if (subCommand === "rename") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Vous devez posséder une alliance active pour la renommer.", threadID, messageID);
+            }
+
+            const newName = args.slice(1).join(" ");
+            if (!newName) return api.sendMessage("💡 Usage: `marry rename <Nouveau Nom d'Alliance>`", threadID, messageID);
+
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            const oldName = coupleData.coupleName;
+            coupleData.coupleName = newName.slice(0, 50);
+            storage.logMarriageEvent(coupleData, "RENAME", `Alliance renommée : ${oldName} ➔ ${coupleData.coupleName}`);
+            storage.saveMarriages(marriages);
+
+            return api.sendMessage(`🏷️ Votre alliance a été renommée : **${coupleData.coupleName}** !`, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 🗓️ SOUS-COMMANDE : MARRY ANNIVERSARY
+        // =========================================================================
+        if (subCommand === "anniversary") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Cette commande nécessite d'être marié(e).", threadID, messageID);
+            }
+
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            const diffTime = Math.abs(now - coupleData.marriedAt);
+            const daysTogether = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            let annMsg = `🗓️ **JALONS TEMPORELS DE L'UNION**\n\n`;
+            annMsg += `💍 Date de célébration : **${new Date(coupleData.marriedAt).toLocaleDateString("fr-FR")}**\n`;
+            annMsg += `💞 Temps partagé ensemble : **${daysTogether} jours**\n`;
+            
+            return api.sendMessage(annMsg, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 📜 SOUS-COMMANDE : MARRY HISTORY
+        // =========================================================================
+        if (subCommand === "history") {
+            if (!userProfile.isMarried || !userProfile.coupleId) {
+                return api.sendMessage("❌ Vous n'avez pas de journal historique car vous êtes célibataire.", threadID, messageID);
+            }
+
+            const marriages = storage.getMarriages();
+            const coupleData = marriages[userProfile.coupleId];
+
+            if (!coupleData.history || coupleData.history.length === 0) {
+                return api.sendMessage("📭 Aucun événement historique marquant pour ce couple.", threadID, messageID);
+            }
+
+            let histMsg = `📜 **JOURNAL OFFICIEL DE : ${coupleData.coupleName.toUpperCase()}**\n\n`;
+            coupleData.history.forEach((h, index) => {
+                const dateStr = new Date(h.timestamp).toLocaleDateString("fr-FR");
+                histMsg += `${index + 1}. [${dateStr}] [${h.type}] ${h.message}\n`;
+            });
+
+            return api.sendMessage(histMsg, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 👩‍❤️‍👨 SOUS-COMMANDE : MARRY INFO (FICHE TECHNIQUE TEXTE)
+        // =========================================================================
+        if (subCommand === "info") {
+            let targetUID = senderID;
+
+            if (event.type === "message_reply") {
+                targetUID = event.messageReply.senderID;
+            } else if (Object.keys(event.mentions).length > 0) {
+                targetUID = Object.keys(event.mentions)[0];
+            } else if (args[1] && !isNaN(args[1])) {
+                targetUID = args[1];
+            }
+
+            const profiles = storage.getProfiles();
+            const tgtProfile = profiles[targetUID] || storage.getUserMarriageProfile(targetUID, `Aventurier #${targetUID.slice(-4)}`);
+
+            if (!tgtProfile.isMarried || !tgtProfile.coupleId) {
+                return api.sendMessage(targetUID === senderID ? "❌ Vous êtes actuellement célibataire." : "❌ Cet aventurier n'est pas marié actuellement.", threadID, messageID);
+            }
+
+            const marriages = storage.getMarriages();
+            const couple = marriages[tgtProfile.coupleId];
+
+            if (!couple) return api.sendMessage("❌ Données du couple introuvables ou corrompues.", threadID, messageID);
+
+            const formatNum = (num) => new Intl.NumberFormat("fr-FR").format(num);
+            const daysCount = Math.floor(Math.abs(now - couple.marriedAt) / (1000 * 60 * 60 * 24));
+
+            let infoMsg = `╭───────────────────────────────────────╮\n`;
+            infoMsg += `│ 💍 𝐀𝐋𝐋𝐈𝐀𝐍𝐂𝐄 : ${couple.coupleName.toUpperCase()}\n`;
+            infoMsg += `├───────────────────────────────────────┤\n`;
+            infoMsg += `│ 👤 Partenaire A : **${couple.user1Name}**\n`;
+            infoMsg += `│ 👤 Partenaire B : **${couple.user2Name}**\n`;
+            infoMsg += `├───────────────────────────────────────┤\n`;
+            infoMsg += `│ 📅 Date d'Union : ${new Date(couple.marriedAt).toLocaleDateString("fr-FR")} (${daysCount} jours)\n`;
+            infoMsg += `│ ❤️ Niveau d'Amour : **Niv.${couple.loveLevel}** (XP: ${couple.bondXp} / ${couple.bondLevel * 500})\n`;
+            infoMsg += `│ 💎 Bague Actuelle : **[ ${couple.ringTier} ]**\n`;
+            infoMsg += `│ 🔮 Affinité Mutuelle : **${couple.compatibilityScore}%**\n`;
+            infoMsg += `├───────────────────────────────────────┤\n`;
+            infoMsg += `│ 💬 Citation : *${couple.quote}*\n`;
+            infoMsg += `│ 📝 Bio : _${couple.bio}_\n`;
+            infoMsg += `├───────────────────────────────────────┤\n`;
+            infoMsg += `│ 🎁 Cadeaux Échangés : ${couple.giftCount} (${formatNum(couple.totalGiftMoney)} Or)\n`;
+            infoMsg += `╰───────────────────────────────────────╯`;
+
+            return api.sendMessage(infoMsg, threadID, messageID);
+                }
