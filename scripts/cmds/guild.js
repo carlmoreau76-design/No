@@ -72,12 +72,11 @@ module.exports = {
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗌𝖾𝖺𝗋𝖼𝗁 <nom> : 𝖥𝗂𝗅𝗍𝗋𝖾𝗋 𝗅𝖾𝗌 𝖺𝗅𝗅𝗂𝖺𝗇𝖼𝖾𝗌\n`;
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗃𝗈𝗂𝗇 <ID> : 𝖨𝗇𝗍é𝗀𝗋𝖾𝗋 𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾\n`;
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗅𝖾𝖺𝗏𝖾 : 𝖰𝗎𝗂quit𝗍𝖾𝗋 𝗏𝗈𝗍𝗋𝖾 𝗀𝗎𝗂𝗅𝖽𝖾\n`;
-            menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗂𝗇𝗏𝗂𝗍𝖾 @user : 𝖨𝗇𝗏𝗂𝗍改𝖾𝗋 𝗎𝗇 𝗃𝗈𝗎𝖾𝗎𝗋\n`;
+            menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗂𝗇𝗏𝗂𝗍𝖾 @user : 𝖨𝗇𝗏𝗂𝗍𝖾𝗋 𝗎𝗇 𝗃𝗈𝗎𝖾𝗎𝗋\n`;
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗆𝖾𝗆𝖻𝖾𝗋𝗌 : 𝖵𝗈𝗂𝗋 𝗅’𝖾𝖿𝖿𝖾𝖼𝗍𝗂𝖿 𝖼𝗈𝗆𝗉𝗅𝖾𝗍\n`;
             menu += `├───────────────────────────────────────┤\n`;
             menu += `│ 💰 𝐁𝐀𝐍𝐐𝐔𝐄 & 𝐈𝐍𝐅𝐑𝐀𝐒𝐓𝐑𝐔𝐂𝐓𝐔𝐑𝐄\n`;
             menu += `├───────────────────────────────────────┤\n`;
-            menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 ... (tronqué pour affichage propre)\n`;
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝖽𝗈𝗇𝖺𝗍𝖾 <montant/all> : 𝖵𝖾𝗋𝗌𝖾𝗋 𝖺𝗎 𝖼𝗈𝖿𝖿𝗋𝖾\n`;
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗐𝗂𝗍𝗁𝖽𝗋𝖺𝗐 <montant> : 𝖱𝖾𝗍𝗂𝗋𝖾𝗋 𝖽𝖾𝗌 𝖿𝗈𝗇𝖽𝗌\n`;
             menu += `│ 🔹 𝖦𝗎𝗂𝗅𝖽 𝗎𝗉𝗀𝗋𝖺𝖽𝖾 : 𝖠𝗆é𝗅𝗂𝗈𝗋𝖾𝗋 𝗅𝖺 𝗀𝗎𝗂𝗅𝖽𝖾\n`;
@@ -413,3 +412,466 @@ module.exports = {
             storage.saveWar(warState);
             return api.sendMessage("⚔️ 𝖨𝗇𝗌𝖼𝗋𝗂𝗉𝗍𝗂𝗈𝗇 𝗏𝖺𝗅𝗂𝖽é𝖾 ! 𝖵𝗈𝗎𝗌 ê𝗍𝖾𝗌 𝗉𝗋ê𝗍 𝗉𝗈𝗎𝗋 𝗅𝖾 𝖼𝗈𝗆𝖻𝖺𝗍.", threadID, messageID);
         }
+
+        // --- SUB-COMMAND : INFO ---
+        if (subCommand === "info") {
+            let targetGuildId = args[1] || userProfile.guildId;
+            if (!targetGuildId || !guilds[targetGuildId]) {
+                return api.sendMessage("❌ 𝖦𝗎𝗂𝗅𝖽𝖾 𝗂𝗇𝗍𝗋𝗈𝗎𝗏𝖺𝖻𝗅𝖾.", threadID, messageID);
+            }
+            const g = guilds[targetGuildId];
+            let infoMsg = `╭───────────────────────────────────────╮\n`;
+            infoMsg += `│ 🛡️ 𝐅𝐈𝐂𝐇𝐄 𝐃𝐄 𝐆𝐔𝐈𝐋𝐃𝐄 : ${g.name.toUpperCase()}\n`;
+            infoMsg += `├───────────────────────────────────────┤\n`;
+            infoMsg += `│ 🆔 𝖨𝖣 : ${g.id}\n`;
+            infoMsg += `│ 👑 𝖫𝖾𝖺𝖽𝖾𝗋 : ${g.leaderName}\n`;
+            infoMsg += `│ 🌟 𝖭𝗂𝗏𝖾𝖺𝗎 : ${g.level} / 50\n`;
+            infoMsg += `│ 👥 𝖤𝖿𝖿𝖾𝖼𝗍𝗂𝖿 : ${g.members.length} / ${g.maxMembers}\n`;
+            infoMsg += `│ 💰 𝖡𝖺𝗇𝗊𝗎𝖾 : ${formatNumber(g.bank)} 𝗉𝗂è𝖼𝖾𝗌\n`;
+            infoMsg += `│ 🏆 𝖳𝗋𝗈𝗉𝗁é𝖾𝗌 : ${formatNumber(g.trophies)}\n`;
+            infoMsg += `│ 📝 𝖡𝗂𝗈 : ${g.description}\n`;
+            infoMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(infoMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : LIST ---
+        if (subCommand === "list") {
+            const listGuilds = Object.values(guilds).slice(0, 15);
+            if (listGuilds.length === 0) return api.sendMessage("📭 𝖠𝗎𝖼𝗎𝗇𝖾 分𝗎𝗂𝗅𝖽𝖾 𝗇'𝖺 é𝗍é 𝖼𝗋éé𝖾 𝗉𝗈𝗎𝗋 𝗅𝖾 𝗆𝗈𝗆𝖾𝗇𝗍.", threadID, messageID);
+
+            let listMsg = `╭───────────────────────────────────────╮\n`;
+            listMsg += `│ 📜 𝖠𝖭𝖭𝖴𝖠𝖨𝖱𝖤 𝖣𝖤𝖲 𝖦𝖴𝖨𝖫𝖣𝖤𝖲\n`;
+            listMsg += `├───────────────────────────────────────┤\n`;
+            listGuilds.forEach(g => {
+                listMsg += `│ 🔹 [${g.id}] **${g.name}** | 𝖫𝗏𝗅 ${g.level} | 👥 ${g.members.length}/${g.maxMembers}\n`;
+            });
+            listMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(listMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : SEARCH ---
+        if (subCommand === "search") {
+            const searchName = args.slice(1).join(" ");
+            if (!searchName) return api.sendMessage("❌ 𝖵𝖾𝗎𝗂𝗅𝗅𝖾𝗓 𝗌𝗉é𝖼𝗂𝖿𝗂𝖾𝗋 𝗎𝗇 𝗇𝗈𝗆 à 𝖼𝗁𝖾𝗋𝖼𝗁𝖾𝗋.", threadID, messageID);
+
+            const results = Object.values(guilds).filter(g => g.name.toLowerCase().includes(searchName.toLowerCase()));
+            if (results.length === 0) return api.sendMessage("🔍 𝖠𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾 𝗇𝖾 𝖼𝗈𝗋𝗋𝖾𝗌𝗉𝗈𝗇𝖽 à 𝖼𝖾 𝗇𝗈𝗆.", threadID, messageID);
+
+            let searchMsg = `╭───────────────────────────────────────╮\n`;
+            searchMsg += `│ 🔍 𝖱É𝖲𝖴𝖫𝖳𝖠𝖳𝖲 𝖣𝖤 𝖫𝖠 𝖱𝖤𝖢𝖧𝖤𝖱𝖢𝖧𝖤\n`;
+            searchMsg += `├───────────────────────────────────────┤\n`;
+            results.slice(0, 5).forEach(g => {
+                searchMsg += `│ 🔹 [${g.id}] **${g.name}** (𝖫𝗏𝗅 ${g.level})\n`;
+            });
+            searchMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(searchMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : JOIN ---
+        if (subCommand === "join") {
+            if (userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 ê𝗍𝖾𝗌 𝖽é𝗃à 𝖽𝖺𝗇𝗌 𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            const targetId = args[1];
+            if (!targetId || !guilds[targetId]) return api.sendMessage("❌ 𝖨𝖣 𝖽𝖾 𝗀𝗎𝗂𝗅𝖽𝖾 𝗂𝗇𝗏𝖺𝗅𝗂𝖽𝖾.", threadID, messageID);
+
+            const g = guilds[targetId];
+            if (g.members.length >= g.maxMembers) return api.sendMessage("❌ 𝖢𝖾𝗍𝗍𝖾 𝗀𝗎𝗂𝗅𝖽𝖾 𝖾𝗌𝗍 𝖺𝗖𝗎𝖾𝗅𝗅𝖾𝗆𝖾𝗇𝗍 𝗉𝗅𝖾𝗂𝗇𝖾.", threadID, messageID);
+
+            g.members.push(senderID);
+            userProfile.guildId = g.id;
+            userProfile.role = "Membre";
+            userProfile.joinedAt = Date.now();
+
+            storage.saveGuilds(guilds);
+            storage.saveUserProfile(senderID, userProfile);
+            storage.logEvent(g.id, "JOIN", `👤 ${senderName} a rejoint la guilde.`);
+
+            return api.sendMessage(`✅ 𝖵𝗈𝗎𝗌 𝖺𝗏𝖾𝗓 𝗋𝖾𝗃𝗈𝗂𝗇𝗍 **${g.name}**.`, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : LEAVE ---
+        if (subCommand === "leave") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            const g = guilds[userProfile.guildId];
+            if (userProfile.role === "Leader") return api.sendMessage("❌ En tant que Leader, vous devez dissoudre (disband) ou transférer la guilde.", threadID, messageID);
+
+            g.members = g.members.filter(id => id !== senderID);
+            userProfile.guildId = null;
+            userProfile.role = null;
+
+            storage.saveGuilds(guilds);
+            storage.saveUserProfile(senderID, userProfile);
+            storage.logEvent(g.id, "LEAVE", `🚪 ${senderName} a quitté la guilde.`);
+
+            return api.sendMessage(`🚪 𝖵𝗈𝗎𝗌 𝖺𝗏𝖾𝗓 𝗊𝗎𝗂𝗍𝗍é 𝗅𝖺 𝗀𝗎𝗂𝗅𝖽𝖾.`, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : MEMBERS ---
+        if (subCommand === "members") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            const g = guilds[userProfile.guildId];
+
+            let mMsg = `╭───────────────────────────────────────╮\n`;
+            mMsg += `│ 👥 𝖤𝖥𝖥𝖤𝖢𝖳𝖨𝖥 𝖣𝖤 𝖫𝖠 𝖦𝖴𝖨𝖫𝖣𝖤\n`;
+            mMsg += `├───────────────────────────────────────┤\n`;
+            g.members.forEach(mId => {
+                const memProf = users[mId] || { name: "Joueur Inconnu", role: "Membre" };
+                mMsg += `│ 🔹 **${memProf.name}** - [${memProf.role || "Membre"}]\n`;
+            });
+            mMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(mMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : DEMOTE ---
+        if (subCommand === "demote") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            if (userProfile.role !== "Leader") return api.sendMessage("❌ 𝖲𝖾𝗎𝗅 𝗅𝖾 𝖫𝖾𝖺𝖽𝖾𝗋 𝗉𝖾𝗎𝗍 𝗋é𝗍𝗋𝗈𝗀𝗋𝖺𝖽𝖾𝗋.", threadID, messageID);
+
+            const targetID = Object.keys(event.mentions)[0];
+            if (!targetID) return api.sendMessage("❌ 𝖬𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗓 𝗅𝖾 𝗆𝖾𝗆𝖻𝗋𝖾 à 𝗋é𝗍𝗋𝗈𝗀𝗋𝖺𝖽𝖾𝗋.", threadID, messageID);
+
+            const targetProfile = users[targetID];
+            if (!targetProfile || targetProfile.guildId !== userProfile.guildId) return api.sendMessage("❌ 𝖩𝗈𝗎𝖾𝗎𝗋 𝗂𝗇𝗍𝗋𝗈𝗎𝗏𝖺𝖻𝗅𝖾.", threadID, messageID);
+
+            if (targetProfile.role === "Co-Leader") {
+                targetProfile.role = "Officier";
+            } else if (targetProfile.role === "Officier") {
+                targetProfile.role = "Membre";
+            } else {
+                return api.sendMessage("❌ 𝖢𝖾 𝗆𝖾𝗆𝖻𝗋𝖾 𝖾𝗌𝗍 𝖽é𝗃à 𝖺𝗎 𝗋𝖺𝗇𝗀 𝗅𝖾 𝗉𝗅𝗎𝗌 𝖻𝖺𝗌.", threadID, messageID);
+            }
+
+            storage.saveUserProfile(targetID, targetProfile);
+            storage.logEvent(userProfile.guildId, "RANK", `🔻 ${targetProfile.name} a été rétrogradé au rang de ${targetProfile.role}.`);
+            return api.sendMessage(`🔻 **${targetProfile.name}** 𝖺 é𝗍é 𝗋é𝗍𝗋𝗈𝗀𝗋𝖺𝖽é **${targetProfile.role}**.`, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : CHAT ---
+        if (subCommand === "chat") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            const msgContent = args.slice(1).join(" ");
+            if (!msgContent) return api.sendMessage("❌ 𝖤𝖼𝗋𝗂𝗏𝖾𝗓 𝗎𝗇 𝗆𝖾𝗌𝗌𝖺𝗀𝖾.", threadID, messageID);
+
+            const g = guilds[userProfile.guildId];
+            g.members.forEach(mId => {
+                if (mId !== senderID) {
+                    api.sendMessage(`💬 [𝖢𝖧𝖠𝖳 𝖦𝖴𝖨𝖫𝖣𝖤 - ${g.name}] **${senderName}** : ${msgContent}`, mId);
+                }
+            });
+            return api.sendMessage("✉️ 𝖬𝖾𝗌𝗌𝖺𝗀𝖾 𝖾𝗇𝗏𝗈𝗒é 𝖺𝗎𝗑 𝗆𝖾𝗆𝖻𝗋𝖾𝗌 𝖺𝖼𝗍𝗂𝖿𝗌.", threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : TOP ---
+        if (subCommand === "top") {
+            const sorted = Object.values(guilds).sort((a, b) => b.level - a.level).slice(0, 5);
+            let topMsg = `🏆 **𝐓𝐎𝐏 𝟓 𝐃𝐄𝐒 𝐌𝐄𝐈𝐋𝐋𝐄𝐔𝐑𝐄𝐒 𝐆𝐔𝐈𝐋𝐃𝐄𝐒**\n\n`;
+            sorted.forEach((g, index) => {
+                topMsg += `${index + 1}. **${g.name}** - 𝖫𝗏𝗅 ${g.level} | 🏆 ${formatNumber(g.trophies)} 𝖳𝗋𝗈𝗉𝗁é𝖾𝗌\n`;
+            });
+            return api.sendMessage(topMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : LOGS ---
+        if (subCommand === "logs") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            const g = guilds[userProfile.guildId];
+            if (!g.logs || g.logs.length === 0) return api.sendMessage("📭 𝖠𝗎𝖼𝗎𝗇 𝗅𝗈𝗀 𝖽𝗂𝗌𝗉𝗈𝗇𝗂𝖻𝗅𝖾.", threadID, messageID);
+
+            let logMsg = `📜 **𝖧𝖨𝖲𝖳𝖮𝖱𝖨𝖰𝖴𝖤 𝖣𝖤 𝖫𝖠 𝖦𝖴𝖨𝖫𝖣𝖤**\n\n`;
+            g.logs.slice(0, 10).forEach(l => {
+                logMsg += `• [${l.type}] ${l.message}\n`;
+            });
+            return api.sendMessage(logMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : DAILY ---
+        if (subCommand === "daily") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            const g = guilds[userProfile.guildId];
+
+            if (now - userProfile.dailyState.lastClaim < 24 * 60 * 60 * 1000) {
+                const remain = Math.ceil((24 * 60 * 60 * 1000 - (now - userProfile.dailyState.lastClaim)) / 1000 / 60 / 60);
+                return api.sendMessage(`⏳ 𝖱𝖾𝗏𝖾𝗇𝖾𝗓 𝖽𝖺𝗇𝗌 ${remain} 𝗁𝖾𝗎𝗋𝖾𝗌.`, threadID, messageID);
+            }
+
+            const goldReward = 5000 + (g.level * 500);
+            g.xp += 100;
+            userProfile.dailyState.lastClaim = now;
+
+            storage.saveGuilds(guilds);
+            storage.saveUserProfile(senderID, userProfile);
+            return api.sendMessage(`🎁 𝖱é𝖼𝗈𝗆𝗉𝖾𝗇𝗌𝖾 ! 𝖵𝗈𝗎𝗌 𝖺𝗏𝖾𝗓 𝗀𝖺𝗀𝗇é **${formatNumber(goldReward)}** 𝗉𝗂è𝖼𝖾𝗌 𝖾𝗍 +100 ⭐ 𝖷𝖯 𝗉𝗈𝗎𝗋 𝗅𝖺 𝗀𝗎𝗂𝗅𝖽𝖾.`, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : SETTINGS ---
+        if (subCommand === "settings") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            if (!["Leader", "Co-Leader"].includes(userProfile.role)) return api.sendMessage("❌ 𝖯𝖾𝗋𝗆𝗂𝗌𝗌𝗂𝗈𝗇 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇 tente.", threadID, messageID);
+
+            const typeSetting = args[1];
+            const valueSetting = args.slice(2).join(" ");
+
+            if (typeSetting === "desc" && valueSetting) {
+                guilds[userProfile.guildId].description = valueSetting;
+                storage.saveGuilds(guilds);
+                return api.sendMessage("✅ Description mise à jour !", threadID, messageID);
+            }
+            if (typeSetting === "emoji" && valueSetting) {
+                guilds[userProfile.guildId].emoji = valueSetting;
+                storage.saveGuilds(guilds);
+                return api.sendMessage("✅ Écusson Emoji mis à jour !", threadID, messageID);
+            }
+            return api.sendMessage("💡 Usage: `guild settings desc <texte>` ou `guild settings emoji <emoji>`", threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : DISBAND ---
+        if (subCommand === "disband") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            if (userProfile.role !== "Leader") return api.sendMessage("❌ Seul le Leader suprême peut dissoudre l'empire.", threadID, messageID);
+
+            const gId = userProfile.guildId;
+            const g = guilds[gId];
+
+            g.members.forEach(mId => {
+                if (users[mId]) {
+                    users[mId].guildId = null;
+                    users[mId].role = null;
+                    storage.saveUserProfile(mId, users[mId]);
+                }
+            });
+
+            delete guilds[gId];
+            storage.saveGuilds(guilds);
+
+            return api.sendMessage("💥 **𝖫𝖺 𝗀𝗎𝗂𝗅𝖽𝖾 𝖺 é𝗍é 𝖽𝗂𝗌𝗌𝗈𝗎𝗍𝖾 𝖽é𝖿𝗂𝗇𝗂𝗍𝗂𝗏𝖾𝗆𝖾𝗇𝗍.** Tous les membres sont libres.", threadID, messageID);
+                }
+
+        // --- SUB-COMMAND : WAR ATTACK ---
+        if (subCommand === "war" && args[1] === "attack") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            if (warState.currentPhase !== "combat") return api.sendMessage("❌ 𝖫𝖺 𝗉𝗁𝖺𝗌𝖾 𝖽𝖾 𝖼𝗈𝗆𝗻𝖺𝗍 𝗇'𝖾𝗌𝗍 𝗉𝖺𝗌 𝖺𝖼𝗍𝗂𝗏𝖾.", threadID, messageID);
+
+            const pStat = warState.playerStats[senderID];
+            if (!pStat) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇𝖾 𝗏𝗈𝗎𝗌 ê𝗍𝖾𝗌 𝗉𝖺𝗌 𝗂𝗇𝗌𝖼𝗋𝗂𝗍 à 𝖼𝖾𝗍𝗍𝖾 𝗀𝗎𝖾𝗋𝗋𝖾.", threadID, messageID);
+
+            // Anti-spam / Cooldown d'attaque (3 minutes entre chaque assaut)
+            if (now - userProfile.cooldowns.lastAttack < 3 * 60 * 1000) {
+                const remain = Math.ceil((3 * 60 * 1000 - (now - userProfile.cooldowns.lastAttack)) / 1000);
+                return api.sendMessage(`⏳ 𝖠𝗇𝗍𝗂-𝗌𝗉𝖺𝗆 ! 𝖱é𝗏𝖾𝗂𝗅 𝖽𝗎 𝗁é𝗋𝗈𝗌 𝖽𝖺𝗇𝗌 ${remain}𝗌.`, threadID, messageID);
+            }
+
+            // Recherche du match de la guilde
+            const match = warState.matches.find(m => m.guildA === pStat.guildId || m.guildB === pStat.guildId);
+            if (!match) return api.sendMessage("❌ 𝖵𝗈𝗍𝗋𝖾 𝗀𝗎𝗂𝗅𝖽𝖾 𝗇'𝖺 𝗉𝖺𝗌 𝗍𝗋𝗈𝗎𝗏é 𝖽'𝖺𝖽𝗏𝖾𝗋𝗌𝖺𝗂𝗋𝖾 𝗉𝗈𝗎𝗋 𝖼𝖾 𝖼𝗒𝖼𝗅𝖾.", threadID, messageID);
+
+            const isGuildA = match.guildA === pStat.guildId;
+            const enemyGuildId = isGuildA ? match.guildB : match.guildA;
+            const enemyGuild = guilds[enemyGuildId];
+
+            // Calcul des dégâts MMORPG basés sur le niveau de guilde + part aléatoire
+            const baseDmg = 1000 + (guilds[pStat.guildId].level * 150);
+            const critFactor = Math.random() > 0.85 ? 2.0 : 1.0; // 15% de chance de coup critique
+            const finalDmg = Math.floor((baseDmg * (0.8 + Math.random() * 0.4)) * critFactor);
+
+            // Mise à jour des stats locales de guerre
+            pStat.damage += finalDmg;
+            pStat.attacks += 1;
+            pStat.points += critFactor > 1 ? 3 : 1;
+
+            if (isGuildA) {
+                match.totalDamageA += finalDmg;
+                match.scoreA += pStat.points;
+            } else {
+                match.totalDamageB += finalDmg;
+                match.scoreB += pStat.points;
+            }
+
+            userProfile.cooldowns.lastAttack = now;
+            storage.saveWar(warState);
+            storage.saveUserProfile(senderID, userProfile);
+
+            let attackMsg = `⚔️ **${senderName}** 𝖺 𝗅𝖺𝗇𝖼é 𝗎𝗇 𝖺𝗌𝗌𝖺𝗎𝗍 𝖼𝗈𝗇𝗍𝗋𝖾 **${enemyGuild ? enemyGuild.name : "L'ennemi"}** !\n`;
+            attackMsg += `💥 **𝖣é𝗀â𝗍𝗌 𝗂𝗇𝖿𝗅𝗂𝗀é𝗌 :** ${formatNumber(finalDmg)} ${critFactor > 1 ? "🔥 **CRITIQUE !**" : ""}`;
+            return api.sendMessage(attackMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : TERRITORIES ---
+        if (subCommand === "territories" || subCommand === "territory") {
+            const territories = storage.getTerritories();
+            let terrMsg = `╭───────────────────────────────────────╮\n`;
+            terrMsg += `│ 🌍 𝐂𝐀𝐑𝐓𝐄 𝐃𝐄𝐒 𝐓𝐄𝐑𝐑𝐈𝐓𝐎𝐈𝐑𝐄𝐒 𝐌𝐌𝐎𝐑𝐏𝐆\n`;
+            terrMsg += `├───────────────────────────────────────┤\n`;
+
+            territories.forEach(t => {
+                const ownerGuild = t.ownerId ? (guilds[t.ownerId] ? guilds[t.ownerId].name : "Inconnu") : "Aucun";
+                terrMsg += `│ 📍 **${t.name}** [${t.rarity}]\n`;
+                terrMsg += `│ 🔹 𝖯𝗋𝗈𝗉𝗋𝗂é𝗍𝖺𝗂𝗋𝖾 : _${ownerGuild}_\n`;
+                terrMsg += `│ 🔹 𝖱𝖾𝗏𝖾𝗇𝗎𝗌 : +${formatNumber(t.revenues.money)}💰 / +${t.revenues.xp}⭐\n`;
+                terrMsg += `├───────────────────────────────────────┤\n`;
+            });
+            terrMsg += `│ 💡 _Revenus distribués automatiquement._\n`;
+            terrMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(terrMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : MISSIONS ---
+        if (subCommand === "missions") {
+            if (!userProfile.guildId) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇'ê𝗍𝖾𝗌 𝖽𝖺𝗇𝗌 𝖺𝗎𝖼𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾.", threadID, messageID);
+            const guild = guilds[userProfile.guildId];
+
+            let misMsg = `╭───────────────────────────────────────╮\n`;
+            misMsg += `│ 🎯 𝐐𝐔Ê𝐓𝐄𝐒 𝐃𝐄 𝐆𝐔𝐈𝐋𝐃𝐄\n`;
+            misMsg += `├───────────────────────────────────────┤\n`;
+            guild.missions.forEach(m => {
+                const status = m.done ? "✅ COMPLÉTÉE" : `⏳ ${formatNumber(m.current)} / ${formatNumber(m.target)}`;
+                misMsg += `│ 🔹 **${m.title}** : ${m.desc}\n`;
+                misMsg += `│ 📊 𝖯𝗋𝗈𝗀𝗋𝖾𝗌𝗌𝗂𝗈𝗇 : [${status}]\n`;
+                misMsg += `├───────────────────────────────────────┤\n`;
+            });
+            misMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(misMsg, threadID, messageID);
+        }
+
+        // --- SUB-COMMAND : PREMIUM CANVAS STATS ---
+        if (subCommand === "stats") {
+            let targetGuildId = userProfile.guildId;
+            if (args[1]) targetGuildId = args[1];
+
+            if (!targetGuildId || !guilds[targetGuildId]) {
+                return api.sendMessage("❌ 𝖦𝗎𝗂𝗅𝖽𝖾 𝗂𝗇𝗍𝗋𝗈𝗎𝗏𝖺𝖻𝗅𝖾 (𝖵𝗈𝗎𝗌 𝖽𝖾𝗏𝖾𝗓 ê𝗍𝗋𝖾 𝖽𝖺𝗇𝗌 𝗎𝗇𝖾 𝗀𝗎𝗂𝗅𝖽𝖾 𝗈𝗎 𝗌𝗉é𝖼𝗂𝖿𝗂𝖾𝗋 𝗎𝗇 ID 𝗏𝖺𝗅𝗂𝖽𝖾).", threadID, messageID);
+            }
+
+            const gData = guilds[targetGuildId];
+
+            // Rendu 1 : Génération Canvas (Si disponible)
+            if (canvasAvailable) {
+                const fs = require("fs");
+                const canvas = Canvas.createCanvas(1400, 800);
+                const ctx = canvas.getContext("2d");
+
+                // Background futuriste / MMORPG Dark Neon
+                const gradientBg = ctx.createLinearGradient(0, 0, 1400, 800);
+                gradientBg.addColorStop(0, "#0a0a16");
+                gradientBg.addColorStop(0.5, "#11112a");
+                gradientBg.addColorStop(1, "#050510");
+                ctx.fillStyle = gradientBg;
+                ctx.fillRect(0, 0, 1400, 800);
+
+                // Glow stylisé sur les bordures extérieures
+                ctx.strokeStyle = "#00ffcc";
+                ctx.lineWidth = 4;
+                ctx.strokeRect(15, 15, 1370, 770);
+
+                // --- HEADER ---
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 52px Arial";
+                ctx.fillText(`${gData.emoji} ${gData.name.toUpperCase()}`, 60, 90);
+
+                ctx.fillStyle = "#8a8ab5";
+                ctx.font = "24px Arial";
+                ctx.fillText(`Leader: ${gData.leaderName}  |  ID: ${gData.id}`, 60, 130);
+
+                // Badge Niveau
+                ctx.fillStyle = "#00ffcc";
+                ctx.beginPath();
+                ctx.roundRect(1150, 45, 180, 70, 15);
+                ctx.fill();
+
+                ctx.fillStyle = "#000000";
+                ctx.font = "bold 32px Arial";
+                ctx.fillText(`LVL ${gData.level}`, 1195, 92);
+
+                // --- BOXES DE STATISTIQUES (GRID) ---
+                const drawBox = (x, y, w, h, title, value, color) => {
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, w, h, 12);
+                    ctx.fill();
+                    ctx.strokeStyle = "rgba(0, 255, 204, 0.15)";
+                    ctx.stroke();
+
+                    // Titre de la box
+                    ctx.fillStyle = "#8a8ab5";
+                    ctx.font = "20px Arial";
+                    ctx.fillText(title, x + 25, y + 40);
+
+                    // Valeur principale
+                    ctx.fillStyle = color;
+                    ctx.font = "bold 38px Arial";
+                    ctx.fillText(value, x + 25, y + 95);
+                };
+
+                drawBox(60, 180, 390, 140, "MEMBRES", `${gData.members.length} / ${gData.maxMembers}`, "#ffffff");
+                drawBox(500, 180, 390, 140, "TRÉSOR DE BANQUE", `${formatNumber(gData.bank)} 💰`, "#ffd700");
+                drawBox(940, 180, 390, 140, "TROPHÉES GLOBAL", `${formatNumber(gData.trophies)} 🏆`, "#ff9900");
+
+                drawBox(60, 360, 390, 140, "VICTOIRES GUERRE", `${gData.wins} ⚔️`, "#00ff66");
+                drawBox(500, 360, 390, 140, "DÉFAITES GUERRE", `${gData.losses} 🛡️`, "#ff3333");
+                drawBox(940, 360, 390, 140, "TERRITOIRES", `${gData.territories.length} 🌍`, "#00bfff");
+
+                // --- FOOTER : BARRE DE PROGRESSION XP ---
+                const xpRequired = gData.level * 2500;
+                const percent = Math.min(1, gData.xp / xpRequired);
+
+                ctx.fillStyle = "#8a8ab5";
+                ctx.font = "22px Arial";
+                ctx.fillText(`Progression d'Exp de Guilde : ${formatNumber(gData.xp)} / ${formatNumber(xpRequired)}`, 60, 580);
+
+                // Fond de la barre
+                ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+                ctx.beginPath();
+                ctx.roundRect(60, 610, 1270, 30, 8);
+                ctx.fill();
+
+                // Remplissage de la barre (Glow néon)
+                ctx.fillStyle = "#00ffcc";
+                ctx.beginPath();
+                ctx.roundRect(60, 610, 1270 * percent, 30, 8);
+                ctx.fill();
+
+                // Signature Bonus du Panel
+                ctx.fillStyle = "#00ffcc";
+                ctx.font = "italic 22px Arial";
+                ctx.fillText(`Statut de puissance : ÉLITE MMORPG (+${gData.level * 2}% Bonus Global)`, 60, 710);
+
+                // Écriture du fichier temporaire et envoi propre via l'API GoatBot
+                const cachePath = path.join(__dirname, "..", "tmp", `guild_stats_${gData.id}.png`);
+                
+                // Vérifier et s'assurer que le dossier temporaire existe
+                if (!fs.existsSync(path.dirname(cachePath))) {
+                    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+                }
+
+                const out = fs.createWriteStream(cachePath);
+                const stream = canvas.createPNGStream();
+                stream.pipe(out);
+
+                out.on("finish", () => {
+                    api.sendMessage({
+                        body: `📊 **𝖣𝖺𝗌𝗁𝖻𝗈𝖺𝗋𝖽 𝗏𝗂𝗌𝗎𝖾𝗅 𝖽𝖾 : ${gData.name}**`,
+                        attachment: fs.createReadStream(cachePath)
+                    }, threadID, () => {
+                        try { fs.unlinkSync(cachePath); } catch(e){}
+                    }, messageID);
+                });
+                return;
+            }
+
+            // Rendu 2 : Fallback Texte Premium (Si Canvas n'est pas installé sur l'environnement)
+            let txtStats = `╭───────────────────────────────────────╮\n`;
+            txtStats += `│ 📊 **𝐒𝐓𝐀𝐓𝐈𝐒𝐓𝐈𝐐𝐔𝐄𝐒 𝐃𝐄 𝐆𝐔𝐈𝐋𝐃𝐄**\n`;
+            txtStats += `├───────────────────────────────────────┤\n`;
+            txtStats += `│ 🔹 𝖭𝗈𝗆 : **${gData.name}** [Niveau ${gData.level}]\n`;
+            txtStats += `│ 🔹 𝖫𝖾𝖺𝖽𝖾𝗋 : ${gData.leaderName}\n`;
+            txtStats += `│ 🔹 𝖬𝖾𝗆𝗅𝗋𝖾𝗌 : ${gData.members.length} / ${gData.maxMembers}\n`;
+            txtStats += `│ 💰 𝖢𝗈𝖿𝖿𝗋𝖾 𝖡𝖺𝗇𝗊𝗎𝖾 : ${formatNumber(gData.bank)} 𝗉𝗂è𝖼𝖾𝗌\n`;
+            txtStats += `│ 🏆 𝖳𝗋𝗈𝗉𝗁é𝖾𝗌 : ${formatNumber(gData.trophies)}\n`;
+            txtStats += `│ ⚔️ 𝖶𝗂𝗇𝗌/𝖫𝗈𝗌𝗌𝖾𝗌 : ${gData.wins}𝖵 / ${gData.losses}𝖣\n`;
+            txtStats += `│ 🌍 𝖳𝖾𝗋𝗋𝗂𝗍𝗈𝗂𝗋𝖾𝗌 𝖼𝗈𝗇𝗊𝗎𝗂𝗌 : ${gData.territories.length}\n`;
+            txtStats += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(txtStats, threadID, messageID);
+        }
+        
+        // --- SOUS-COMMANDE INVALIDE ---
+        return api.sendMessage("❌ 𝖲𝗈𝗎𝗌-𝖼𝗈𝗆𝗆𝖺𝗇𝖽𝖾 𝗂𝗇𝖼𝗈𝗇𝗇𝗎𝖾. 𝖳𝖺𝗉𝖾𝗓 `guild` 𝗉𝗈𝗎𝗋 𝗏𝗈𝗂𝗋 𝗅𝖾 𝗆𝖾𝗇𝗎.", threadID, messageID);
+    }
+};
