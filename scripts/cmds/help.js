@@ -1,6 +1,5 @@
 const { commands } = global.GoatBot;
 const config = global.GoatBot.config;
-const axios = require("axios");
 
 function toBold(text) {
   const map = {
@@ -13,21 +12,20 @@ function toBold(text) {
 
 function formatCategory(cat) {
   const map = {
-    owner: "👑 OWNER",
-    admin: "🛡️ ADMINISTRATION",
-    economy: "💰 ÉCONOMIE",
-    ai: "🤖 IA",
-    system: "🪐 HORI SYSTEM",
-    image: "🎨 IMAGES",
-    media: "🎵 MÉDIA",
-    game: "🎮 GAMES",
-    utility: "📜 UTILITAIRES",
-    download: "📦 DOWNLOAD",
-    security: "🔒 SÉCURITÉ",
-    settings: "⚙️ CONFIG",
-    other: "❓ AUTRE"
+    owner: "👑 𝐎𝐖𝐍𝐄𝐑",
+    admin: "🛡️ 𝐀𝐃𝐌𝐈𝐍𝐈𝐒𝐓𝐑𝐀𝐓𝐈𝐎𝐍",
+    economy: "💰 𝐄́𝐂𝐎𝐍𝐎𝐌𝐈𝐄",
+    ai: "🤖 𝐈𝐀",
+    system: "🪐 𝐇𝐎𝐑𝐈 𝐒𝐘𝐒𝐓𝐄𝐌",
+    image: "🎨 𝐈𝐌𝐀𝐆𝐄𝐒",
+    media: "🎵 𝐌𝐄́𝐃𝐈𝐀",
+    game: "🎮 𝐆𝐀𝐌𝐄𝐒",
+    utility: "📜 𝐔𝐓𝐈𝐋𝐈𝐓𝐀𝐈𝐑𝐄𝐒",
+    download: "📦 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃",
+    security: "🔒 𝐒𝐄́𝐂𝐔𝐑𝐈𝐓𝐄́",
+    settings: "⚙️ 𝐂𝐎𝐍𝐅𝐈𝐆",
+    other: "❓ 𝐀𝐔𝐓𝐑𝐄"
   };
-
   return map[cat.toLowerCase()] || `❓ ${cat.toUpperCase()}`;
 }
 
@@ -38,64 +36,35 @@ module.exports = {
     author: "Shade",
     countDown: 2,
     role: 0,
-    category: "settings",
+    category: "system",
     guide: "help [commande]"
   },
-
   onStart: async function ({ message, args }) {
-
-    const imageURL = "https://files.catbox.moe/al5kmm.gif";
-    let streamData;
-
-    try {
-      const res = await axios.get(imageURL, { responseType: "stream" });
-      streamData = res.data;
-    } catch {}
-
+    
     // ───── DÉTAIL COMMANDE ─────
     if (args[0]) {
       const search = args[0].toLowerCase();
-
       const cmd = commands.get(search) ||
         Array.from(commands.values())
           .find(c => c.config?.aliases?.includes(search));
-
       if (!cmd) return message.reply("❌ Commande introuvable.");
-
       const c = cmd.config;
-
       return message.reply({
-        body: `
-╭─ ⋆｡˚ ♡ 𝐂𝐎𝐌𝐌𝐀𝐍𝐃 𝐃𝐄𝐓𝐀𝐈𝐋𝐒 ♡ ˚｡⋆ ─╮
-✨ Nom : ${c.name.toUpperCase()}
-📝 Desc : ${c.shortDescription?.en || "Aucune"}
-🏷️ Catégorie : ${c.category || "other"}
-⏳ Cooldown : ${c.countDown || 0}s
-🔐 Permission : ${c.role === 2 ? "Admin" : c.role === 1 ? "Modérateur" : "Utilisateur"}
-╰──────────────────────────╯
-
-💡 Utilisation :
-➤ ${config.prefix || ""}${c.guide?.en || c.name}
-        `,
-        attachment: streamData
+        body: `╭─ 🪐 𝐇𝐎𝐑𝐈 𝐒𝐘𝐒𝐓𝐄𝐌 𝐃𝐄𝐓𝐀𝐈𝐋𝐒 🪐 ─╮\n✨ Nom : ${c.name.toUpperCase()}\n📝 Desc : ${c.shortDescription?.en || "Aucune"}\n🏷️ Catégorie : ${c.category || "other"}\n⏳ Cooldown : ${c.countDown || 0}s\n🔐 Permission : ${c.role === 2 ? "Admin" : c.role === 1 ? "Modérateur" : "Utilisateur"}\n╰──────────────────────────╯\n💡 Utilisation :\n➤ ${config.prefix || ""}${c.guide?.en || c.name}`
       });
     }
 
     // ───── MENU ─────
     const cats = {};
-
     for (const [name, cmd] of commands) {
       const cat = cmd?.config?.category || "other";
-
       if (!cats[cat]) cats[cat] = [];
       cats[cat].push(name);
     }
 
-    let menu = `🔍 ${toBold("Available Commands")} 🧰 (${commands.size})\n`;
-
+    let menu = `🪐 𝐇𝐎𝐑𝐈 𝐒𝐘𝐒𝐓𝐄𝐌 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒 (${commands.size})\n`;
     for (const cat of Object.keys(cats).sort()) {
       menu += `\n${formatCategory(cat)} (${cats[cat].length})\n\n`;
-
       let line = "";
       cats[cat].sort().forEach((cmd, i) => {
         line += `📄 ${cmd}  `;
@@ -104,18 +73,15 @@ module.exports = {
           line = "";
         }
       });
-
       if (line) menu += line + "\n";
     }
 
     const p = config.prefix || "!";
-
-    menu += `\n➜ ${toBold("Help")}: ${p}help <cmd>`;
-    menu += `\n➜ ${toBold("Owner")} @𝐒𝐡𝐚𝐝𝐞 🪐`;
+    menu += `\n🪐 𝐇𝐞𝐥𝐩: ${p}help <cmd>`;
+    menu += `\n🪐 𝐎𝐰𝐧𝐞𝐫: @𝐒𝐡𝐚𝐝𝐞 🪐`;
 
     return message.reply({
-      body: menu,
-      attachment: streamData
+      body: menu
     });
   }
 };
