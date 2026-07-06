@@ -16,7 +16,7 @@ module.exports = {
         countDown: 2,
         role: 0,
         description: "Simulation d'un empire financier : Banque, Crédits, Bourse et Entreprises.",
-        category: "Économie (RPG)"
+        category: "economy"
     },
 
     onStart: async function ({ api, event, args }) {
@@ -545,3 +545,399 @@ module.exports = {
 
         // Transmission globale du contexte mis à jour
         global.bankEngine.account = account;
+        // =========================================================================
+        // 🏢 SECTION 6 : EMPIRE COMMERCIAL (REVENUS PASSIFS)
+        // =========================================================================
+        const BIZ_PRESETS = {
+            "b1": { id: "b1", name: "𝖲𝗍𝖺𝗇𝖽 𝖽𝖾 𝗋𝗎𝖾 𝖿𝗂𝖼𝗍𝗂𝖿", price: 50000, revenue: 800 },
+            "b2": { id: "b2", name: "𝖢𝖺𝖿é 𝖦𝖺𝗆𝗂𝗇𝗀 𝖱𝖯𝖦", price: 150000, revenue: 2500 },
+            "b3": { id: "b3", name: "𝖱𝖾𝗌𝗍𝖺𝗎𝗋𝖺𝗇𝗍 𝟧 é𝗍𝗈𝗂𝗅𝖾𝗌", price: 450000, revenue: 7500 },
+            "b4": { id: "b4", name: "𝖲𝗍𝗎𝖽𝗂𝗈 𝖽𝖾 𝖩𝖾𝗎𝗑 𝖵𝗂𝗋𝗍𝗎𝖾𝗅𝗌", price: 1200000, revenue: 22000 },
+            "b5": { id: "b5", name: "𝖢𝖺𝗌𝗂𝗇𝗈 𝖧ô𝗍𝖾𝗅 𝖽𝖾 𝖫𝗎𝗑𝖾", price: 3500000, revenue: 65000 }
+        };
+
+        if (primary === "business") {
+            if (!secondary || secondary === "list") {
+                let bMsg = `🏢 **𝖬𝖠𝖱𝖢𝖧𝖤 𝖣𝖤𝖲 𝖤𝖭𝖳𝖱𝖤𝖯𝖱𝖨𝖲𝖤𝖲 𝖥𝖨𝖢𝖳𝖨𝖵𝖤𝖲**\n\n`;
+                for (let id in BIZ_PRESETS) {
+                    let biz = BIZ_PRESETS[id];
+                    let ownedLevel = account.businesses[id]?.level || 0;
+                    bMsg += `🔹 **${biz.name}** [\`${biz.id}\`]\n`;
+                    bMsg += `   Coût d'achat : **${fNum(biz.price)} 𝖮𝗋**\n`;
+                    bMsg += `   Revenu de base : **+${fNum(biz.revenue)} 𝖮𝗋 /cycle**\n`;
+                    bMsg += `   Statut : ${ownedLevel > 0 ? `Possédé (Niveau ${ownedLevel})` : "*Non possédé*"}\n`;
+                    bMsg += `────────────────────\n`;
+                }
+                bMsg += `💡 Commands : \`bank business buy <id>\` | \`bank business upgrade <id>\``;
+                return api.sendMessage(bMsg, threadID, messageID);
+            }
+
+            if (secondary === "buy") {
+                let bizId = args[2]?.toLowerCase();
+                if (!bizId || !BIZ_PRESETS[bizId]) return api.sendMessage("❌ 𝖨𝖣 𝖽'𝖾𝗇𝗍𝗋𝖾𝗉𝗋𝗂𝗌𝖾 𝗂𝗇𝗏𝖺𝗅𝗂𝖽𝖾.", threadID, messageID);
+                if (account.businesses[bizId]) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗉𝗈𝗌𝗌é𝖽𝖾𝗓 déjà 𝖼𝖾𝗍𝗍𝖾 𝗂𝗇𝖿𝗋𝖺𝗌𝗍𝗋𝗎𝖼𝗍𝗎𝗋𝖾.", threadID, messageID);
+
+                let cost = BIZ_PRESETS[bizId].price;
+                if (account.bankBalance < cost) return api.sendMessage(`❌ 𝖲𝗈𝗅𝖽𝖾 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍 𝖾𝗇 𝖻𝖺𝗇𝗊𝗎𝖾. Il requis **${fNum(cost)} 𝖮𝗋**.`, threadID, messageID);
+
+                account.bankBalance -= cost;
+                account.businesses[bizId] = { id: bizId, level: 1, lastCollected: now };
+
+                if (!account.achievements.includes("𝖢𝖺𝗉𝗂𝗍𝖺𝗅𝗂𝗌𝗍𝖾")) account.achievements.push("𝖢𝖺𝗉𝗂𝗍𝖺𝗅𝗂𝗌𝗍𝖾");
+
+                storage.logTransaction(account, "BIZ_BUY", `Achat de l'entreprise : ${BIZ_PRESETS[bizId].name}.`);
+                storage.saveUserBankProfile(senderID, account);
+
+                return api.sendMessage(`✅ **𝖤𝖭𝖳𝖱𝖤𝖯𝖱𝖨𝖲𝖤 𝖠𝖢𝖧𝖤𝖳𝖤𝖤**\nVous êtes officiellement propriétaire de : **${BIZ_PRESETS[bizId].name}**.`, threadID, messageID);
+            }
+
+            if (secondary === "upgrade") {
+                let bizId = args[2]?.toLowerCase();
+                if (!bizId || !account.businesses[bizId]) return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇𝖾 𝗉𝗈𝗌𝗌é𝖽𝖾𝗓 𝗉𝖺𝗌 𝖼𝖾 𝖻𝗎𝗌𝗂𝗇𝖾𝗌𝗌.", threadID, messageID);
+
+                let currentLevel = account.businesses[bizId].level;
+                if (currentLevel >= 5) return api.sendMessage("❌ 𝖢𝖾𝗍𝗍𝖾 𝖾𝗇𝗍𝗋𝖾𝗉𝗋𝗂𝗌𝖾 𝖺 𝖺𝗍𝗍𝖾𝗂𝗇𝗍 𝗌𝗈𝗇 𝗇𝗂𝗏𝖾𝖺𝗎 𝗆𝖺𝗑𝗂𝗆𝗎𝗆 (𝟧).", threadID, messageID);
+
+                let upgradeCost = Math.floor(BIZ_PRESETS[bizId].price * 0.6 * currentLevel);
+                if (account.bankBalance < upgradeCost) return api.sendMessage(`❌ 𝖥𝗈𝗇𝖽𝗌 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍𝗌 𝖾𝗇 𝖻𝖺𝗇𝗊𝗎𝖾. Amélioration requiert **${fNum(upgradeCost)} 𝖮𝗋**.`, threadID, messageID);
+
+                account.bankBalance -= upgradeCost;
+                account.businesses[bizId].level += 1;
+
+                storage.logTransaction(account, "BIZ_UPGRADE", `Mise à niveau de ${BIZ_PRESETS[bizId].name} au niveau ${currentLevel + 1}.`);
+                storage.saveUserBankProfile(senderID, account);
+
+                return api.sendMessage(`✅ **𝖡𝖴𝖲𝖨𝖭𝖤𝖲𝖲 𝖠𝖬𝖤𝖫𝖨𝖮𝖱𝖤**\n**${BIZ_PRESETS[bizId].name}** passe au niveau **${currentLevel + 1}**.\nVos bénéfices par cycle augmentent.`, threadID, messageID);
+            }
+
+            if (secondary === "collect") {
+                let totalCollected = 0;
+                let minCooldown = 4 * 60 * 60 * 1000; // Cooldown fictif de 4h
+
+                for (let id in account.businesses) {
+                    let biz = account.businesses[id];
+                    if (now - biz.lastCollected >= minCooldown) {
+                        let cycles = Math.min(6, Math.floor((now - biz.lastCollected) / minCooldown)); // Limite stockage à 6 cycles max
+                        totalCollected += BIZ_PRESETS[id].revenue * biz.level * cycles;
+                        biz.lastCollected = now;
+                    }
+                }
+
+                if (totalCollected === 0) return api.sendMessage("⏳ 𝖵𝗈𝗌 𝖾𝗇𝗍𝗋𝖾𝗉𝗋𝗂𝗌𝖾𝗌 𝗇'𝗈𝗇𝗍 𝗉𝖺𝗌 𝖾𝗇𝖼𝗈𝗋𝖾 généré 𝖺𝗌𝗌𝖾𝗓 𝖽𝖾 𝗉𝗋𝗈𝖿𝗂𝗍𝗌. Réessayez 𝗉𝗅𝗎𝗌 𝗍𝖺𝗋𝖽.", threadID, messageID);
+
+                account.bankBalance += totalCollected;
+                account.totalEarnedFromBusiness += totalCollected;
+
+                storage.logTransaction(account, "BIZ_COLLECT", `Récolte des profits commerciaux : +${fNum(totalCollected)} Or.`);
+                storage.saveUserBankProfile(senderID, account);
+
+                return api.sendMessage(`💸 **𝖱𝖤𝖢𝖮𝖫𝖳𝖤 𝖢𝖮𝖬𝖬𝖤𝖱𝖢𝖨𝖠𝖫𝖤**\nVos infrastructures fictives rapportent **+${fNum(totalCollected)} 𝖮𝗋** sur votre compte courant.`, threadID, messageID);
+            }
+        }
+
+        // =========================================================================
+        // 🏠 SECTION 7 : PARC IMMOBILIER (LOYERS)
+        // =========================================================================
+        const PROP_PRESETS = {
+            "p1": { id: "p1", name: "𝖲𝗍𝗎𝖽𝗂𝗈 É𝖽𝗎𝖽𝗂𝖺𝗇𝗍 𝖱𝖯𝖦", price: 80000, rent: 1500 },
+            "p2": { id: "p2", name: "𝖠𝗉𝗉𝖺𝗋𝗍𝖾𝗆𝖾𝗇𝗍 𝖢𝖾𝗇𝗍𝗋𝖺𝗅", price: 220000, rent: 4200 },
+            "p3": { id: "p3", name: "𝖵𝗂𝗅𝗅𝖺 𝖺𝗏𝖾𝖼 𝖯𝗂𝗌𝖼𝗂𝗇𝖾", price: 600000, rent: 11000 },
+            "p4": { id: "p4", name: "𝖨𝗆𝗆𝖾𝗎𝖻𝗅𝖾 𝖽𝖾 𝖱é𝗌𝗂𝖽𝖾𝗇𝖼𝖾𝗌", price: 1800000, rent: 35000 },
+            "p5": { id: "p5", name: "Î𝗅𝖾 𝖯𝗋𝗂𝗏é𝖾 𝖯𝗋𝖾𝗆𝗂𝗎𝗆", price: 6000000, rent: 120000 }
+        };
+
+        if (primary === "property") {
+            if (!secondary || secondary === "list") {
+                let pList = `🏠 **𝖠𝖦𝖤𝖭𝖢𝖤 𝖨𝖬𝖬𝖮𝖡𝖨𝖫𝖨𝖤𝖱𝖤 𝖵𝖨𝖱𝖳𝖴𝖤𝖫𝖫𝖤**\n\n`;
+                for (let id in PROP_PRESETS) {
+                    let prop = PROP_PRESETS[id];
+                    let qtyOwned = account.properties[id]?.qty || 0;
+                    pList += `🔹 **${prop.name}** [\`${prop.id}\`]\n`;
+                    pList += `   Prix unitaire : **${fNum(prop.price)} 𝖮𝗋**\n`;
+                    pList += `   Loyers générés : **+${fNum(prop.rent)} 𝖮𝗋 /cycle**\n`;
+                    pList += `   Quantité en possession : **${qtyOwned}**\n`;
+                    pList += `────────────────────\n`;
+                }
+                pList += `💡 Commands : \`bank property buy <id>\` | \`bank property sell <id>\``;
+                return api.sendMessage(pList, threadID, messageID);
+            }
+
+            if (secondary === "buy") {
+                let propId = args[2]?.toLowerCase();
+                if (!propId || !PROP_PRESETS[propId]) return api.sendMessage("❌ 𝖨𝖣 𝗂𝗆𝗆𝗈𝖻𝗂𝗅𝗂𝖾𝗋 𝗂𝗇𝗏𝖺𝗅𝗂𝖽𝖾.", threadID, messageID);
+
+                let cost = PROP_PRESETS[propId].price;
+                if (account.bankBalance < cost) return api.sendMessage(`❌ 𝖲𝗈𝗅𝖽𝖾 𝗂𝗇𝗌𝗎𝖿𝖿𝗂𝗌𝖺𝗇𝗍 𝖾𝗇 𝖻𝖺𝗇𝗊𝗎𝖾. Achat requiert **${fNum(cost)} 𝖮𝗋**.`, threadID, messageID);
+
+                account.bankBalance -= cost;
+
+                if (!account.properties[propId]) {
+                    account.properties[propId] = { id: propId, qty: 0, lastCollected: now };
+                }
+                account.properties[propId].qty += 1;
+
+                storage.logTransaction(account, "PROP_BUY", `Acquisition immobilière : ${PROP_PRESETS[propId].name}.`);
+                storage.saveUserBankProfile(senderID, account);
+
+                return api.sendMessage(`✅ **𝖠𝖢𝖰𝖴𝖨𝖲𝖨𝖳𝖨𝖮𝖭 𝖱𝖤𝖴𝖲𝖲𝖨𝖤**\nVous ajoutez un(e) **${PROP_PRESETS[propId].name}** à votre patrimoine.`, threadID, messageID);
+            }
+
+            if (secondary === "sell") {
+                let propId = args[2]?.toLowerCase();
+                if (!propId || !account.properties[propId] || account.properties[propId].qty <= 0) {
+                    return api.sendMessage("❌ 𝖵𝗈𝗎𝗌 𝗇𝖾 𝗉𝗈𝗌𝗌é𝖽𝖾𝗓 𝖺𝗎𝖼𝗎𝗇 𝖻𝗂𝖾𝗇 correspondant.", threadID, messageID);
+                }
+
+                // Revend à 75% du prix neuf (Perte de valeur d'usage)
+                let refund = Math.floor(PROP_PRESETS[propId].price * 0.75);
+
+                account.properties[propId].qty -= 1;
+                account.bankBalance += refund;
+
+                if (account.properties[propId].qty === 0) delete account.properties[propId];
+
+                storage.logTransaction(account, "PROP_SELL", `Vente d'une propriété : ${PROP_PRESETS[propId].name}.`);
+                storage.saveUserBankProfile(senderID, account);
+
+                return api.sendMessage(`✅ **𝖡𝖨𝖤𝖭 𝖵𝖤𝖭𝖣𝖴**\nPropriété cédée au marché immobilier virtuel pour **+${fNum(refund)} 𝖮𝗋** sur votre compte.`, threadID, messageID);
+            }
+        }
+
+        if (primary === "rent") {
+            let totalRent = 0;
+            let rentCooldown = 6 * 60 * 60 * 1000; // Cycle de loyer (6 heures)
+
+            for (let id in account.properties) {
+                let prop = account.properties[id];
+                if (now - prop.lastCollected >= rentCooldown) {
+                    let cycles = Math.min(4, Math.floor((now - prop.lastCollected) / rentCooldown)); // Maximum 4 cycles stockés
+                    totalRent += PROP_PRESETS[id].rent * prop.qty * cycles;
+                    prop.lastCollected = now;
+                }
+            }
+
+            if (totalRent === 0) return api.sendMessage("⏳ 𝖠𝗎𝖼𝗎𝗇 𝗅𝗈𝗒𝖾𝗋 𝗇'𝖾𝗌𝗍 𝖽𝗂𝗌𝗉𝗈𝗇𝗂𝖻𝗅𝖾 à 𝗅𝖺 𝖼𝗈𝗅𝗅𝖾𝖼𝗍𝖾 𝗉𝗈𝗎𝗋 𝗅𝖾 𝗆𝗈𝗆𝖾𝗇𝗍.", threadID, messageID);
+
+            account.bankBalance += totalRent;
+            account.totalEarnedFromRent += totalRent;
+
+            storage.logTransaction(account, "PROP_RENT", `Perception des loyers : +${fNum(totalRent)} Or.`);
+            storage.saveUserBankProfile(senderID, account);
+
+            return api.sendMessage(`🏠 **𝖢𝖮𝖫𝖫𝖤𝖢𝖳𝖤 𝖣𝖤𝖲 𝖫𝖮𝖴𝖤𝖱𝖲**\nVotre parc immobilier fictif génère **+${fNum(totalRent)} 𝖮𝗋** de revenus passifs fonciers.`, threadID, messageID);
+        }
+
+        // Transmission globale du contexte mis à jour
+        global.bankEngine.account = account;
+        // =========================================================================
+        // 🏴‍☠️ SECTION 8 : "BANK ROB" — MÉCANIQUE PvP ÉCONOMIQUE FICTIVE
+        // =========================================================================
+        if (primary === "rob") {
+            let targetID = null;
+            if (event.type === "message_reply") {
+                targetID = event.messageReply.senderID;
+            } else if (Object.keys(event.mentions).length > 0) {
+                targetID = Object.keys(event.mentions)[0];
+            } else if (args[1] && !isNaN(args[1])) {
+                targetID = args[1];
+            }
+
+            if (!targetID) return api.sendMessage("💡 𝖴𝗌𝖺𝗀𝖾 : 𝖬𝖾𝗇𝗍𝗂𝗈𝗇𝗇𝖾𝗓 𝗎𝗇 𝗃𝗈𝗎𝖾𝗎𝗋 𝗈𝗎 𝗋𝖾𝗉𝗈𝗇𝖽𝖾𝗓 à 𝗌𝗈𝗇 𝗆𝖾𝗌𝗌𝖺𝗀𝖾 : `𝖻𝖺𝗇𝗄 𝗋𝗈𝖻 <@𝗎𝗌𝖾rer>`", threadID, messageID);
+            if (targetID === senderID) return api.sendMessage("❌ 𝖨𝗆𝗉𝗈𝗌𝗌𝗂𝖻𝗅𝖾 𝖽𝖾 𝗏𝗈𝗎𝗌 𝗏𝗈𝗅𝖾𝗋 𝗏𝗈𝗎𝗌-𝗆ê𝗆𝖾.", threadID, messageID);
+
+            // Cooldown de 12 heures pour l'attaquant
+            const robCooldown = 12 * 60 * 60 * 1000;
+            let lastRob = account.robberyState?.lastRobAt || 0;
+            if (now - lastRob < robCooldown) {
+                let hoursLeft = Math.ceil((robCooldown - (now - lastRob)) / (1000 * 60 * 60));
+                return api.sendMessage(`⏳ 𝖵𝗈𝗌 𝖼𝗈𝗇𝗍𝖺𝖼𝗍𝗌 𝖽𝖺𝗇𝗌 𝗅'𝗈𝗆𝖻𝗋𝖾 𝗌𝗈𝗇𝗍 𝗈𝖼𝖼𝗎𝗉é𝗌. 𝖱𝖾𝗏𝖾𝗇𝖾𝗓 𝖽𝖺𝗇𝗌 **${hoursLeft} 𝗁𝖾𝗎𝗋𝖾(𝗌)**.`, threadID, messageID);
+            }
+
+            // Récupération de la cible
+            const targetName = global.data?.allUserData?.[targetID]?.name || `Cible #${targetID.slice(-4)}`;
+            let targetCash = global.data && global.data.allUserData?.[targetID] ? (global.data.allUserData[targetID].money || 0) : 0;
+            const targetAccount = storage.getUserBankProfile(targetID, targetName);
+
+            // Anti-abus : Vérification des protections et des soldes minimums
+            if (now < (targetAccount.robberyState?.shieldUntil || 0)) {
+                return api.sendMessage(`🛡️ **𝖠𝖳𝖳𝖠𝖰𝖴𝖤 𝖡𝖫𝖮𝖰𝖴𝖤𝖤**\n**${targetName}** possède un bouclier actif suite à un récent incident fictif.`, threadID, messageID);
+            }
+            if (targetCash < 5000) {
+                return api.sendMessage("❌ **𝖢𝖨𝖡𝖫𝖤 𝖨𝖭𝖳𝖤𝖱𝖤𝖲𝖲𝖠𝖭𝖳𝖤**\n𝖢𝖾𝗍 𝗎𝗍𝗂𝗅𝗂𝗌𝖺𝗍𝖾𝗎𝗋 𝖾𝗌𝗍 𝗋𝗎𝗂𝗇é. Sa fortune en poche est trop basse pour mériter une opération.", threadID, messageID);
+            }
+            if (walletCash < 2500) {
+                return api.sendMessage("❌ 𝖨𝗅 𝗏𝗈𝗎𝗌 𝖿𝖺𝗎𝗍 𝖺𝗎 𝗆𝗈𝗂𝗇𝗌 **𝟤 𝟧𝟢𝟢 𝖮𝗋** 𝖾𝗇 liquide pour financer les frais de l'opération.", threadID, messageID);
+            }
+
+            account.robberyState.lastRobAt = now;
+            account.robberyState.lastRobTarget = targetID;
+
+            // Détermination des probabilités (Équilibre MMORPG : 45% de réussite)
+            let success = Math.random() < 0.45;
+
+            if (success) {
+                // Vol d'une fraction aléatoire du Cash de la cible (entre 10% et 25%)
+                let stealPercent = 0.10 + (Math.random() * 0.15);
+                let stolenAmount = Math.floor(targetCash * stealPercent);
+
+                // Application d'un abattement si la cible possède des réserves dans le Vault
+                if (targetAccount.vaultBalance > 1000000) {
+                    stolenAmount = Math.floor(stolenAmount * 0.85); // 15% de pertes en moins grâce au coffre
+                }
+
+                targetCash -= stolenAmount;
+                walletCash += stolenAmount;
+
+                account.robberyState.robSuccess += 1;
+                account.totalStolen += stolenAmount;
+                targetAccount.totalLostToRob += stolenAmount;
+                
+                // Activation d'un bouclier temporaire de 2 heures pour la victime
+                targetAccount.robberyState.shieldUntil = now + (2 * 60 * 60 * 1000);
+
+                if (account.robberyState.robSuccess >= 5 && !account.achievements.includes("𝖮𝗆𝖻𝗋𝖾 𝖤𝗅𝗎𝗌𝗂𝗏𝖾")) {
+                    account.achievements.push("𝖮𝗆𝖻𝗋𝖾 𝖤𝗅𝗎𝗌𝗂𝗏𝖾");
+                }
+
+                syncWalletCash(senderID, walletCash);
+                syncWalletCash(targetID, targetCash);
+
+                storage.logTransaction(account, "ROB_SUCCESS", `Infiltration réussie chez ${targetName} : +${fNum(stolenAmount)} Or.`);
+                storage.logTransaction(targetAccount, "ROB_VICTIM", `Dépouillé par ${account.name} : -${fNum(stolenAmount)} Or. Bouclier activé.`);
+
+                storage.saveUserBankProfile(senderID, account);
+                storage.saveUserBankProfile(targetID, targetAccount);
+
+                return api.sendMessage(`🏴‍☠️ **𝖨𝖭𝖥𝖨𝖫𝖳𝖱𝖠𝖳𝖨𝖮𝖭 𝖱𝖤𝖴𝖲𝖲𝖨𝖤**\nVous surprenez les gardes de **${targetName}** et dérobez **+${fNum(stolenAmount)} 𝖮𝗋** dans son portefeuille virtuel.`, threadID, messageID);
+            } else {
+                // Pénalité financière fixe payée aux forces de sécurité de la cible
+                let penalty = 5000;
+                walletCash = Math.max(0, walletCash - penalty);
+                targetCash += penalty;
+
+                account.robberyState.robFail += 1;
+                account.creditScore = Math.max(300, account.creditScore - 30); // L'échec dégrade le score de confiance
+
+                syncWalletCash(senderID, walletCash);
+                syncWalletCash(targetID, targetCash);
+
+                storage.logTransaction(account, "ROB_FAIL", `Échec du raid chez ${targetName}. Amende de ${fNum(penalty)} Or.`);
+                storage.logTransaction(targetAccount, "ROB_DEFEND", `Les systèmes de sécurité ont intercepté ${account.name}. Prime de +${fNum(penalty)} Or perçue.`);
+
+                storage.saveUserBankProfile(senderID, account);
+                storage.saveUserBankProfile(targetID, targetAccount);
+
+                return api.sendMessage(`🚨 **𝖤𝖢𝖧𝖤𝖢 𝖣𝖤 𝖫'𝖮𝖯𝖤𝖱𝖠𝖳𝖨𝖮𝖭**\nLes alarmes se déclenchent ! Vous fuyez en abandonnant une amende de **-${fNum(penalty)} 𝖮𝗋** versée à la victime. Votre indice de crédit chute.`, threadID, messageID);
+            }
+        }
+
+        // =========================================================================
+        // 🏆 SECTION 9 : SUCCÈS, CALCULS DE NETWORTH & CLASSEMENT GLOBAL
+        // =========================================================================
+        if (primary === "achievements") {
+            if (!account.achievements || account.achievements.length === 0) {
+                return api.sendMessage("🏅 **𝖲𝖴𝖢𝖢𝖤𝖲 𝖵𝖨𝖱𝖳𝖴𝖤𝖫𝖲**\nVous n'avez pas encore débloqué de distinctions financières.", threadID, messageID);
+            }
+            let achMsg = `🏅 **𝖳𝖱𝖮𝖯𝖧𝖤𝖤𝖲 𝖤𝖢𝖮𝖭𝖮𝖬𝖨𝖥𝖴𝖤𝖲**\n\n`;
+            account.achievements.forEach(ach => achMsg += `  🏆 **${ach}**\n`);
+            return api.sendMessage(achMsg, threadID, messageID);
+        }
+
+        if (primary === "networth") {
+            let bizVal = 0; let propVal = 0; let investVal = 0;
+            for (let id in account.businesses) bizVal += (BIZ_PRESETS[id]?.price || 0) * account.businesses[id].level;
+            for (let id in account.properties) propVal += (PROP_PRESETS[id]?.price || 0) * account.properties[id].qty;
+            if (account.portfolio.stocks) {
+                for (let id in account.portfolio.stocks) investVal += account.portfolio.stocks[id].qty * (market.stocks[id]?.price || 0);
+            }
+            if (account.portfolio.crypto) {
+                for (let id in account.portfolio.crypto) investVal += account.portfolio.crypto[id].qty * (market.cryptos[id]?.price || 0);
+            }
+
+            let netTotal = walletCash + account.bankBalance + account.vaultBalance + bizVal + propVal + investVal;
+            if (account.loan.hasActiveLoan) netTotal -= account.loan.remainingDebt;
+
+            let nwMsg = `💎 **𝖠𝖭𝖠𝖫𝖸𝖲𝖤 𝖯𝖠𝖳𝖱𝖨𝖬𝖮𝖨𝖭𝖨𝖠𝖫𝖤**\n\n`;
+            nwMsg += `💵 Liquidités (Poche) : **${fNum(walletCash)}**\n`;
+            nwMsg += `💳 Épargne Bancaire   : **${fNum(account.bankBalance)}**\n`;
+            nwMsg += `🔐 Réserves Sécurisées : **${fNum(account.vaultBalance)}**\n`;
+            nwMsg += `🏭 Parts Commerciales  : **${fNum(bizVal)}**\n`;
+            nwMsg += `🏠 Actifs Immobiliers  : **${fNum(propVal)}**\n`;
+            nwMsg += `📈 Portefeuille Marché : **${fNum(investVal)}**\n`;
+            if (account.loan.hasActiveLoan) nwMsg += `📉 Passifs (Dettes Dûes) : **-${fNum(account.loan.remainingDebt)}**\n`;
+            nwMsg += `────────────────────\n`;
+            nwMsg += `💎 **𝖵𝖠𝖫𝖤𝖴𝖱 𝖭𝖤𝖳𝖳𝖤 𝖤𝖲𝖳𝖨𝖬𝖤𝖤** : **${fNum(netTotal)} 𝖮𝗋**`;
+            return api.sendMessage(nwMsg, threadID, messageID);
+        }
+
+        if (primary === "leaderboard") {
+            const allProfiles = storage.getUsers();
+            let leaderboardData = [];
+
+            for (let id in allProfiles) {
+                let prof = allProfiles[id];
+                let cash = global.data?.allUserData?.[id]?.money || 0;
+                let nw = cash + prof.bankBalance + prof.vaultBalance;
+                if (prof.loan?.hasActiveLoan) nw -= prof.loan.remainingDebt;
+
+                leaderboardData.push({ name: prof.name, netWorth: nw });
+            }
+
+            leaderboardData.sort((a, b) => b.netWorth - a.netWorth);
+            let topEntries = leaderboardData.slice(0, 10);
+
+            let lbMsg = `🏆 **𝖢𝖫𝖠𝖲𝖲𝖤𝖬𝖤𝖭𝖳 𝖣𝖤𝖲 𝖬𝖨𝖫𝖫𝖨𝖮𝖭𝖭𝖠𝖨𝖱𝖤𝖲 (𝖭𝖤𝖳𝖶𝖮𝖱𝖳𝖧)**\n\n`;
+            topEntries.forEach((entry, idx) => {
+                let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "🔹";
+                lbMsg += `${medal} #${idx + 1} **${entry.name}** — **${fNum(entry.netWorth)} 𝖮𝗋**\n`;
+            });
+            return api.sendMessage(lbMsg, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 📊 SECTION 10 : "BANK STATS" — FALLBACK TEXTE PREMIUM STATISTIQUES
+        // =========================================================================
+        if (primary === "stats") {
+            let bizVal = 0; let propVal = 0;
+            let bizCount = 0; let propCount = 0;
+            
+            for (let id in account.businesses) {
+                bizVal += (BIZ_PRESETS[id]?.price || 0) * account.businesses[id].level;
+                bizCount += 1;
+            }
+            for (let id in account.properties) {
+                propVal += (PROP_PRESETS[id]?.price || 0) * account.properties[id].qty;
+                propCount += account.properties[id].qty;
+            }
+
+            let netTotal = walletCash + account.bankBalance + account.vaultBalance + bizVal + propVal;
+            if (account.loan.hasActiveLoan) netTotal -= account.loan.remainingDebt;
+
+            let rankTitle = "Novice Financier";
+            if (netTotal > 10000000) rankTitle = "Légende de WallStreet";
+            else if (netTotal > 2500000) rankTitle = "Magnat de l'Empire";
+            else if (netTotal > 500000) rankTitle = "Investisseur Émérite";
+
+            let statsMsg = `╭───────────────────────────────────────╮\n`;
+            statsMsg += `│ 📊 **𝖳𝖠𝖡𝖫𝖤𝖠𝖴 𝖣𝖤 𝖡𝖮𝖱𝖣 𝖯𝖱𝖤𝖬𝖨𝖴𝖬**\n`;
+            statsMsg += `├───────────────────────────────────────┤\n`;
+            statsMsg += `│ 👤 Titulaire  : **${account.name}**\n`;
+            statsMsg += `│ 🎖️ Rang Tycoon : [**${rankTitle}**]\n`;
+            statsMsg += `├───────────────────────────────────────┤\n`;
+            statsMsg += `│ 💵 Wallet     : **${fNum(walletCash)} 𝖮𝗋**\n`;
+            statsMsg += `│ 💳 Banque     : **${fNum(account.bankBalance)} 𝖮𝗋**\n`;
+            statsMsg += `│ 🔐 Vault      : **${fNum(account.vaultBalance)} 𝖮𝗋**\n`;
+            statsMsg += `│ 📉 Crédit     : **${account.creditScore} pts**\n`;
+            statsMsg += `├───────────────────────────────────────┤\n`;
+            statsMsg += `│ 🏢 Business   : **${bizCount} possédé(s)**\n`;
+            statsMsg += `│ 🏠 Immobilier : **${propCount} propriété(s)**\n`;
+            statsMsg += `├───────────────────────────────────────┤\n`;
+            statsMsg += `│ 🏴‍☠️ Raids Réussis  : **${account.robberyState?.robSuccess || 0}**\n`;
+            statsMsg += `│ 💸 Total Volé     : **${fNum(account.totalStolen || 0)} 𝖮𝗋**\n`;
+            statsMsg += `├───────────────────────────────────────┤\n`;
+            statsMsg += `│ 💎 Fortune Nette : **${fNum(netTotal)} 𝖮𝗋**\n`;
+            statsMsg += `╰───────────────────────────────────────╯`;
+            return api.sendMessage(statsMsg, threadID, messageID);
+        }
+    }
+};
