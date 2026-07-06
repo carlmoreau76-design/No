@@ -32,7 +32,7 @@ module.exports = {
     description: "🌸 Génère une image de waifu selon la catégorie choisie",
     category: "image",
     guide: {
-      fr: "{p}{n} [catégorie] : Affiche une image.\nCatégories valides : maid, waifu, marin-kitagawa, mori-calliope, raiden-shogun, kamisato-ayaka, uniform, selfies"
+      fr: "{p}{n} [catégorie] : Affiche une image.\nCatégories valides : maid, ecchi, ero, oral, milf, paizuri, oppai, kamisato-ayaka, ass, waifu, marin-kitagawa, mori-calliope, hentai, raiden-shogun, kamisato-ayaka, uniform, selfies"
     }
   },
 
