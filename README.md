@@ -17,7 +17,13 @@
 ---
 
 <p align="center">
-  <img src="https://i.ibb.co/m5h7Dq5B/image.jpg" width="100%">
+  <a href="https://git.io/typing-svg">
+    <img src="https://readme-typing-svg.demolab.com?font=Dancing+Script&size=60&pause=1000&color=FF69B4&center=true&vCenter=true&width=1000&height=140&lines=MIYAMURA+EDITION;Miyamura+x+Hori+%F0%9F%92%96;Always+With+You..." alt="Typing SVG Miyamura" />
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://i.ibb.co/m5h7Dq5B/image.jpg" width="750" style="border-radius: 15px; box-shadow: 0px 4px 15px rgba(255, 105, 180, 0.4);" alt="Shade Miyamura Banner"/>
 </p>
 
 ## 🌸 Shade Hori Bot
@@ -52,7 +58,7 @@ Choisissez votre hébergeur préféré pour exécuter **Shade Hori Bot** instant
 | **Render** | <a href="https://dashboard.render.com" target="_blank"><img src="https://img.shields.io/badge/DEPLOY_TO-RENDER-ff69b4?style=for-the-badge&logo=render&logoColor=white" alt="Deploy to Render"/></a> |
 | **Replit** | <a href="https://repl.it/github/3voldi/Flemme" target="_blank"><img alt="Deploy to Replit" src="https://img.shields.io/badge/REPLIT-orange?style=for-the-badge&logo=replit&logoColor=white"/></a> |
 | **Koyeb** | <a href="https://app.koyeb.com/auth/signin" target="_blank"><img alt="Deploy to Koyeb" src="https://img.shields.io/badge/KOYEB-blue?style=for-the-badge&logo=koyeb&logoColor=white"/></a> |
-| **Railway** | <a href="https://railway.app/new" target="_blank"><img alt="Deploy to Railway" src="https://img.shields.io/badge/RAILWAY-black?style=for-the-badge&logo=railway"/></a> |
+| **Railway** | <a href="https://railway.app/new" target="_blank"><img src="https://img.shields.io/badge/RAILWAY-black?style=for-the-badge&logo=railway" alt="Deploy to Railway"/></a> |
 
 ### 🌐 Alternatives secondaires
 
