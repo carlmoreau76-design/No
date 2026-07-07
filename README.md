@@ -17,7 +17,7 @@
 ---
 
 <p align="center">
-  <img src="https://imgur.com/a/61gxV8z" width="100%">
+  <img src="https://i.imgur.com/61gxV8z.jpg" width="100%">
 </p>
 
 ## 🌸 Shade Hori Bot
@@ -63,14 +63,14 @@ Choisissez votre hébergeur préféré pour exécuter **Shade Hori Bot** instant
 
 ## 💎 Commandes & Modules Spéciaux
 
-| 🔮 Module | 📝 Fonctionnalité & Description | 🔑 restriction || :--- | :--- | :--- |
+| 🔮 Module | 📝 Fonctionnalité & Description | 🔑 Restriction |
 | :--- | :--- | :--- |
-| `pinterest` | Catalogue d'images Canvas interactif (10 miniatures, pagination dynamique) | Tout le monde |
-| `shadey play` | Écouter un son de la playlist via son numéro de liste | Tout le monde |
-| `shadey list` | Afficher l'index complet de la playlist audio | Tout le monde |
-| `shadey add` | Ajouter une chanson via format : `Titre \| Lien_MP3` | Admin Unique |
-| `shadey remove` | Menu de suppression interactif de musiques | Admin Unique |
-| `paire` | Calculateur de couple amoureux et montage photo des avatars | Tout le monde |
+| `pinterest` | Catalogue d'images Canvas interactif (10 miniatures, pagination dynamique) | 👤 Tout le monde |
+| `shadey play` | Écouter un son de la playlist via son numéro de liste | 👤 Tout le monde |
+| `shadey list` | Afficher l'index complet de la playlist audio | 👤 Tout le monde |
+| `shadey add` | Ajouter une chanson via le format : `Titre \| Lien_MP3` | 👑 Admin Unique |
+| `shadey remove` | Menu de suppression interactif pour retirer des musiques | 👑 Admin Unique |
+| `paire` | Calculateur de couple amoureux et montage photo des avatars | 👤 Tout le monde |
 
 ---
 
