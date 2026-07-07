@@ -1,270 +1,232 @@
+/**
+ * @author Zetsu & Shade
+ * @title Pinterest Catalogue Premium
+ * @name pinterest
+ * @class pinterest
+ * @version 2.0.0
+ * @description Recherche des images sur Pinterest sous forme de catalogue Canvas interactif par Reply.
+ * @usage pinterest [terme]
+ * @alt pin
+ */
+
+const { createCanvas, loadImage } = require("canvas");
 const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
-const { createCanvas, loadImage } = require("canvas");
 
-// URL de ton fichier de configuration sur GitHub
-const githubUrl = "https://raw.githubusercontent.com/Saim-x69x/sakura/main/ApiUrl.json";
+// Stockage temporaire des sessions de recherche en mémoire vive
+global.pinSessions = global.pinSessions || new Map();
 
-// Fonction pour récupérer l'URL de base de l'API
-async function getBaseApiUrl() {
-  const res = await axios.get(githubUrl);
-  return res.data.apiv3; // Récupère l'URL de ton API (ex: https://votre-api.com)
+async function createCatalogueCanvas(imagesUrls, query, page) {
+    // Grille de 2 colonnes x 5 lignes = 10 images
+    const canvas = createCanvas(800, 1600);
+    const ctx = canvas.getContext("2d");
+
+    // Fond sombre style Hori / Épuré
+    ctx.fillStyle = "#0d0e12";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // En-tête du catalogue
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 32px sans-serif";
+    ctx.fillText(`📌 CATALOGUE PINTEREST : ${query.toUpperCase()}`, 40, 60);
+    
+    ctx.fillStyle = "#6b7280";
+    ctx.font = "20px sans-serif";
+    ctx.fillText(`Page ${page} • Répondez avec le [Numéro] ou "page [N°]"`, 40, 95);
+
+    // Dessin de la grille de sous-images
+    const startX = 40, startY = 140;
+    const itemWidth = 340, itemHeight = 260;
+    const gapX = 40, gapY = 30;
+
+    const loadedImages = await Promise.all(
+        imagesUrls.map(url => loadImage(url).catch(() => null))
+    );
+
+    for (let i = 0; i < 10; i++) {
+        const row = Math.floor(i / 2);
+        const col = i % 2;
+        const x = startX + col * (itemWidth + gapX);
+        const y = startY + row * (itemHeight + gapY);
+
+        // Conteneur de l'image
+        ctx.fillStyle = "#161820";
+        ctx.fillRect(x, y, itemWidth, itemHeight);
+
+        if (loadedImages[i]) {
+            // Dessiner l'image ajustée (Center Crop simulé)
+            ctx.drawImage(loadedImages[i], x, y, itemWidth, itemHeight);
+        } else {
+            ctx.fillStyle = "#374151";
+            ctx.font = "18px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("Impossible de charger", x + itemWidth / 2, y + itemHeight / 2);
+            ctx.textAlign = "left";
+        }
+
+        // Pastille de numérotation néon en haut à gauche de chaque sous-photo
+        ctx.fillStyle = "#ef4444";
+        ctx.fillRect(x + 10, y + 10, 45, 45);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 22px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(i + 1), x + 32, y + 32);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+    }
+
+    const cachePath = path.join(__dirname, "cache", `pin_cat_${Date.now()}.png`);
+    fs.ensureDirSync(path.dirname(cachePath));
+    fs.writeFileSync(cachePath, canvas.toBuffer("image/png"));
+    return cachePath;
 }
 
 module.exports = {
-  config: {
-    name: "pin",
-    version: "4.5 Gallery",
-    author: "Shade × Gemini",
-    countDown: 5,
-    role: 0,
-    shortDescription: "Pinterest Gallery Grid",
-    longDescription: "Affiche une grille verticale d'images provenant de Pinterest avec navigation par page et sélection par numéro.",
-    category: "image",
-    guide: "{p}pin [recherche]"
-  },
+    config: {
+        name: "pin",
+        aliases: ["pinterest"],
+        version: "2.0.0",
+        author: "Zetsu & Shade",
+        countDown: 5,
+        role: 0,
+        category: "image",
+        guide: {
+            fr: "{p}{n} <recherche>\nExemple: {p}{n} naruto"
+        }
+    },
 
-  onStart: async function ({ message, args, event }) {
-    const query = args.join(" ");
+    onStart: async function ({ api, event, message, args }) {
+        const { threadID, messageID, senderID } = event;
+        const query = args.join(" ");
 
-    if (!query) {
-      return message.reply("⚠️ Veuillez spécifier un terme de recherche.\nExemple : !pin chat");
-    }
-
-    const loading = await message.reply("⏳ Recherche et génération de la galerie...");
-
-    try {
-      // 1. Récupération dynamique de ton URL d'API depuis GitHub
-      const baseApiUrl = await getBaseApiUrl();
-      
-      // 2. Construction de la nouvelle URL de recherche Pinterest
-      // On extrait l'origine (domaine) pour lui ajouter la route Pinterest requise par ton script
-      const urlObj = new URL(baseApiUrl);
-      const apiUrl = `${urlObj.origin}/api/pinterest?query=${encodeURIComponent(query)}&limit=100`;
-
-      const response = await axios.get(apiUrl, { timeout: 10000 });
-
-      let allImages = [];
-      if (Array.isArray(response.data)) {
-        allImages = response.data;
-      } else if (response.data && Array.isArray(response.data.results)) {
-        allImages = response.data.results;
-      } else if (response.data && typeof response.data === 'object') {
-        allImages = Object.values(response.data).filter(val => typeof val === 'string' && val.startsWith('http'));
-      }
-
-      if (!allImages || allImages.length === 0) {
-        await message.unsend(loading.messageID);
-        return message.reply("❌ Aucun résultat trouvé pour cette recherche.");
-      }
-
-      // Nettoyer la liste des liens
-      allImages = allImages.filter(Boolean);
-
-      // Génération de la première page
-      await this.sendGridPage({ message, event, query, allImages, currentPage: 1, loadingId: loading.messageID });
-
-    } catch (e) {
-      console.error(e);
-      if (loading?.messageID) {
-        await message.unsend(loading.messageID).catch(() => {});
-      }
-      return message.reply("❌ Une erreur est survenue lors de la communication avec l'API Pinterest.");
-    }
-  },
-
-  sendGridPage: async function ({ message, event, query, allImages, currentPage, loadingId }) {
-    const cache = path.join(__dirname, "cache");
-    await fs.ensureDir(cache);
-
-    const imagesPerPage = 20; 
-    const startIndex = (currentPage - 1) * imagesPerPage;
-    const endIndex = startIndex + imagesPerPage;
-    
-    const pageImages = allImages.slice(startIndex, endIndex);
-
-    if (pageImages.length === 0) {
-      if (loadingId) await message.unsend(loadingId);
-      return message.reply("📋 Fin des images disponibles pour cette recherche.");
-    }
-
-    // Configuration géométrique de la grille verticale (4 colonnes x 5 lignes = 20 images)
-    const cols = 4;
-    const rows = Math.ceil(pageImages.length / cols);
-    
-    const cellWidth = 240;   // Proportion verticale (debout)
-    const cellHeight = 360;  
-    const padding = 15;      
-    
-    const headerHeight = 90; 
-    const footerHeight = 30; 
-
-    const canvasWidth = (cellWidth * cols) + (padding * (cols + 1));
-    const canvasHeight = headerHeight + (cellHeight * rows) + (padding * (rows + 1)) + footerHeight;
-
-    const canvas = createCanvas(canvasWidth, canvasHeight);
-    const ctx = canvas.getContext("2d");
-
-    // Fond arrière Noir Uni Strict
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Titre de l'interface
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 30px Arial";
-    ctx.fillText(`🔍 RECHERCHE : ${query.toUpperCase()}`, padding, 50);
-    
-    ctx.fillStyle = "#aaaaaa";
-    ctx.font = "22px Arial";
-    ctx.textAlign = "right";
-    const totalPages = Math.ceil(allImages.length / imagesPerPage);
-    ctx.fillText(`Page ${currentPage} / ${totalPages}`, canvasWidth - padding, 50);
-    ctx.textAlign = "left"; 
-
-    const downloadedPaths = [];
-
-    // Téléchargement et intégration des vignettes dans la grille
-    for (let i = 0; i < pageImages.length; i++) {
-      const imgUrl = pageImages[i];
-      const filePath = path.join(cache, `pin_thumb_${Date.now()}_p${currentPage}_${i}.jpg`);
-
-      const colIndex = i % cols;
-      const rowIndex = Math.floor(i / cols);
-      
-      const x = padding + colIndex * (cellWidth + padding);
-      const y = headerHeight + padding + rowIndex * (cellHeight + padding);
-
-      try {
-        const res = await axios({ url: imgUrl, responseType: "stream", timeout: 5000 });
-        await new Promise((resolve, reject) => {
-          const stream = fs.createWriteStream(filePath);
-          res.data.pipe(stream);
-          stream.on("finish", resolve);
-          stream.on("error", reject);
-        });
-
-        downloadedPaths.push(filePath);
-        const img = await loadImage(filePath);
-
-        // Découpe intelligente centrée pour respecter le ratio vertical sans déformer l'image originale
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(x, y, cellWidth, cellHeight);
-        ctx.clip();
-
-        const imgRatio = img.width / img.height;
-        const cellRatio = cellWidth / cellHeight;
-        let drawWidth, drawHeight, offsetX, offsetY;
-
-        if (imgRatio > cellRatio) {
-          drawHeight = cellHeight;
-          drawWidth = cellHeight * imgRatio;
-          offsetX = x - (drawWidth - cellWidth) / 2;
-          offsetY = y;
-        } else {
-          drawWidth = cellWidth;
-          drawHeight = cellWidth / imgRatio;
-          offsetX = x;
-          offsetY = y - (drawHeight - cellHeight) / 2;
+        if (!query) {
+            return message.reply("❌ Veuillez entrer un mot-clé pour lancer la recherche interactive.");
         }
 
-        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-        ctx.restore();
+        // On demande 30 résultats au total à l'API pour pouvoir gérer les pages (3 pages de 10)
+        const apiUrl = `https://zetbot-page.onrender.com/api/pinterest?query=${encodeURIComponent(query)}&limit=30`;
 
-        // Contour de délimitation de la case
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, cellWidth, cellHeight);
+        try {
+            message.reply("🔍 Génération du catalogue de miniatures en cours...");
 
-        // Badge du numéro
-        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-        ctx.fillRect(x + 8, y + 8, 45, 45);
-        
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 24px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(`${i + 1}`, x + 30, y + 38);
-        ctx.textAlign = "left"; 
+            const response = await axios.get(apiUrl);
+            if (!response.data.status || !response.data.pins || response.data.pins.length === 0) {
+                return message.reply("❌ Aucun résultat trouvé pour cette recherche.");
+            }
 
-      } catch (err) {
-        downloadedPaths.push(null);
-        ctx.fillStyle = "#1c1c1c";
-        ctx.fillRect(x, y, cellWidth, cellHeight);
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-        ctx.strokeRect(x, y, cellWidth, cellHeight);
-      }
+            const allPins = response.data.pins;
+            const pageUrls = allPins.slice(0, 10).map(p => p.image);
+
+            const imgPath = await createCatalogueCanvas(pageUrls, query, 1);
+
+            return api.sendMessage({
+                body: `📸 **𝖢𝖠𝖳𝖠𝖫𝖮𝖦𝖴𝖤 𝖯𝖨𝖭𝖳𝖤𝖱𝖤𝖲𝖳**\n\n💬 **Instructions :**\n• Répondez avec un chiffre de \`1\` à \`10\` pour recevoir la photo seule en HD.\n• Répondez \`page 2\` ou \`page 3\` pour faire défiler la liste.`,
+                attachment: fs.createReadStream(imgPath)
+            }, threadID, (err, info) => {
+                if (!err) {
+                    global.pinSessions.set(info.messageID, {
+                        author: senderID,
+                        query: query,
+                        allPins: allPins,
+                        currentPage: 1
+                    });
+                }
+                if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+            }, messageID);
+
+        } catch (error) {
+            console.error(error);
+            return message.reply("❌ Une erreur est survenue lors de la communication avec le serveur Pinterest.");
+        }
+    },
+
+    onReply: async function ({ api, event, Reply, message }) {
+        const { senderID, threadID, messageID, body } = event;
+        const session = global.pinSessions.get(Reply.messageID);
+
+        if (!session) return;
+        if (senderID !== session.author) return;
+
+        const input = body?.trim().toLowerCase();
+
+        // ---- LOGIQUE DE NAVIGATION DE PAGES (Scroller) ----
+        if (input.startsWith("page ")) {
+            const targetPage = parseInt(input.split(" ")[1]);
+            if (isNaN(targetPage) || targetPage < 1 || targetPage > 3) {
+                return message.reply("❌ Page invalide. Le catalogue comprend les pages 1, 2 et 3.");
+            }
+
+            const startIdx = (targetPage - 1) * 10;
+            const endIdx = startIdx + 10;
+            const pagePins = session.allPins.slice(startIdx, endIdx);
+
+            if (pagePins.length === 0) {
+                return message.reply("❌ Plus aucune image disponible pour cette page.");
+            }
+
+            // Nettoyer l'ancien catalogue visuel
+            try { api.unsendMessage(Reply.messageID); } catch(e){}
+
+            session.currentPage = targetPage;
+            const pageUrls = pagePins.map(p => p.image);
+            const imgPath = await createCatalogueCanvas(pageUrls, session.query, targetPage);
+
+            return api.sendMessage({
+                body: `📸 **𝖢𝖠𝖳𝖠𝖫𝖮𝖦𝖴𝖤 : 𝖯𝖠𝖦𝖤 ${targetPage}**\n\n• Répondez avec un numéro (1-10) pour extraire l'image.\n• Tapez \`page [numéro]\` pour scroller.`,
+                attachment: fs.createReadStream(imgPath)
+            }, threadID, (err, info) => {
+                if (!err) {
+                    global.pinSessions.delete(Reply.messageID);
+                    global.pinSessions.set(info.messageID, session);
+                }
+                if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+            });
+        }
+
+        // ---- LOGIQUE DE SÉLECTION D'UNE IMAGE (1 À 10) ----
+        const selection = parseInt(input);
+        if (!isNaN(selection) && selection >= 1 && selection <= 10) {
+            const actualIndex = ((session.currentPage - 1) * 10) + (selection - 1);
+            const selectedPin = session.allPins[actualIndex];
+
+            if (!selectedPin || !selectedPin.image) {
+                return message.reply("❌ Données de l'image introuvables.");
+            }
+
+            const ext = selectedPin.image.split('.').pop().split('?')[0] || "jpg";
+            const cachePath = path.join(__dirname, "cache", `pin_hd_${Date.now()}.${ext}`);
+
+            try {
+                message.reply(`📥 Extraction et envoi de l'image HD n°${selection}...`);
+
+                const imgRes = await axios({
+                    method: "get",
+                    url: selectedPin.image,
+                    responseType: "stream"
+                });
+
+                const writer = fs.createWriteStream(cachePath);
+                imgRes.data.pipe(writer);
+
+                await new Promise((resolve, reject) => {
+                    writer.on("finish", resolve);
+                    writer.on("error", reject);
+                });
+
+                return api.sendMessage({
+                    body: `✨ **𝖨𝖬𝖠𝖦𝖤 𝖤𝖷𝖳𝖱𝖠𝖨𝖳𝖤** ✨\n\n📝 Titre : ${selectedPin.title || "Sans titre"}\n👤 Compte : ${selectedPin.uploader?.username || "Inconnu"}`,
+                    attachment: fs.createReadStream(cachePath)
+                }, threadID, () => {
+                    if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+                }, messageID);
+
+            } catch (e) {
+                if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+                return message.reply("❌ Impossible de télécharger l'image d'origine en haute résolution.");
+            }
+        }
     }
-
-    const outPath = path.join(cache, `pin_grid_p${currentPage}_${Date.now()}.jpg`);
-    fs.writeFileSync(outPath, canvas.toBuffer("image/jpeg"));
-
-    const instructions = `📱 GALERIE PINTEREST\n━━━━━━━━━━━━━━━━━\n✨ Terme : ${query}\n📄 Emplacement : Page ${currentPage} / ${totalPages}\n\n👉 Répondez avec un numéro [1-${pageImages.length}] pour obtenir l'image seule.\n👉 Répondez avec "page ${currentPage + 1}" pour afficher les images suivantes.`;
-
-    await message.reply({
-      body: instructions,
-      attachment: fs.createReadStream(outPath)
-    }, (err, info) => {
-      if (err) return;
-
-      // Sauvegarde de l'état dans la session globale de GoatBot pour capturer les réponses
-      global.GoatBot.onReply.set(info.messageID, {
-        commandName: this.config.name,
-        author: event.senderID,
-        query: query,
-        allImages: allImages,
-        currentPage: currentPage,
-        currentPageImages: downloadedPaths
-      });
-    });
-
-    if (loadingId) {
-      try { await message.unsend(loadingId); } catch (_) {}
-    }
-  },
-
-  onReply: async function ({ event, Reply, message, args }) {
-    // Seul l'auteur initial de la recherche peut interagir avec sa propre galerie
-    if (event.senderID !== Reply.author) return;
-
-    const input = args.join(" ").toLowerCase().trim();
-
-    // Gestion du changement de page (ex: "page 2")
-    if (input.startsWith("page")) {
-      const targetPage = parseInt(input.replace("page", "").trim());
-
-      if (isNaN(targetPage) || targetPage < 1) {
-        return message.reply("❌ Numéro de page invalide.");
-      }
-
-      const loading = await message.reply(`⏳ Chargement de la page ${targetPage}...`);
-      
-      return this.sendGridPage({
-        message,
-        event,
-        query: Reply.query,
-        allImages: Reply.allImages,
-        currentPage: targetPage,
-        loadingId: loading.messageID
-      });
-    }
-
-    // Extraction d'un numéro d'image précis
-    const index = parseInt(input) - 1;
-
-    if (!isNaN(index) && Reply.currentPageImages && index >= 0 && index < Reply.currentPageImages.length) {
-      const imagePath = Reply.currentPageImages[index];
-
-      if (!imagePath || !fs.existsSync(imagePath)) {
-        return message.reply("❌ Cette image n'est pas disponible ou son cache a expiré.");
-      }
-
-      return message.reply({
-        body: `✨ Voici l'image [${index + 1}] demandée (Page ${Reply.currentPage})`,
-        attachment: fs.createReadStream(imagePath)
-      });
-    }
-
-    return message.reply("💡 Option non reconnue. Entrez un numéro (1-20) pour afficher une image ou 'page [numéro]' pour naviguer.");
-  }
 };
