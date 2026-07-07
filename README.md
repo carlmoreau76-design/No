@@ -1,5 +1,11 @@
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Dancing+Script&size=65&pause=1000&color=FF69B4&center=true&vCenter=true&width=1000&lines=SHADE+CREATION;Shade+Hori+Bot;Always+Active+%F0%9F%92%96" alt="Typing SVG" />
+  <a href="https://git.io/typing-svg">
+    <img src="https://readme-typing-svg.demolab.com?font=Dancing+Script&size=70&pause=1000&color=FF69B4&center=true&vCenter=true&width=1000&height=180&lines=SHADE+HORI+BOT;Version+1.0.0;Created+By+SHADE" alt="Typing SVG" />
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://files.catbox.moe/6ofj4c.jpg" width="800" alt="Shade Hori Bot Banner"/>
 </p>
 
 <p align="center">
