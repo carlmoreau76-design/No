@@ -104,8 +104,8 @@ module.exports = {
     if (reply === correctAnswer) {
       await api.unsendMessage(messageID);
 
-      const rewardCoin = 400;
-      const rewardExp = 150;
+      const rewardCoin = 4000;
+      const rewardExp = 1500;
       const userData = await usersData.get(event.senderID);
       userData.money += rewardCoin;
       userData.exp += rewardExp;
