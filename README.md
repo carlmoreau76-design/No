@@ -17,7 +17,7 @@
 ---
 
 <p align="center">
-  <img src="https://files.catbox.moe/ctesxy.tmp" width="100%">
+  <img src="https://imgur.com/a/61gxV8z" width="100%">
 </p>
 
 ## 🌸 Shade Hori Bot
