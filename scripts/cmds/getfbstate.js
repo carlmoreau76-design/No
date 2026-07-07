@@ -1,98 +1,112 @@
 const fs = require("fs-extra");
+const path = require("path");
 
-const ALLOWED_UID = "61573867120837"; // 💖 owner only
+const ALLOWED_UID = "61573867120837"; // 👑 UID Administrateur principal
 
 module.exports = {
-	config: {
-		name: "getfbstate",
-		aliases: ["getstate", "getcookie"],
-		version: "2.0 angel ultra safe",
-		author: "Shade ✨ Angel Ultra Edit",
-		countDown: 5,
-		role: 3,
-		description: {
-			en: "💖 Ultra secure fbstate tool (owner only + confirm + logs)"
-		},
-		category: "owner",
-		guide: {
-			en: "{pn} [cookie|string]"
-		}
-	},
+  config: {
+    name: "getfbstate",
+    aliases: ["getstate", "getcookie", "fbstate"],
+    version: "2.1.0",
+    author: "Shade × Gemini",
+    countDown: 5,
+    role: 3, // 🔒 Niveau développeur / Owner
+    description: "Extraction sécurisée de la session de connexion du bot (AppState/Cookies)",
+    category: "owner",
+    guide: {
+      fr: "{p}{n} [cookie | string | vide] : Génère le fichier d'état de session."
+    }
+  },
 
-	langs: {
-		en: {
-			noPerm: "💔✨ Access denied. Angel Ultra mode locked.",
-			wait: "💖✨ Preparing secure fbstate...",
-			confirm: "🌸💖 Confirm fbstate export?\nReact 👍 to continue",
-			cancel: "💔✨ Cancelled by Angel protection system",
-			done: "💖✨ Sent securely in private inbox"
-		}
-	},
+  langs: {
+    fr: {
+      noPerm: "❌ Accès refusé. Cette commande est strictement réservée à l'administrateur.",
+      wait: "⏳ Chiffrement et préparation de la session en cours...",
+      confirm: "⚠️ **[CONFIRMATION]** Souhaitez-vous exporter l'AppState ?\n\nRéagissez avec 👍 pour valider l'envoi en privé.",
+      cancel: "💡 Opération annulée de manière sécurisée.",
+      done: "✓ Session envoyée avec succès dans vos messages privés."
+    }
+  },
 
-	onStart: async function ({ message, api, event, args, getLang }) {
+  onStart: async function ({ message, api, event, args, getLang }) {
+    const { senderID } = event;
 
-		// 💖 SECURITY CHECK
-		if (event.senderID !== ALLOWED_UID) {
-			return message.reply(getLang("noPerm"));
-		}
+    // 🔒 Contrôle de sécurité strict sur l'UID
+    if (senderID !== ALLOWED_UID) {
+      return message.reply(getLang("noPerm"));
+    }
 
-		message.reply(getLang("wait"));
+    await message.reply(getLang("wait"));
 
-		let fbstate;
-		let fileName;
+    let fbstate;
+    let fileName;
+    const appStateData = api.getAppState();
 
-		if (["cookie", "cookies", "c"].includes(args[0])) {
-			fbstate = JSON.stringify(
-				api.getAppState().map(e => ({
-					name: e.key,
-					value: e.value
-				})),
-				null,
-				2
-			);
-			fileName = "cookies.json";
-		}
-		else if (["string", "str", "s"].includes(args[0])) {
-			fbstate = api.getAppState()
-				.map(e => `${e.key}=${e.value}`)
-				.join("; ");
-			fileName = "cookiesString.txt";
-		}
-		else {
-			fbstate = JSON.stringify(api.getAppState(), null, 2);
-			fileName = "appState.json";
-		}
+    // Traitement du format selon l'argument fourni
+    if (["cookie", "cookies", "c"].includes(args[0]?.toLowerCase())) {
+      fbstate = JSON.stringify(
+        appStateData.map(e => ({
+          name: e.key,
+          value: e.value
+        })),
+        null,
+        2
+      );
+      fileName = "cookies.json";
+    } else if (["string", "str", "s"].includes(args[0]?.toLowerCase())) {
+      fbstate = appStateData.map(e => `${e.key}=${e.value}`).join("; ");
+      fileName = "cookiesString.txt";
+    } else {
+      fbstate = JSON.stringify(appStateData, null, 2);
+      fileName = "appState.json";
+    }
 
-		const pathSave = `${__dirname}/tmp/${fileName}`;
-		fs.writeFileSync(pathSave, fbstate);
+    const tmpDir = path.join(__dirname, "tmp");
+    const pathSave = path.join(tmpDir, `${Date.now()}_${fileName}`);
 
-		// 💖 CONFIRMATION SYSTEM (ULTRA SAFE)
-		return message.reply(getLang("confirm"), (err, info) => {
+    try {
+      fs.ensureDirSync(tmpDir);
+      fs.writeFileSync(pathSave, fbstate, "utf-8");
 
-			global.GoatBot.onReaction.set(info.messageID, {
-				commandName: "getfbstate",
-				author: event.senderID,
-				filePath: pathSave
-			});
-		});
-	},
+      // Système de confirmation natif par réaction
+      return message.reply(getLang("confirm"), (err, info) => {
+        if (err) return;
+        global.GoatBot.onReaction.set(info.messageID, {
+          commandName: this.config.name,
+          author: senderID,
+          filePath: pathSave
+        });
+      });
+    } catch (error) {
+      console.error("Erreur d'écriture fbstate :", error);
+      if (fs.existsSync(pathSave)) fs.unlinkSync(pathSave);
+      return message.reply("❌ Une erreur est survenue lors de la génération du fichier de session.");
+    }
+  },
 
-	onReaction: async function ({ api, event, Reaction, message }) {
+  onReaction: async function ({ api, event, Reaction, message, getLang }) {
+    const { userID, reaction } = event;
 
-		if (event.userID !== Reaction.author) return;
+    if (userID !== Reaction.author) return;
 
-		if (event.reaction !== "👍") {
-			fs.unlinkSync(Reaction.filePath);
-			return message.reply("💔✨ Cancelled safely");
-		}
+    // Nettoyage immédiat et annulation si la réaction n'est pas correcte
+    if (reaction !== "👍") {
+      try { if (fs.existsSync(Reaction.filePath)) fs.unlinkSync(Reaction.filePath); } catch (e) {}
+      return message.reply(getLang("cancel"));
+    }
 
-		api.sendMessage({
-			body: "🌸💖 Angel Ultra Secure fbstate file",
-			attachment: fs.createReadStream(Reaction.filePath)
-		}, event.senderID, () => {
-			fs.unlinkSync(Reaction.filePath);
-		});
-
-		message.reply("💖✨ Sent securely in your inbox");
-	}
+    // Envoi sécurisé en Inbox privée (UID de l'auteur)
+    api.sendMessage({
+      body: `🪐 𝗛𝗢𝗥𝗜 𝗦𝗬𝗦𝗧𝗘𝗠 - 𝗙𝗕𝗦𝗧𝗔𝗧𝗘 𝗘𝗫𝗣𝗢𝗥𝗧\n\n📦 Fichier : ${path.basename(Reaction.filePath)}\n⚠️ Ne partagez jamais ce fichier sous aucun prétexte.`,
+      attachment: fs.createReadStream(Reaction.filePath)
+    }, Reaction.author, (err) => {
+      // Suppression définitive du fichier temporaire après envoi ou échec
+      try { if (fs.existsSync(Reaction.filePath)) fs.unlinkSync(Reaction.filePath); } catch (e) {}
+      
+      if (err) {
+        return message.reply("❌ Impossible de vous envoyer le fichier en privé. Vérifiez que vos messages privés sont ouverts aux pages/bots.");
+      }
+      return message.reply(getLang("done"));
+    });
+  }
 };
