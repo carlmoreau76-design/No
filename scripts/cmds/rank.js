@@ -32,8 +32,17 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// Fonction pour abréger l'argent avec l'ajout du suffixe Q
+function formatShortMoney(num) {
+  if (num >= 1e15) return (num / 1e15).toFixed(1).replace(/\.0$/, "") + "Q";
+  if (num >= 1e12) return (num / 1e12).toFixed(1).replace(/\.0$/, "") + "T";
+  if (num >= 1e9) return (num / 1e9).toFixed(1).replace(/\.0$/, "") + "B";
+  if (num >= 1e6) return (num / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+  if (num >= 1e3) return (num / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+  return num.toString();
+}
+
 async function drawRankCard(data) {
-  // Dimensions modernes et horizontales adaptées
   const W = 1100, H = 450;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext("2d");
@@ -81,7 +90,6 @@ async function drawRankCard(data) {
   ctx.font = "bold 44px Arial";
   ctx.fillStyle = "#ffffff";
   ctx.fillText(data.name, 310, 110);
-
   ctx.font = "22px Arial";
   ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
   ctx.fillText(`@${data.username}`, 310, 145);
@@ -93,11 +101,9 @@ async function drawRankCard(data) {
     ctx.fill();
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
     ctx.stroke();
-
     ctx.font = "16px Arial";
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
     ctx.fillText(label, x + 20, y + 32);
-
     ctx.font = "bold 24px Arial";
     ctx.fillStyle = color;
     ctx.fillText(value, x + 20, y + 68);
@@ -108,13 +114,13 @@ async function drawRankCard(data) {
   drawStatBox(550, 180, 220, 85, "CLASSEMENT EXP", `#${data.rank}`, "#00cec9");
   drawStatBox(790, 180, 240, 85, "CLASSEMENT CA$H", `#${data.moneyRank || "N/A"}`, "#e17055");
 
-  // Deuxième ligne de stats (Détails complémentaires)
-  drawStatBox(310, 285, 220, 85, "PORTEFEUILLE", `${data.money.toLocaleString()}$`, "#00b894");
+  // Deuxième ligne de stats avec format abrégé appliqué au portefeuille
+  drawStatBox(310, 285, 220, 85, "PORTEFEUILLE", `${formatShortMoney(data.money)}$`, "#00b894");
   drawStatBox(550, 285, 220, 85, "GENRE / PROFIL", data.gender.split(" ")[0], "#fd79a8");
   drawStatBox(790, 285, 240, 85, "UID DU COMPTE", data.uid, "#ffeaa7");
 
   // 📈 Barre de progression globale en bas
-  const barX = 70, barY = 405, barW = W - 140, barH = 14;
+  const barX = 70, barY = 405, barW = W - 140, barH = 14;  
   
   // Fond de la barre
   ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
@@ -136,8 +142,7 @@ async function drawRankCard(data) {
   ctx.font = "bold 16px Arial";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
-  ctx.fillText(`EXP: ${data.exp.toLocaleString()} / ${data.requiredExp.toLocaleString()}`, barX, barY - 12);
-  
+  ctx.fillText(`EXP: ${data.exp.toLocaleString()} / ${data.requiredExp.toLocaleString()}`, barX, barY - 12);  
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
   ctx.fillText(`${Math.round(progressPercent * 100)}%`, barX + barW, barY - 12);
@@ -154,9 +159,7 @@ async function drawRankCard(data) {
 
   const fileName = `premium_rank_${data.uid}_${randomString(5)}.png`;
   const filePath = path.join(__dirname, "cache", fileName);
-
   if (!fs.existsSync(path.dirname(filePath))) fs.mkdirSync(path.dirname(filePath));
-
   fs.writeFileSync(filePath, canvas.toBuffer("image/png"));
   return filePath;
 }
@@ -164,8 +167,8 @@ async function drawRankCard(data) {
 module.exports = {
   config: {
     name: "rank",
-    version: "PREMIUM-2.0",
-    author: "Shade × ChatGPT",
+    version: "PREMIUM-2.2",
+    author: "Shade × ChatGPT × Gemini",
     countDown: 5,
     role: 0,
     shortDescription: "Affiche votre carte de niveau premium",
@@ -179,11 +182,9 @@ module.exports = {
       const uid = Object.keys(mentions)[0] || args[0] || messageReply?.senderID || senderID;
 
       const allUsers = await usersData.getAll();
-
       const sortedExp = allUsers
         .map(u => ({ id: u.userID, exp: u.exp || 0 }))
         .sort((a, b) => b.exp - a.exp);
-
       const rank = sortedExp.findIndex(u => u.id === uid) + 1;
 
       const sortedMoney = [...allUsers].sort((a, b) => (b.money || 0) - (a.money || 0));
