@@ -5,10 +5,6 @@
 </p>
 
 <p align="center">
-  <img src="https://files.catbox.moe/6ofj4c.jpg" width="800" alt="Shade Hori Bot Banner"/>
-</p>
-
-<p align="center">
   <img src="https://files.catbox.moe/6ofj4c.jpg" width="750" style="border-radius: 15px; box-shadow: 0px 4px 15px rgba(255, 105, 180, 0.4);" alt="Shade Hori Bot Banner"/>
 </p>
 
