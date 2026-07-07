@@ -1,27 +1,29 @@
 module.exports = {
   config: {
     name: "out",
-    aliases: ["leave"],
-    version: "2.1",
-    author: "Shade",
+    aliases: ["leave", "quitter"],
+    version: "2.2.0",
+    author: "Shade × Gemini",
     countDown: 5,
-    role: 3, // admin bot only
-    shortDescription: {
-      fr: "Fait quitter le bot des autres groupes ou du groupe actuel"
-    },
+    role: 3, // 🔒 Niveau Owner uniquement
+    description: "Fait quitter le bot du groupe actuel ou de tous les autres groupes connectés",
     category: "owner",
     guide: {
-      fr: "{p}{n} → Quitter le groupe actuel\n{p}{n} all → Quitter TOUS les groupes SAUF celui-ci 🌸"
+      fr: "{p}{n} : Quitter le groupe actuel\n{p}{n} all : Quitter tous les autres groupes connectés"
     }
   },
 
   onStart: async function ({ api, event, args }) {
-    const ownerID = "61573867120837"; // 🔒 TON ID
+    const ownerID = "61573867120837"; // 🔒 Identifiant administrateur principal
 
-    // 🔒 Sécurité : Seul l'owner peut déclencher ça
+    // 🔒 Contrôle d'accès strict
     if (event.senderID !== ownerID) {
       return api.sendMessage(
-        "🌸 𝘼𝙣𝙜𝙚𝙡 : désolée… seul mon créateur peut me demander ça 💔",
+        `╭─ 🪐 𝗛𝗢𝗥𝗜 𝗦𝗬𝗦𝗧𝗘𝗠 ────────╮\n` +
+        `│ 🎀 Statut : Accès Refusé\n` +
+        `│ 💔 Désolée, seul mon créateur peut\n` +
+        `│    déclencher ce protocole.\n` +
+        `╰──────────────────────────╯`,
         event.threadID,
         event.messageID
       );
@@ -30,27 +32,37 @@ module.exports = {
     const action = args[0]?.toLowerCase();
 
     // ==========================================
-    // 🚪 QUITTER TOUS LES AUTRES GROUPES (OUT ALL)
+    // 🚪 PROTOCOLE : QUITTER TOUS LES AUTRES GROUPES
     // ==========================================
     if (action === "all") {
       try {
         const list = await api.getThreadList(100, null, ["INBOX"]);
         
-        // On filtre pour exclure le groupe actuel (event.threadID) de la liste de suppression
+        // Filtrage pour exclure le groupe actuel
         const otherGroups = list.filter(thread => thread.isGroup && thread.threadID !== event.threadID);
 
         if (otherGroups.length === 0) {
-          return api.sendMessage("🌸 𝘼𝙣𝙜𝙚𝙡 : Je ne suis connectée à aucun autre groupe pour le moment !", event.threadID);
+          return api.sendMessage(
+            `╭─ 🪐 𝗛𝗢𝗥𝗜 𝗦𝗬𝗦𝗧𝗘𝗠 ────────╮\n` +
+            `│ 🌸 Aucun autre groupe détecté.\n` +
+            `│    Je reste connectée ici.\n` +
+            `╰──────────────────────────╯`, 
+            event.threadID
+          );
         }
 
         await api.sendMessage(
-          `🌸⚙️ 𝘼𝙣𝙜𝙚𝙡 : Initialisation du nettoyage global...\nExtraction de ${otherGroups.length} autres groupes en cours. Je reste ici avec toi ! ✨`,
+          `╭─ 🪐 𝗛𝗢𝗥𝗜 𝗦𝗬𝗦𝗧𝗘𝗠 ────────╮\n` +
+          `│ ⚙️ Initialisation du nettoyage...\n` +
+          `│ 📦 Groupes cibles : ${otherGroups.length}\n` +
+          `│ ✨ Début du traitement en arrière-plan.\n` +
+          `╰──────────────────────────╯`,
           event.threadID
         );
 
         let count = 0;
         for (const group of otherGroups) {
-          // Pause d'une seconde pour éviter le spam
+          // Pause de sécurité d'une seconde entre chaque extraction
           await new Promise(resolve => setTimeout(resolve, 1000));
           try {
             await api.removeUserFromGroup(api.getCurrentUserID(), group.threadID);
@@ -61,35 +73,40 @@ module.exports = {
         }
 
         return api.sendMessage(
-          `🎉 𝘼𝙣𝙜𝙚𝙡 : Opération terminée ! J'ai quitté ${count} autres groupes avec succès. 🌸`,
+          `╭─ 🪐 𝗛𝗢𝗥𝗜 𝗦𝗬𝗦𝗧𝗘𝗠 ────────╮\n` +
+          `│ ✓ Nettoyage global terminé\n` +
+          `│ 🌸 Groupes quittés : ${count}\n` +
+          `│ 🎉 Mission accomplie avec succès.\n` +
+          `╰──────────────────────────╯`,
           event.threadID
         );
 
       } catch (err) {
         console.error(err);
-        return api.sendMessage("❌ Une erreur s'est produite lors du protocole d'extraction.", event.threadID);
+        return api.sendMessage("❌ Une erreur critique est survenue lors du protocole d'extraction.", event.threadID);
       }
     }
 
     // ==========================================
-    // 🚪 QUITTER LE GROUPE ACTUEL SEULEMENT
+    // 🚪 PROTOCOLE : QUITTER LE GROUPE ACTUEL
     // ==========================================
     try {
       await api.sendMessage(
-        "🌸💔 𝘼𝙣𝙜𝙚𝙡 : d'accord… je m'éloigne doucement du groupe...\nPrenez soin de vous ✨",
+        `╭─ 🪐 𝗛𝗢𝗥𝗜 𝗦𝗬𝗦𝗧𝗘𝗠 ────────╮\n` +
+        `│ 🚪 Extraction en cours...\n` +
+        `│ 🌸 Je m'éloigne doucement.\n` +
+        `│ ✨ Prenez soin de vous.\n` +
+        `╰──────────────────────────╯`,
         event.threadID
       );
-
+      
       setTimeout(() => {
         api.removeUserFromGroup(api.getCurrentUserID(), event.threadID);
-      }, 800);
+      }, 1000);
 
     } catch (err) {
       console.error(err);
-      api.sendMessage(
-        "❌ Angel n’a pas réussi à quitter le groupe…",
-        event.threadID
-      );
+      api.sendMessage("❌ Échec de la commande : Impossible de quitter le groupe actuel.", event.threadID);
     }
   }
 };
