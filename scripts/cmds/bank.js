@@ -175,8 +175,6 @@ module.exports = {
 
         // Transmission de l'exécution vers la suite logique du système
         global.bankEngine = { walletCash, syncWalletCash, account, fNum, primary, secondary, now };
-        // Récupération des variables partagées du moteur financier
-        let { walletCash, syncWalletCash, fNum, primary, secondary, now } = global.bankEngine;
 
         // =========================================================================
         // 💸 TRANSFERT SECURISE INTER-JOUEURS (COMPTE A COMPTE)
