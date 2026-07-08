@@ -1,23 +1,21 @@
 /**
  * @file tournament.js
  * @description Système RPG de Tournois Automatiques, Saisons et Événements Spéciaux pour GoatBot v2
- * @version 1.0.0
- * @author Collaborateur IA RPG
+ * @version 1.1.0
+ * @author Collaborateur IA RPG & Gemini
  */
 
 const fs = require('fs');
 const path = require('path');
 
 // ==========================================
-// 📁 CONFIGURATION ET PERSISTANCE DES DONNÉES
+// 📁 CONFIGURATION ET CONFIGURATION SYSTÈME
 // ==========================================
 const DATA_DIR = path.join(__dirname, 'cache', 'tournamentMMO');
-const PLAYER_FILE = path.join(DATA_DIR, 'players.json');
 const SYSTEM_FILE = path.join(DATA_DIR, 'system.json');
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-if (!fs.existsSync(PLAYER_FILE)) fs.writeFileSync(PLAYER_FILE, JSON.stringify({}, null, 2));
 if (!fs.existsSync(SYSTEM_FILE)) fs.writeFileSync(SYSTEM_FILE, JSON.stringify({
   currentSeason: 1,
   seasonStart: Date.now(),
@@ -51,20 +49,24 @@ const TOURNAMENT_TYPES = {
 };
 
 // ==========================================
-// 🛠️ UTILITIES ET CLOCK DE SYNCHRONISATION
+// 🛠️ UTILITIES DE LECTURE / ÉCRITURE SYSTEM
 // ==========================================
 function readDB(file) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return {}; }
 }
+
 function writeDB(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
 }
 
-function getPlayerProfile(uid, name = "Aventurier") {
-  const db = readDB(PLAYER_FILE);
-  if (!db[uid]) {
-    db[uid] = {
-      name: name,
+/**
+ * Normalise et extrait le profil de tournoi d'un utilisateur depuis GoatBot
+ */
+function getTournamentProfile(userData, name = "Aventurier") {
+  if (!userData.customData) userData.customData = {};
+  if (!userData.customData.tournament) {
+    userData.customData.tournament = {
+      name: userData.name || name,
       points: 0,
       seasonPoints: 0,
       wins: 0,
@@ -75,9 +77,20 @@ function getPlayerProfile(uid, name = "Aventurier") {
       titles: [],
       activeTitle: null
     };
-    writeDB(PLAYER_FILE, db);
   }
-  return db[uid];
+  // S'assurer qu'aucune sous-propriété ne manque suite à une mise à jour
+  const t = userData.customData.tournament;
+  if (!t.name) t.name = userData.name || name;
+  if (t.points === undefined) t.points = 0;
+  if (t.seasonPoints === undefined) t.seasonPoints = 0;
+  if (t.wins === undefined) t.wins = 0;
+  if (t.streak === undefined) t.streak = 0;
+  if (t.maxStreak === undefined) t.maxStreak = 0;
+  if (t.tickets === undefined) t.tickets = 1;
+  if (t.lastTicketClaim === undefined) t.lastTicketClaim = 0;
+  if (!t.titles) t.titles = [];
+  
+  return t;
 }
 
 const UI = {
@@ -88,24 +101,24 @@ const UI = {
 };
 
 // ==========================================
-// 🛡️ ACCROCHE ET CONFIGURATION GOATBOT V2
+// 🛡️ CONFIGURATION GOATBOT V2
 // ==========================================
 module.exports = {
   config: {
     name: "tournament",
     aliases: ["tournoi", "bracket", "arenas"],
-    version: "1.0.0",
-    author: "Collaborateur IA RPG",
+    version: "1.1.0",
+    author: "Collaborateur IA RPG & Gemini",
     countDown: 3,
     role: 0,
-    description: "Système de tournois RPG automatiques par bracket avec gestion des saisons et titres exclusifs.",
+    description: "Système de tournois RPG automatiques par bracket avec gestion des saisons et titres exclusifs (Sauvegardes résilientes).",
     category: "game",
     guide: { fr: "{p}tournament [sous-commande]", en: "{p}tournament [subcommand]" }
   },
 
   onLoad: function ({ api }) {
-    // Boucle de vérification automatique (S'exécute en tâche de fond toutes les minutes)
-    setInterval(() => {
+    // Boucle de vérification automatique exécutée en tâche de fond toutes les minutes
+    setInterval(async () => {
       try {
         const sys = readDB(SYSTEM_FILE);
         const now = Date.now();
@@ -116,30 +129,27 @@ module.exports = {
           sys.seasonStart = now;
           writeDB(SYSTEM_FILE, sys);
           
-          // Réinitialisation des points de saison des joueurs
-          const players = readDB(PLAYER_FILE);
-          Object.keys(players).forEach(uid => {
-            players[uid].seasonPoints = 0;
-          });
-          writeDB(PLAYER_FILE, players);
+          // Note : La réinitialisation des seasonPoints se fait désormais "à la volée" 
+          // au chargement du profil utilisateur dans onStart pour éviter de corrompre la BD globale.
         }
 
         // 2. Lancement automatique du tournoi quotidien (Toutes les 24 heures)
         if (!sys.activeTournament && (now - sys.lastAutoTournament >= 24 * 60 * 60 * 1000)) {
           const types = Object.keys(TOURNAMENT_TYPES);
-          // Événement spécial rare si le sort est favorable
           const rolledType = Math.random() > 0.80 ? types[Math.floor(Math.random() * types.length)] : "regular";
-
           sys.activeTournament = {
             type: rolledType,
             status: "registration",
             createdAt: now,
-            participants: []
+            participants: [],
+            matches: []
           };
           sys.lastAutoTournament = now;
           writeDB(SYSTEM_FILE, sys);
         }
-      } catch (e) { console.log("Erreur boucle auto-tournoi:", e); }
+      } catch (e) { 
+        console.log("Erreur boucle auto-tournoi:", e); 
+      }
     }, 60000);
   },
 
@@ -148,18 +158,20 @@ module.exports = {
     const sys = readDB(SYSTEM_FILE);
     const subCommand = args[0]?.toLowerCase();
 
+    // Récupération et instanciation du profil via GoatBot
     let userData = await usersData.get(senderID);
-    let userMoney = userData.money || 0;
-    let pProfile = getPlayerProfile(senderID, userData.name);
+    if (!userData) return message.reply("❌ Impossible de synchroniser votre profil utilisateur.");
+
+    let pProfile = getTournamentProfile(userData, userData.name);
 
     // Distribution automatique du ticket quotidien gratuit
     if (Date.now() - pProfile.lastTicketClaim >= 24 * 60 * 60 * 1000) {
       pProfile.tickets += 1;
       pProfile.lastTicketClaim = Date.now();
-      writeDB(PLAYER_FILE, readDB(PLAYER_FILE));
+      userData.customData.tournament = pProfile;
+      await usersData.set(senderID, userData.customData, "customData");
     }
 
-    // ==========================================
     // ==========================================
     // 📜 INTERFACE : MENU D'AIDE CENTRALISÉ
     // ==========================================
@@ -185,15 +197,14 @@ module.exports = {
       menu += `╰───────────────────────────────────────╯`;
       return message.reply(menu);
     }
-    
+
     // ==========================================
-    // 📊 SOUS-COMMANDE : INFO (ÉTAT DU TOURNOI ACTUEL)
+    // 📊 SOUS-COMMANDE : INFO
     // ==========================================
     if (subCommand === "info") {
       if (!sys.activeTournament) {
-        return message.reply("🏟️ | Aucun tournoi n'est ouvert pour le moment. Revenez plus tard ou attendez le lancement automatique.");
+        return message.reply("🏟️ | Aucun tournoi n'est ouvert pour le moment. Revenez plus tard.");
       }
-
       const tType = TOURNAMENT_TYPES[sys.activeTournament.type];
       let infoBox = UI.boxStart("État du Championnat") + `\n`;
       infoBox += `${UI.field("Événement", `${tType.icon} ${tType.name}`)}\n`;
@@ -212,102 +223,90 @@ module.exports = {
     }
 
     // ==========================================
-    // 🎟️ SOUS-COMMANDE : JOIN (INSCRIPTION AU TOURNOI)
+    // 🎟️ SOUS-COMMANDE : JOIN
     // ==========================================
     if (subCommand === "join") {
-      if (!sys.activeTournament) {
-        return message.reply("❌ | Aucun tournoi n'est actif pour le moment.");
-      }
-      if (sys.activeTournament.status !== "registration") {
-        return message.reply("❌ | Trop tard ! Les inscriptions sont closes et les duels ont déjà commencé.");
-      }
-      if (sys.activeTournament.participants.includes(senderID)) {
-        return message.reply("❌ | Inscription invalide : Votre nom figure déjà sur le registre des combattants.");
+      if (!sys.activeTournament) return message.reply("❌ | Aucun tournoi n'est actif.");
+      if (sys.activeTournament.status !== "registration") return message.reply("❌ | Les inscriptions sont closes.");
+      if (sys.activeTournament.participants.includes(senderID)) return message.reply("❌ | Vous êtes déjà sur le registre.");
+
+      if (pProfile.tickets <= 0) {
+        return message.reply("🎫 | Aucun ticket disponible. Achetez-en un via `~tournament buy ticket`.");
       }
 
-      // Vérification et prélèvement du ticket d'entrée
-      const fullPlayers = readDB(PLAYER_FILE);
-      let playerProf = fullPlayers[senderID] || getPlayerProfile(senderID, userData.name);
-
-      if (playerProf.tickets <= 0) {
-        return message.reply("🎫 | Vous n'avez plus de ticket de tournoi. Achetez-en un via `~tournament buy ticket` (50,000$).");
-      }
-
-      // Consommation du ticket et enregistrement
-      playerProf.tickets -= 1;
-      fullPlayers[senderID] = playerProf;
-      writeDB(PLAYER_FILE, fullPlayers);
+      pProfile.tickets -= 1;
+      userData.customData.tournament = pProfile;
+      
+      // Persistance immédiate
+      await usersData.set(senderID, userData.customData, "customData");
 
       sys.activeTournament.participants.push(senderID);
       writeDB(SYSTEM_FILE, sys);
 
-      return message.reply(`🎫 | **INSCRIPTION VALIDÉE :** Vous avez déposé votre ticket d'entrée. Bonne chance pour cette **Saison ${sys.currentSeason}** ! (Inscrits : ${sys.activeTournament.participants.length})`);
+      return message.reply(`🎫 | **INSCRIPTION VALIDÉE :** Ticket déposé ! (Total inscrits : ${sys.activeTournament.participants.length})`);
     }
 
     // ==========================================
-    // 🏃 SOUS-COMMANDE : LEAVE (SE DÉSINSCRIRE)
+    // 🏃 SOUS-COMMANDE : LEAVE
     // ==========================================
     if (subCommand === "leave") {
       if (!sys.activeTournament || sys.activeTournament.status !== "registration") {
-        return message.reply("❌ | Impossible de vous désister à ce stade du championnat.");
+        return message.reply("❌ | Désistement impossible à ce stade.");
       }
       if (!sys.activeTournament.participants.includes(senderID)) {
-        return message.reply("❌ | Vous n'êtes pas inscrit à ce tournoi.");
+        return message.reply("❌ | Vous n'êtes pas inscrit.");
       }
 
-      // Retrait de la liste et restitution du ticket
       sys.activeTournament.participants = sys.activeTournament.participants.filter(id => id !== senderID);
       writeDB(SYSTEM_FILE, sys);
 
-      const fullPlayers = readDB(PLAYER_FILE);
-      if (fullPlayers[senderID]) {
-        fullPlayers[senderID].tickets += 1;
-        writeDB(PLAYER_FILE, fullPlayers);
-      }
+      pProfile.tickets += 1;
+      userData.customData.tournament = pProfile;
+      await usersData.set(senderID, userData.customData, "customData");
 
-      return message.reply("🏃 | **DÉSISTEMENT :** Vous retirez votre candidature. Votre ticket d'entrée vous a été restitué.");
+      return message.reply("🏃 | **DÉSISTEMENT :** Votre ticket d'entrée vous a été restitué.");
     }
 
     // ==========================================
-    // 💰 SOUS-COMMANDE : BUY TICKET (ACHAT DE TICKET)
+    // 💰 SOUS-COMMANDE : BUY TICKET
     // ==========================================
     if (subCommand === "buy" && args[1] === "ticket") {
-      const ticketPrice = 500000; // 500 000$ le ticket supplémentaire
-      if (userMoney < ticketPrice) {
-        return message.reply(`💰 | Vos finances sont insuffisantes. Un ticket d'arène coûte **${ticketPrice.toLocaleString()}$**.`);
+      const ticketPrice = 500000;
+      let currentMoney = userData.money || 0;
+
+      if (currentMoney < ticketPrice) {
+        return message.reply(`💰 | Finances insuffisantes. Prix d'un ticket : **${ticketPrice.toLocaleString()}$**.`);
       }
 
-      userMoney -= ticketPrice;
-      await usersData.set(senderID, { money: userMoney });
+      pProfile.tickets += 1;
+      userData.customData.tournament = pProfile;
+      
+      await usersData.set(senderID, currentMoney - ticketPrice, "money");
+      await usersData.set(senderID, userData.customData, "customData");
 
-      const fullPlayers = readDB(PLAYER_FILE);
-      let playerProf = fullPlayers[senderID] || getPlayerProfile(senderID, userData.name);
-      playerProf.tickets += 1;
-      fullPlayers[senderID] = playerProf;
-      writeDB(PLAYER_FILE, fullPlayers);
-
-      return message.reply(`🎫 | **ACHAT EFFECTUÉ :** Vous achetez un ticket de tournoi. (-${ticketPrice.toLocaleString()}$) | Total en réserve : **${playerProf.tickets}** 🎫`);
+      return message.reply(`🎫 | **ACHAT EFFECTUÉ :** Ticket ajouté ! Reserve : **${pProfile.tickets}** 🎫`);
     }
 
     // ==========================================
-    // 🎖️ SOUS-COMMANDE : REWARDS (PROFIL DES TITRES DE COMBAT)
+    // 🎖️ SOUS-COMMANDE : REWARDS / TITLES
     // ==========================================
     if (subCommand === "rewards" || subCommand === "titles") {
       let titleBox = UI.boxStart("Vos Distinctions") + `\n`;
       titleBox += `${UI.field("Tickets restants", `**${pProfile.tickets}** 🎫`)}\n`;
       titleBox += `${UI.field("Titre Actif", pProfile.activeTitle ? `**${pProfile.activeTitle}**` : "Aucun Titre Équipé")}\n`;
-      titleBox += `${UI.line}\n│ 🏅 **TITRES DISPONIBLES / DÉBLOQUÉS :**\n`;
-
+      titleBox += `${UI.line}\n│ 🏅 **TITRES DISPONIBLES :**\n`;
+      
       if (!pProfile.titles || pProfile.titles.length === 0) {
-        titleBox += `│ *Aucun titre honorifique débloqué pour le moment.*\n`;
+        titleBox += `│ *Aucun titre honorifique débloqué.*\n`;
       } else {
         pProfile.titles.forEach(tKey => {
           const tInfo = TITLES[tKey];
-          titleBox += `│ ➔ ${tInfo.name} ${pProfile.activeTitle === tInfo.name ? "🔹 *(Équipé)*" : ""}\n`;
+          if (tInfo) {
+            titleBox += `│ ➔ ${tInfo.name} ${pProfile.activeTitle === tInfo.name ? "🔹 *(Équipé)*" : ""}\n`;
+          }
         });
         titleBox += `${UI.line}\n│ *Équipez un titre via : \`~tournament equip <nom_titre>\`*\n`;
       }
-
       titleBox += UI.boxEnd();
       return message.reply(titleBox);
     }
@@ -316,59 +315,66 @@ module.exports = {
     if (subCommand === "equip") {
       const targetTitleKey = args[1]?.toLowerCase();
       if (!targetTitleKey || !TITLES[targetTitleKey]) {
-        return message.reply("❌ | Titre inconnu. Indiquez la clé du titre (ex: rookie, elite, grand, king, unstoppable, legendary).");
+        return message.reply("❌ | Titre inconnu (Ex: rookie, elite, grand, king, unstoppable, legendary).");
       }
 
-      const fullPlayers = readDB(PLAYER_FILE);
-      let playerProf = fullPlayers[senderID];
-
-      if (!playerProf.titles.includes(targetTitleKey)) {
-        return message.reply("❌ | Vous n'avez pas encore accompli les hauts faits requis pour arborer ce titre.");
+      if (!pProfile.titles.includes(targetTitleKey)) {
+        return message.reply("❌ | Vous n'avez pas accompli les hauts faits pour ce titre.");
       }
 
-      playerProf.activeTitle = TITLES[targetTitleKey].name;
-      fullPlayers[senderID] = playerProf;
-      writeDB(PLAYER_FILE, fullPlayers);
+      pProfile.activeTitle = TITLES[targetTitleKey].name;
+      userData.customData.tournament = pProfile;
+      await usersData.set(senderID, userData.customData, "customData");
 
-      return message.reply(`👑 | **PROFIL MODIFIÉ :** Vous arborez fièrement le titre honorifique : **${TITLES[targetTitleKey].name}** !`);
+      return message.reply(`👑 | **PROFIL MODIFIÉ :** Vous arborez le titre : **${TITLES[targetTitleKey].name}** !`);
     }
 
     // ==========================================
-    // 📊 SOUS-COMMANDE : BRACKET (ARBRE DES DUELS EN DIRECT)
+    // 📊 SOUS-COMMANDE : BRACKET
     // ==========================================
     if (subCommand === "bracket") {
-      if (!sys.activeTournament) return message.reply("❌ | Aucun tournoi n'est actif pour le moment.");
+      if (!sys.activeTournament) return message.reply("❌ | Aucun tournoi n'est actif.");
       if (sys.activeTournament.status === "registration") {
-        return message.reply(`⏳ | Le tournoi est en phase d'inscription. Débute automatiquement dès la fin du compte à rebours ou via un lancement système. Total inscrits : **${sys.activeTournament.participants.length}**.`);
+        return message.reply(`⏳ | Phase d'inscription. Inscrits : **${sys.activeTournament.participants.length}**.`);
       }
 
-      const players = readDB(PLAYER_FILE);
-      let bracketMsg = `🏟️ **[ARBRE DES DUELS - TOURNOI EN COURS]**\n${UI.line}\n`;
+      let bracketMsg = `🏟️ **[ARBRE DES DUELS - EN COURS]**\n${UI.line}\n`;
       
       if (!sys.activeTournament.matches || sys.activeTournament.matches.length === 0) {
-        // Lancement forcé ou automatique des brackets si les inscriptions sont closes
-        return evaluateTournamentStart(api, threadID, sys, message);
+        return evaluateTournamentStart(api, threadID, sys, message, usersData);
       }
 
-      sys.activeTournament.matches.forEach((match, index) => {
-        const p1Name = players[match.p1]?.name || "Combattant A";
-        const p2Name = players[match.p2]?.name || "Combattant B";
-        bracketMsg += `🔹 **Match ${index + 1}** : ${p1Name} **VS** ${p2Name}\n│ Statut : ${match.winner ? `🏆 Gagnant : **${players[match.winner].name}**` : "⚡ En attente du signal..."}\n${UI.line}\n`;
-      });
+      for (const [index, match] of sys.activeTournament.matches.entries()) {
+        const p1User = await usersData.get(match.p1);
+        const p2User = await usersData.get(match.p2);
+        const p1Name = p1User?.customData?.tournament?.name || p1User?.name || "Combattant A";
+        const p2Name = p2User?.customData?.tournament?.name || p2User?.name || "Combattant B";
+        const winnerName = match.winner ? ((match.winner === match.p1) ? p1Name : p2Name) : null;
 
+        bracketMsg += `🔹 **Match ${index + 1}** : ${p1Name} **VS** ${p2Name}\n│ Statut : ${match.winner ? `🏆 Gagnant : **${winnerName}**` : "⚡ En attente..."}\n${UI.line}\n`;
+      }
       return message.reply(bracketMsg);
     }
 
     // ==========================================
-    // 📈 SOUS-COMMANDE : TOP (PANTHÉON DE LA SAISON)
+    // 📈 SOUS-COMMANDE : TOP (LEADERBOARD)
     // ==========================================
     if (subCommand === "top" || subCommand === "leaderboard") {
-      const fullPlayers = readDB(PLAYER_FILE);
-      let leaderboard = Object.entries(fullPlayers).map(([uid, data]) => ({ uid, ...data }));
+      const allUsers = await usersData.getAll();
+      let leaderboard = [];
 
-      if (leaderboard.length === 0) return message.reply("🏁 | Aucun guerrier n'a encore combattu dans l'arène cette saison.");
+      allUsers.forEach(u => {
+        if (u.value?.customData?.tournament) {
+          leaderboard.push({
+            uid: u.key,
+            name: u.value.name || "Aventurier",
+            ...u.value.customData.tournament
+          });
+        }
+      });
 
-      // Tri par points de saison, puis par victoires totales
+      if (leaderboard.length === 0) return message.reply("🏁 | Aucun guerrier n'a encore combattu cette saison.");
+      
       leaderboard.sort((a, b) => b.seasonPoints - a.seasonPoints || b.wins - a.wins);
 
       let topMsg = `🏆 **[PANTHÉON DE L'ARÈNE - SAISON ${sys.currentSeason}]**\n${UI.line}\n`;
@@ -376,63 +382,55 @@ module.exports = {
         const titleLabel = pl.activeTitle ? ` [${pl.activeTitle}]` : "";
         topMsg += `${index + 1}. **${pl.name}**${titleLabel}\n│ ⭐ Points : **${pl.seasonPoints}** | ⚔️ Victoires : ${pl.wins} | 🔥 Série : ${pl.streak}\n`;
       });
-
       return message.reply(topMsg);
     }
 
     // ==========================================
-    // 📜 SOUS-COMMANDE : HISTORY (ARCHIVES DES TOURNOIS)
+    // 📜 SOUS-COMMANDE : HISTORY
     // ==========================================
     if (subCommand === "history") {
       const history = readDB(HISTORY_FILE);
-      if (history.length === 0) return message.reply("📜 | Les archives impériales sont vierges. Aucun tournoi n'a encore été complété.");
-
-      let histMsg = `📜 **[ARCHIVES DES DERNIERS CHAMPIONNATS]**\n${UI.line}\n`;
-      // Affichage des 5 derniers tournois
+      if (history.length === 0) return message.reply("📜 | Les archives impériales sont vierges.");
+      let histMsg = `📜 **[ARCHIVES DES CHAMPIONNATS]**\n${UI.line}\n`;
+      
       history.slice(-5).reverse().forEach((h, index) => {
         const tType = TOURNAMENT_TYPES[h.type] || TOURNAMENT_TYPES.regular;
         histMsg += `${index + 1}. ${tType.icon} **${tType.name}**\n│ 🥇 Vainqueur : **${h.winnerName}**\n│ 👥 Participants : ${h.participantCount} | 📅 Saison ${h.season}\n${UI.line}\n`;
       });
-
       return message.reply(histMsg);
     }
 
-    // Commande cachée d'administration ou de force-start manuel
-    if (subCommand === "start" && ROLES[userLink?.role || "GUEST"]?.power >= 2) {
-      return evaluateTournamentStart(api, threadID, sys, message);
+    // Force start pour l'admin
+    if (subCommand === "start" && userData.role >= 2) {
+      return evaluateTournamentStart(api, threadID, sys, message, usersData);
     }
 
-    return message.reply("❌ | Action inconnue. Entrez la commande brute `~tournament` pour ouvrir l'aide.");
+    return message.reply("❌ | Action inconnue. Entrez la commande brute `~tournament` pour l'aide.");
   }
 };
 
 // ==========================================
-// ⚔️ CORE LOGIC : SIMULATEUR DE COMBAT RPG AUTOMATIQUE
+// ⚔️ SIMULATEUR DE COMBAT RPG
 // ==========================================
-function simulateRpgFight(p1, p2, p1Data, p2Data) {
-  // Définition des statistiques de base ajustées
+function simulateRpgFight(p1Id, p2Id, p1Profile, p2Profile) {
   const buildStats = (base, prof) => ({
-    name: prof.name,
-    hp: base.hp + (prof.wins * 2), // Petite progression passive selon l'expérience
-    maxHp: base.hp + (prof.wins * 2),
+    hp: base.hp + ((prof.wins || 0) * 2),
     atk: base.atk,
     def: base.def,
     crit: base.crit,
     dodge: base.dodge
   });
 
-  let f1 = buildStats({ hp: 800, atk: 85, def: 30, crit: 0.15, dodge: 0.10 }, p1Data);
-  let f2 = buildStats({ hp: 800, atk: 85, def: 30, crit: 0.15, dodge: 0.10 }, p2Data);
-
+  let f1 = buildStats({ hp: 800, atk: 85, def: 30, crit: 0.15, dodge: 0.10 }, p1Profile);
+  let f2 = buildStats({ hp: 800, atk: 85, def: 30, crit: 0.15, dodge: 0.10 }, p2Profile);
   let round = 1;
+
   while (f1.hp > 0 && f2.hp > 0 && round <= 15) {
-    // Étape 1 : Attaque de f1 sur f2
     if (Math.random() >= f2.dodge) {
       let dmg = Math.max(15, f1.atk - Math.floor(f2.def / 2)) * (0.85 + Math.random() * 0.3);
       if (Math.random() < f1.crit) dmg *= 1.5;
       f2.hp -= Math.floor(dmg);
     }
-    // Étape 2 : Riposte de f2 sur f1 (si encore en vie)
     if (f2.hp > 0 && Math.random() >= f1.dodge) {
       let dmg = Math.max(15, f2.atk - Math.floor(f1.def / 2)) * (0.85 + Math.random() * 0.3);
       if (Math.random() < f2.crit) dmg *= 1.5;
@@ -440,46 +438,37 @@ function simulateRpgFight(p1, p2, p1Data, p2Data) {
     }
     round++;
   }
-  return f1.hp > f2.hp ? p1 : p2;
+  return f1.hp > f2.hp ? p1Id : p2Id;
 }
 
 // ==========================================
-// 🏟️ EXPÉDITION DU TOURNOI & SÉQUENÇAGE DES BRACKETS
+// 🏟️ EXPÉDITION DU TOURNOI & SÉQUENÇAGE
 // ==========================================
-async function evaluateTournamentStart(api, threadID, sys, message) {
+async function evaluateTournamentStart(api, threadID, sys, message, usersData) {
   if (sys.activeTournament.participants.length < 2) {
     sys.activeTournament = null;
     writeDB(SYSTEM_FILE, sys);
-    return message.reply("❌ | Le tournoi est annulé par manque de participants (minimum 2 gladiateurs requis).");
+    return message.reply("❌ | Le tournoi est annulé par manque de participants (minimum 2 requis).");
   }
 
   sys.activeTournament.status = "ongoing";
   let pool = [...sys.activeTournament.participants];
-  
-  // Mélange aléatoire (Shuffle)
   pool.sort(() => Math.random() - 0.5);
 
-  const players = readDB(PLAYER_FILE);
   let matches = [];
-
-  // Création des paires initiales
   for (let i = 0; i < pool.length; i += 2) {
     if (pool[i + 1]) {
       matches.push({ p1: pool[i], p2: pool[i + 1], winner: null });
     } else {
-      // Joueur exempt (Bye) qui passe directement au tour suivant si nombre impair
       matches.push({ p1: pool[i], p2: pool[i], winner: pool[i] });
     }
   }
-
   sys.activeTournament.matches = matches;
   writeDB(SYSTEM_FILE, sys);
 
-  await message.reply(`⚔️ | **LES INSCRIPTIONS SONT CLOSES !**\nGénération de l'arbre de combat avec **${pool.length} participants**. Début des simulations automatiques...`);
+  await message.reply(`⚔️ | **LES INSCRIPTIONS SONT CLOSES !**\nGénération de l'arbre de combat (${pool.length} participants). Début des simulations...`);
 
-  // Résolution progressive des duels
   let currentRoundPool = [...pool];
-  let roundCount = 1;
 
   while (currentRoundPool.length > 1) {
     let winners = [];
@@ -493,79 +482,96 @@ async function evaluateTournamentStart(api, threadID, sys, message) {
 
       const p1 = currentRoundPool[i];
       const p2 = currentRoundPool[i + 1];
-      
-      // Simulation RPG pure
-      const winner = simulateRpgFight(p1, p2, players[p1], players[p2]);
+
+      let u1Data = await usersData.get(p1);
+      let u2Data = await usersData.get(p2);
+      let p1Prof = getTournamentProfile(u1Data);
+      let p2Prof = getTournamentProfile(u2Data);
+
+      const winner = simulateRpgFight(p1, p2, p1Prof, p2Prof);
       winners.push(winner);
       roundMatches.push({ p1, p2, winner });
 
-      // Mise à jour de l'historique de combat des joueurs
-      players[winner].wins += 1;
-      players[winner].streak += 1;
-      players[winner].points += 10;
-      players[winner].seasonPoints += 10;
+      // Modification des profils à la volée
+      let winUserData = winner === p1 ? u1Data : u2Data;
+      let loseUserData = winner === p1 ? u2Data : u1Data;
+      
+      let wProf = getTournamentProfile(winUserData);
+      let lProf = getTournamentProfile(loseUserData);
 
-      const loser = winner === p1 ? p2 : p1;
-      players[loser].streak = 0; // Perte de la série de victoires
+      wProf.wins += 1;
+      wProf.streak += 1;
+      wProf.points += 10;
+      wProf.seasonPoints += 10;
+      lProf.streak = 0;
 
-      // Déblocage automatique des titres honorifiques
-      if (players[winner].wins >= 5 && !players[winner].titles.includes("rookie")) players[winner].titles.push("rookie");
-      if (players[winner].wins >= 15 && !players[winner].titles.includes("elite")) players[winner].titles.push("elite");
-      if (players[winner].wins >= 40 && !players[winner].titles.includes("grand")) players[winner].titles.push("grand");
-      if (players[winner].wins >= 80 && !players[winner].titles.includes("king")) players[winner].titles.push("king");
-      if (players[winner].streak >= 5 && !players[winner].titles.includes("unstoppable")) players[winner].titles.push("unstoppable");
-      if (players[winner].points >= 500 && !players[winner].titles.includes("legendary")) players[winner].titles.push("legendary");
+      // Déblocage des titres
+      if (wProf.wins >= 5 && !wProf.titles.includes("rookie")) wProf.titles.push("rookie");
+      if (wProf.wins >= 15 && !wProf.titles.includes("elite")) wProf.titles.push("elite");
+      if (wProf.wins >= 40 && !wProf.titles.includes("grand")) wProf.titles.push("grand");
+      if (wProf.wins >= 80 && !wProf.titles.includes("king")) wProf.titles.push("king");
+      if (wProf.streak >= 5 && !wProf.titles.includes("unstoppable")) wProf.titles.push("unstoppable");
+      if (wProf.points >= 500 && !wProf.titles.includes("legendary")) wProf.titles.push("legendary");
+
+      winUserData.customData.tournament = wProf;
+      loseUserData.customData.tournament = lProf;
+
+      // Écriture forcée en DB
+      await usersData.set(p1, u1Data.customData, "customData");
+      await usersData.set(p2, u2Data.customData, "customData");
     }
 
-    // Si nous arrivons au dernier duel, c'est la Grande Finale !
+    // Gestion de la Grande Finale
     if (currentRoundPool.length === 2) {
       const finalMatch = roundMatches[0];
       const championId = finalMatch.winner;
       const secondId = finalMatch.winner === finalMatch.p1 ? finalMatch.p2 : finalMatch.p1;
 
-      // Distribution des récompenses financières
+      let cUserData = await usersData.get(championId);
+      let sUserData = await usersData.get(secondId);
+
       const tConfig = TOURNAMENT_TYPES[sys.activeTournament.type] || TOURNAMENT_TYPES.regular;
       const baseReward = 500000 * tConfig.multiplier;
 
-      // Envoi du rapport de la Grande Finale
       let finalBox = `🏆 **[GRANDE FINALE DU CHAMPIONNAT]**\n${UI.line}\n`;
-      finalBox += `👑 **${players[championId].name}** VS **${players[secondId].name}**\n${UI.line}\n`;
-      finalBox += `🥇 **1er Place : ${players[championId].name}**\n│ ➔ Gain : +${(baseReward).toLocaleString()}$ | +100 Points\n`;
-      finalBox += `🥈 **2e Place : ${players[secondId].name}**\n│ ➔ Gain : +${(baseReward * 0.5).toLocaleString()}$ | +40 Points\n`;
+      finalBox += `👑 **${cUserData.name || "Champion"}** VS **${sUserData.name || "Challenger"}**\n${UI.line}\n`;
+      finalBox += `🥇 **1er Place : ${cUserData.name || "Champion"}**\n│ ➔ Gain : +${baseReward.toLocaleString()}$ | +100 Points\n`;
+      finalBox += `🥈 **2e Place : ${sUserData.name || "Challenger"}**\n│ ➔ Gain : +${(baseReward * 0.5).toLocaleString()}$ | +40 Points\n`;
       finalBox += UI.boxEnd();
-      
+
       api.sendMessage(finalBox, threadID);
 
-      // Attribution des gains financiers sur les profils des joueurs
-      try {
-        const usersData = api.usersData; // Récupération sécurisée du gestionnaire global
-        if (usersData) {
-          let cData = await usersData.get(championId);
-          let sData = await usersData.get(secondId);
-          await usersData.set(championId, { money: (cData.money || 0) + baseReward });
-          await usersData.set(secondId, { money: (sData.money || 0) + (baseReward * 0.5) });
-        }
-      } catch (e) {}
+      // Attribution de l'argent via l'API GoatBot natif
+      await usersData.set(championId, (cUserData.money || 0) + baseReward, "money");
+      await usersData.set(secondId, (sUserData.money || 0) + (baseReward * 0.5), "money");
 
-      // Archivage historique
+      // Points additionnels finale
+      let cProf = getTournamentProfile(cUserData);
+      let sProf = getTournamentProfile(sUserData);
+      cProf.points += 100; cProf.seasonPoints += 100;
+      sProf.points += 40; sProf.seasonPoints += 40;
+      
+      cUserData.customData.tournament = cProf;
+      sUserData.customData.tournament = sProf;
+      
+      await usersData.set(championId, cUserData.customData, "customData");
+      await usersData.set(secondId, sUserData.customData, "customData");
+
+      // Historique global
       let historyDb = readDB(HISTORY_FILE);
       historyDb.push({
         type: sys.activeTournament.type,
-        winnerName: players[championId].name,
+        winnerName: cUserData.name || "Champion",
         participantCount: sys.activeTournament.participants.length,
         season: sys.currentSeason,
         date: new Date().toLocaleDateString()
       });
       writeDB(HISTORY_FILE, historyDb);
 
-      // Fermeture du tournoi actif
       sys.activeTournament = null;
       writeDB(SYSTEM_FILE, sys);
-      writeDB(PLAYER_FILE, players);
       return;
     }
-
     currentRoundPool = winners;
-    roundCount++;
   }
-        }
+}
