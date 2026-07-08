@@ -1,203 +1,161 @@
-const { writeFileSync } = require("fs-extra");
+const { getTime } = global.utils;
 
 module.exports = {
   config: {
     name: "thread",
-    aliases: ["t"],
-    version: "1.5",
-    author: "NTKhang",
-    role: 2, // Admin / Owner Bot uniquement
-    category: "Owner",
-    description: "No description",
+    version: "1.5.0",
+    author: "Chitron Bhattacharjee × Gemini",
+    countDown: 5,
+    role: 0,
+    description: "Gestion des groupes de discussion enregistrés dans le système du bot",
+    category: "owner",
     guide: {
-      en: "🌸 𝗧𝗛𝗥𝗘𝗔𝗗\n\n📂 𝗖𝗮𝘁𝗲𝗴𝗼𝗿𝘆: Owner\n📘 𝗗𝗲𝘀𝗰𝗿𝗶𝗽𝘁𝗶𝗼𝗻: No description\n🧾 𝗨𝘀𝗮𝗴𝗲:\n{pn} [find | -f | search | -s] <name to find>\n{pn} [find | -f | search | -s] [-j | joined] <name to find>\n{pn} [ban | -b] [<tid> | leave blank] <reason>\n{pn} unban [<tid> | leave blank]\n\n👤 𝗔𝘂𝘁𝗵𝗼𝗿: NTKhang\n🛠 𝗩𝗲𝗿𝘀𝗶𝗼𝗻: 1.5"
+      fr: "• {p}{n} find [-j / joined] [nom] : Recherche un groupe par son nom (-j filtre uniquement les groupes où le bot est actif).\n" +
+          "• {p}{n} ban [ID_groupe / vide] [raison] : Bloque l'accès au bot pour le groupe spécifié ou actuel.\n" +
+          "• {p}{n} unban [ID_groupe / vide] : Débloque le groupe spécifié ou actuel.\n" +
+          "• {p}{n} info [ID_groupe / vide] : Affiche les statistiques globales d'un groupe."
     }
   },
 
-  onStart: async function ({ api, event, args, threadsData, message }) {
-    const { threadID, messageID } = event;
-    const action = args[0]?.toLowerCase();
-
-    if (!action) {
-      return message.reply(`🌸 𝗧𝗛𝗥𝗘𝗔𝗗\n\n📂 𝗖𝗮𝘁𝗲𝗴𝗼𝗿𝘆: Owner\n📘 𝗗𝗲𝘀𝗰𝗿𝗶𝗽𝘁𝗶𝗼𝗻: No description\n🧾 𝗨𝘀𝗮𝗴𝗲:\n{p}{n} find <name>\n{p}{n} find -j <name>\n{p}{n} ban <tid> <reason>\n{p}{n} unban <tid>`);
+  langs: {
+    fr: {
+      noPermission: "❌ Autorisation refusée. Vous n'avez pas les privilèges nécessaires.",
+      found: "🔎 %1 groupe(s) correspondant au mot-clé \"%2\" trouvé(s) :\n%3",
+      notFound: "❌ Aucun groupe ne correspond au mot-clé : \"%1\"",
+      hasBanned: "⚠️ Ce groupe [ID: %1 | Nom: %2] est déjà banni.\n» Raison : %3\n» Date : %4",
+      banned: "✓ Le groupe [ID: %1 | Nom: %2] a été banni avec succès.\n» Raison : %3\n» Date : %4",
+      notBanned: "💡 Le groupe [ID: %1 | Nom: %2] ne fait l'objet d'aucune restriction.",
+      unbanned: "✓ Les restrictions du groupe [ID: %1 | Nom: %2] ont été levées.",
+      missingReason: "❌ Veuillez spécifier un motif ou une raison pour justifier le bannissement.",
+      info: "╭─ 🪐 𝗧𝗛𝗥𝗘𝗔𝗗 𝗜𝗡𝗙𝗢𝗥𝗠𝗔𝗧𝗜𝗢𝗡 ─╮\n" +
+            "│ • ID de la box : %1\n" +
+            "│ • Nom : %2\n" +
+            "│ • Création des données : %3\n" +
+            "├──────────────────────────┤\n" +
+            "│ • Membres totaux : %4\n" +
+            "│ • Hommes : %5\n" +
+            "│ • Femmes : %6\n" +
+            "│ • Activité totale : %7 messages\n" +
+            "%8" +
+            "╰──────────────────────────╯"
     }
+  },
 
-    // ==========================================
-    // 🔍 RECHERCHE / FIND / SEARCH
-    // ==========================================
-    if (["find", "-f", "search", "-s"].includes(action)) {
-      try {
-        let onlyJoined = false;
-        let queryIndex = 1;
+  onStart: async function ({ args, threadsData, message, role, event, getLang }) {
+    const type = args[0]?.toLowerCase();
 
-        if (args[1]?.toLowerCase() === "-j" || args[1]?.toLowerCase() === "joined") {
-          onlyJoined = true;
-          queryIndex = 2;
+    switch (type) {
+      // 🔍 CONFIGURATION RECHERCHE
+      case "find":
+      case "search":
+      case "-f":
+      case "-s": {
+        if (role < 2) return message.reply(getLang("noPermission"));
+        let allThread = await threadsData.getAll();
+        let keyword = args.slice(1).join(" ");
+
+        if (['-j', '-join', 'joined'].includes(args[1]?.toLowerCase())) {
+          allThread = allThread.filter(thread => thread.members.some(member => member.userID == global.GoatBot.botID && member.inGroup));
+          keyword = args.slice(2).join(" ");
         }
 
-        const searchQuery = args.slice(queryIndex).join(" ").toLowerCase();
-        if (!searchQuery) {
-          return message.reply("⚠️ Veuillez entrer un nom de groupe à rechercher.");
-        }
+        const result = allThread.filter(item => item.threadID.length > 15 && (item.threadName || "").toLowerCase().includes(keyword.toLowerCase()));
+        const resultText = result.reduce((i, thread) => i += `\n ├─ Nom : ${thread.threadName}\n └─ ID : ${thread.threadID}\n`, "");
 
-        // Récupération de tous les groupes enregistrés dans la DB du bot
-        const allThreads = await threadsData.getAll() || [];
-        // Récupération de la liste en temps réel des salons actifs sur la session
-        let activeThreads = [];
-        try {
-          activeThreads = await api.getThreadList(100, null, ["INBOX"]) || [];
-        } catch (e) {
-          console.error("Impossible de récupérer la liste active de l'API", e);
-        }
-
-        const activeTids = activeThreads.map(t => String(t.threadID));
-
-        let results = [];
-
-        for (const tData of allThreads) {
-          const tid = String(tData.threadID);
-          const tInfoInActive = activeThreads.find(t => String(t.threadID) === tid);
-          
-          // Détermination du nom et du statut de jointure
-          let threadName = tData.threadName || tInfoInActive?.name || tInfoInActive?.threadName || "Sans nom";
-          const isJoined = activeTids.includes(tid) || !!tInfoInActive;
-          const memberCount = tInfoInActive?.participantIDs?.length || tData.members?.length || 0;
-
-          if (onlyJoined && !isJoined) continue;
-
-          if (threadName.toLowerCase().includes(searchQuery) || tid.includes(searchQuery)) {
-            results.push({
-              id: tid,
-              name: threadName,
-              members: memberCount,
-              status: isJoined ? "Connecté 🟢" : "Quitté 🔴"
-            });
-          }
-        }
-
-        if (results.length === 0) {
-          return message.reply(`❌ Aucun groupe trouvé correspondant à "${searchQuery}" (Filtre Joint: ${onlyJoined ? "Oui" : "Non"}).`);
-        }
-
-        // Gestion de la pagination (max 20 groupes par page)
-        const itemsPerPage = 20;
-        const totalPages = Math.ceil(results.length / itemsPerPage);
-        let page = 1;
-
-        // Détection si le dernier argument spécifie un numéro de page
-        const lastArg = args[args.length - 1];
-        if (!isNaN(lastArg) && parseInt(lastArg) > 0) {
-          page = parseInt(lastArg);
-          if (page > totalPages) page = totalPages;
-        }
-
-        const startIdx = (page - 1) * itemsPerPage;
-        const endIdx = startIdx + itemsPerPage;
-        const paginatedResults = results.slice(startIdx, endIdx);
-
-        let responseMsg = `🔎 **RÉSULTATS DE RECHERCHE (${startIdx + 1}-${Math.min(endIdx, results.length)}/${results.length})**\n━━━━━━━━━━━━━━━━━━━━━\n`;
+        let msg = "";
+        if (result.length > 0) msg += getLang("found", result.length, keyword, resultText);
+        else msg += getLang("notFound", keyword);
         
-        paginatedResults.forEach((res, index) => {
-          responseMsg += `${startIdx + index + 1}. 👥 **${res.name}**\n   🆔 TID: \`${res.id}\`\n   👥 Membres: ${res.members} | Statut: ${res.status}\n\n`;
-        });
-
-        responseMsg += `━━━━━━━━━━━━━━━━━━━━━\n📄 Page ${page}/${totalPages} — Utilisez \`thread find [query] [page]\` pour naviguer.`;
-        return message.reply(responseMsg);
-
-      } catch (err) {
-        console.error(err);
-        return message.reply("❌ Une erreur est survenue lors de la recherche des groupes.");
+        return message.reply(msg);
       }
-    }
 
-    // ==========================================
-    // 🚫 BAN / -B
-    // ==========================================
-    if (["ban", "-b"].includes(action)) {
-      try {
-        let targetTid = args[1];
-        let reason = args.slice(2).join(" ");
+      // 🔒 CONFIGURATION BANNISSEMENT
+      case "ban":
+      case "-b": {
+        if (role < 2) return message.reply(getLang("noPermission"));
+        let tid, reason;
 
-        // Si l'UID ou le TID est omis, on prend par défaut le groupe actuel
-        if (!targetTid || isNaN(targetTid)) {
-          targetTid = threadID;
+        if (!isNaN(args[1])) {
+          tid = args[1];
+          reason = args.slice(2).join(" ");
+        } else {
+          tid = event.threadID;
           reason = args.slice(1).join(" ");
         }
 
-        if (!reason) reason = "Aucune raison spécifiée par l'administrateur.";
+        if (!tid) return message.SyntaxError();
+        if (!reason) return message.reply(getLang("missingReason"));
+        
+        reason = reason.replace(/\s+/g, ' ');
+        const threadData = await threadsData.get(tid);
+        const name = threadData.threadName;
+        const status = threadData.banned.status;
 
-        const threadToBan = await threadsData.get(targetTid);
-        if (!threadToBan) {
-          return message.reply(`❌ Le groupe avec l'ID \`${targetTid}\` n'existe pas dans la base de données.`);
-        }
+        if (status) return message.reply(getLang("hasBanned", tid, name, threadData.banned.reason, threadData.banned.date));
 
-        if (threadToBan.data?.banned === true) {
-          return message.reply(`⚠️ Le groupe \`${threadToBan.threadName || targetTid}\` est déjà banni.`);
-        }
-
-        // Sauvegarde des informations du ban dans les métadonnées de la DB
-        if (!threadToBan.data) threadToBan.data = {};
-        threadToBan.data.banned = true;
-        threadToBan.data.banReason = reason;
-        threadToBan.data.banDate = new Date().toISOString();
-
-        await threadsData.set(targetTid, threadToBan.data, "data");
-
-        // Notification d'exécution
-        message.reply(`🛑 **[THREAD BAN]**\n━━━━━━━━━━━━━━━━━\n👥 Groupe : ${threadToBan.threadName || "Inconnu"}\n🆔 TID : \`${targetTid}\`\n⚖️ Raison : ${reason}\n\nLe groupe a été verrouillé avec succès.`);
-
-        // Alerte envoyée sur le groupe banni si le bot y est encore connecté
-        try {
-          await api.sendMessage(`🛑 **[NOTIFICATION SYSTÈME]**\nCe groupe a été banni par l'administration du bot.\n⚖️ Raison : ${reason}\n\nLe bot cessera de répondre ici.`, targetTid);
-        } catch (e) {}
-
-      } catch (err) {
-        console.error(err);
-        return message.reply("❌ Une erreur s'est produite lors du bannissement du thread.");
+        const time = getTime("DD/MM/YYYY HH:mm:ss");
+        await threadsData.set(tid, {
+          banned: {
+            status: true,
+            reason,
+            date: time
+          }
+        });
+        return message.reply(getLang("banned", tid, name, reason, time));
       }
-      return;
-    }
 
-    // ==========================================
-    // 🔓 UNBAN
-    // ==========================================
-    if (action === "unban") {
-      try {
-        let targetTid = args[1];
+      // 🔓 CONFIGURATION DÉBANNISSEMENT
+      case "unban":
+      case "-u": {
+        if (role < 2) return message.reply(getLang("noPermission"));
+        let tid;
 
-        if (!targetTid || isNaN(targetTid)) {
-          targetTid = threadID;
-        }
+        if (!isNaN(args[1])) tid = args[1];
+        else tid = event.threadID;
 
-        const threadToUnban = await threadsData.get(targetTid);
-        if (!threadToUnban) {
-          return message.reply(`❌ Le groupe avec l'ID \`${targetTid}\` n'existe pas dans la base de données.`);
-        }
+        if (!tid) return message.SyntaxError();
 
-        if (!threadToUnban.data || threadToUnban.data.banned !== true) {
-          return message.reply(`⚠️ Le groupe \`${threadToUnban.threadName || targetTid}\` n'est pas banni.`);
-        }
+        const threadData = await threadsData.get(tid);
+        const name = threadData.threadName;
+        const status = threadData.banned.status;
 
-        // Réinitialisation des paramètres de bannissement
-        threadToUnban.data.banned = false;
-        delete threadToUnban.data.banReason;
-        delete threadToUnban.data.banDate;
+        if (!status) return message.reply(getLang("notBanned", tid, name));
 
-        await threadsData.set(targetTid, threadToUnban.data, "data");
-
-        message.reply(`🟩 **[THREAD UNBAN]**\n━━━━━━━━━━━━━━━━━\n👥 Groupe : ${threadToUnban.threadName || "Inconnu"}\n🆔 TID : \`${targetTid}\`\n\nL'accès global a été restauré pour ce groupe.`);
-
-        try {
-          await api.sendMessage(`🟩 **[NOTIFICATION SYSTÈME]**\nLe bannissement de ce groupe a été levé. Les fonctionnalités sont de nouveau opérationnelles.`, targetTid);
-        } catch (e) {}
-
-      } catch (err) {
-        console.error(err);
-        return message.reply("❌ Une erreur s'est produite lors du débannissement du thread.");
+        await threadsData.set(tid, { banned: {} });
+        return message.reply(getLang("unbanned", tid, name));
       }
-      return;
-    }
 
-    return message.reply("⚠️ Commande ou action introuvable. Utilisez `find`, `ban` ou `unban`.");
+      // 📊 AFFICHAGE DES STATISTIQUES GLOBAL
+      case "info":
+      case "-i": {
+        let tid;
+
+        if (!isNaN(args[1])) tid = args[1];
+        else tid = event.threadID;
+
+        if (!tid) return message.SyntaxError();
+
+        const threadData = await threadsData.get(tid);
+        const createdDate = getTime(threadData.createdAt, "DD/MM/YYYY HH:mm:ss");
+        const valuesMember = Object.values(threadData.members).filter(item => item.inGroup);
+        const totalBoy = valuesMember.filter(item => item.gender == "MALE").length;
+        const totalGirl = valuesMember.filter(item => item.gender == "FEMALE").length;
+        const totalMessage = valuesMember.reduce((i, item) => i += item.count, 0);
+
+        let infoBanned = "";
+        if (threadData.banned.status) {
+          infoBanned = "├──────────────────────────┤\n" +
+                       `│ ⚠️ STATUT : BANNI\n` +
+                       `│ • Motif : ${threadData.banned.reason}\n` +
+                       `│ • Date d'effet : ${threadData.banned.date}\n`;
+        }
+
+        const msg = getLang("info", threadData.threadID, threadData.threadName, createdDate, valuesMember.length, totalBoy, totalGirl, totalMessage, infoBanned);
+        return message.reply(msg);
+      }
+
+      default:
+        return message.SyntaxError();
+    }
   }
 };
