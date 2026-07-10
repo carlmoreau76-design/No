@@ -19,6 +19,13 @@ module.exports = {
       disabled: "🟥 **[SÉCURITÉ LEVÉE]** Option %1 déverrouillée.",
       missing: "⚠️ **[ALERTE DONNÉES]** Impossible de trouver la configuration initiale pour cette option.",
       usage: "💡 **[INFO TERMINAL]** Syntaxe : `anti [avatar / name / nickname / theme / emoji] [on / off]`"
+    },
+    en: {
+      noPermission: "⛔ **[ACCESS DENIED]** Security protocol violation. Only the Supreme Founder has these privileges.",
+      saved: "🟩 **[SECURITY ENABLED]** Option %1 successfully locked.",
+      disabled: "🟥 **[SECURITY DISABLED]** Option %1 unlocked.",
+      missing: "⚠️ **[DATA ALERT]** Unable to find the initial configuration for this option.",
+      usage: "💡 **[TERMINAL INFO]** Syntax: `anti [avatar / name / nickname / theme / emoji] [on / off]`"
     }
   },
 
