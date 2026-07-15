@@ -161,7 +161,7 @@ module.exports = {
     name: "cafe",
     aliases: ["coffee", "bar", "caferp"],
     version: "2.0.0",
-    author: "Developer Expert",
+    author: "Malika",
     countDown: 2,
     role: 0,
     category: "economy",
@@ -189,7 +189,7 @@ module.exports = {
         }
 
         const welcomeMsg = 
-          `🌸 ✨ ━━━━━━━ 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐀𝐔 𝐂𝐀𝐅𝐄́ 𝐑𝐏 ━━━━━━━ ✨ 🌸\n` +
+          `🌸 ✨ ━━━━━━━ 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐀𝐔 𝐂𝐀𝐅𝐄́ 𝐌𝐀𝐋𝐈𝐊𝐀 ━━━━━━━ ✨ 🌸\n` +
           `✨ ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬ ✨\n` +
           `Bonjour à toi, @${userName} ! 🎉\n\n` +
           `Bienvenue dans notre havre de paix et de gourmandise.\n` +
@@ -315,7 +315,7 @@ module.exports = {
     // 1. HELP / AIDE
     if (!subCommand || subCommand === "aide" || subCommand === "help") {
       const listAide = 
-        `☕ ━━━━━━━ 𝐌𝐄𝐍𝐔 𝐃𝐄𝐒 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐄𝐒 𝐂𝐀𝐅𝐄́ 𝐑𝐏 ━━━━━━━ ☕\n` +
+        `☕ ━━━━━━━ 𝐌𝐄𝐍𝐔 𝐃𝐄𝐒 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐄𝐒 𝐂𝐀𝐅𝐄́ 𝐌𝐀𝐋𝐈𝐊𝐀 ━━━━━━━ ☕\n` +
         `✨ Utilisez : \`cafe [option]\`\n` +
         `◽ ━━━━━━━━━ CLIENT ━━━━━━━━━ ◽\n` +
         `• \`menu\` : Consulter la carte des délicieuses boissons\n` +
@@ -349,7 +349,7 @@ module.exports = {
 
     // 2. MENU
     if (subCommand === "menu") {
-      let msg = `📋 ━━━━━━━ 𝐌𝐄𝐍𝐔 𝐃𝐔 𝐂𝐀𝐅𝐄́ 𝐑𝐏 ━━━━━━━ 📋\n` +
+      let msg = `📋 ━━━━━━━ 𝐌𝐄𝐍𝐔 𝐃𝐔 𝐂𝐀𝐅𝐄́ 𝐌𝐀𝐋𝐈𝐊𝐀 ━━━━━━━ 📋\n` +
                 `✨ Niveau du café requis pour commander indiqué.\n\n`;
       data.menu.forEach(d => {
         msg += `◽ **[ ${d.id} ]** ${d.name} : **${d.price}$** *(Req: Nv.${d.level})*\n` +
