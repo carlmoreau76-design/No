@@ -252,26 +252,40 @@ module.exports = {
     }
   },
 
-  // 1. Événement d'accueil et d'automatisation des PNJ / Cycles
+ // 1. Événement d'accueil automatique des nouveaux membres (restreint au groupe spécifié)
   onEvent: async function ({ api, event, usersData }) {
+    // Vérifier si l'événement provient bien du groupe autorisé
     if (String(event.threadID) !== ALLOWED_GROUP_ID) return;
 
-    // --- ACCUEIL DES NOUVEAUX ---
     if (event.logMessageType === "log:subscribe") {
       const addedParticipants = event.logMessageData.addedParticipants;
+      
+      // CHARGEMENT DES DONNÉES DU CAFÉ POUR LES QUÊTES
+      const data = loadCafeData(); 
+
       for (const participant of addedParticipants) {
         const userID = participant.userFbId;
         const userInfo = await usersData.get(userID) || {};
         const userName = userInfo.name || "Nouvel Invité";
 
+        // 📥 COLLER LE BLOC ICI :
         // Attribution auto du rôle de Client et bonus de bienvenue
         if (userInfo) {
           userInfo.money = safeNumber(userInfo.money) + 500; // Bonus de 500$
           await usersData.set(userID, userInfo);
         }
 
+        // 📈 MISE À JOUR DE LA QUÊTE 9 (Accueillir de nouveaux clients pour tout le staff)
+        data.serveuses.forEach(srvID => {
+          data.quetesQuotidiennes.forEach(q => {
+            if (q.id === 9) q.progression[srvID] = (q.progression[srvID] || 0) + 1;
+          });
+        });
+        saveCafeData(data); // Sauvegarde immédiate de la quête
+
+        // Envoi du message de bienvenue esthétique
         const welcomeMsg = 
-          `🌸 ✨ ━━━━━━━ 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐀𝐔 𝐂𝐀𝐅𝐄́ 𝐌𝐀𝐋𝐈𝐊𝐀 ━━━━━━━ ✨ 🌸\n` +
+          `🌸 ✨ ━━━━━━━ 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐀𝐔 𝐂𝐀𝐅𝐄́ 𝐑𝐏 ━━━━━━━ ✨ 🌸\n` +
           `✨ ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬ ✨\n` +
           `Bonjour à toi, @${userName} ! 🎉\n\n` +
           `Bienvenue dans notre havre de paix et de gourmandise.\n` +
@@ -289,7 +303,7 @@ module.exports = {
       }
     }
   },
-
+  
   // 2. Logique principale des commandes
   onStart: async function ({ api, event, args, usersData, message }) {
     const { senderID, threadID } = event;
