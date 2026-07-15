@@ -604,15 +604,25 @@ module.exports = {
 
     // 9. POURBOIRE
     if (subCommand === "pourboire") {
-      if (!data.serveuses.includes(senderID)) return message.reply("❌ Seules les serveuses collectent des pourboires !");
-      const chance = Math.random();
-      if (chance < 0.4) {
-        return message.reply("💨 Les clients ont été radins sur ce coup. Pas de pourboire.");
-      }
-      const tips = Math.floor(Math.random() * 80) + 20;
-      senderInfo.money += tips;
-      await usersData.set(senderID, senderInfo);
-      return message.reply(`👛 **𝐆𝐄́𝐍𝐄́𝐑𝐄𝐔𝐗 𝐂𝐋𝐈𝐄𝐍𝐓 !**\nVous obtenez un pourboire de **${tips}$** pour votre amabilité.`);
+  if (!data.serveuses.includes(senderID)) return message.reply("❌ Seules les serveuses collectent des pourboires !");
+  
+  const chance = Math.random();
+  if (chance < 0.4) {
+    return message.reply("💨 Les clients ont été radins sur ce coup. Pas de pourboire.");
+  }
+  
+  const tips = Math.floor(Math.random() * 80) + 20;
+  senderInfo.money += tips;
+
+  // 📈 MISE À JOUR DE LA QUÊTE 4 (À AJOUTER ICI)
+  data.quetesQuotidiennes.forEach(q => {
+    if (q.id === 4) q.progression[senderID] = (q.progression[senderID] || 0) + 1;
+  });
+
+  await usersData.set(senderID, senderInfo);
+  saveCafeData(data); // Ajouté pour enregistrer la progression de la quête dans le fichier JSON
+
+  return message.reply(`👛 **𝐆𝐄́𝐍𝐄́𝐑𝐄𝐔𝐗 𝐂𝐋𝐈𝐄𝐍𝐓 !**\nVous obtenez un pourboire de **${tips}$** pour votre amabilité.`);
     }
 
     // 10. CAISSE
