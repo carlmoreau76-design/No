@@ -443,48 +443,60 @@ module.exports = {
 
     // 3. COMMANDER
     if (subCommand === "commander") {
-      if (!data.ouvert) return message.reply("💤 Le café est actuellement fermé ! Repassez pendant les heures d'ouverture.");
-      const drinkId = parseInt(args[1]);
-      if (isNaN(drinkId)) return message.reply("❌ Précisez l'identifiant numérique de la boisson ! Exemple: `cafe commander 2`");
+  if (!data.ouvert) return message.reply("💤 Le café est actuellement fermé ! Repassez pendant les heures d'ouverture.");
+  const drinkId = parseInt(args[1]);
+  if (isNaN(drinkId)) return message.reply("❌ Précisez l'identifiant numérique de la boisson ! Exemple: `cafe commander 2`");
 
-      const boisson = data.menu.find(d => d.id === drinkId);
-      if (!boisson) return message.reply("❌ Cette boisson ne figure pas sur notre carte.");
-      if (data.level < boisson.level) return message.reply(`🔒 Vous devez atteindre le niveau de café **${boisson.level}** pour débloquer cette boisson.`);
+  const boisson = data.menu.find(d => d.id === drinkId);
+  if (!boisson) return message.reply("❌ Cette boisson ne figure pas sur notre carte.");
+  if (data.level < boisson.level) return message.reply(`🔒 Vous devez atteindre le niveau de café **${boisson.level}** pour débloquer cette boisson.`);
 
-      // Vérification des stocks d'ingrédients du café
-      for (const [ing, qte] of Object.entries(boisson.req)) {
-        if ((data.stock[ing] || 0) < qte) {
-          return message.reply(`⚠️ Le café est en rupture d'ingrédients (**${ing}**) pour concocter cette boisson !`);
-        }
-      }
+  // Vérification des stocks d'ingrédients du café
+  for (const [ing, qte] of Object.entries(boisson.req)) {
+    if ((data.stock[ing] || 0) < qte) {
+      return message.reply(`⚠️ Le café est en rupture d'ingrédients (**${ing}**) pour concocter cette boisson !`);
+    }
+  }
 
-      if (senderInfo.money < boisson.price) {
-        return message.reply(`💸 Vous ne possédez pas les fonds nécessaires (**${boisson.price}$**).`);
-      }
+  if (senderInfo.money < boisson.price) {
+    return message.reply(`💸 Vous ne possédez pas les fonds nécessaires (**${boisson.price}$**).`);
+  }
 
-      // Consommation et paiement
-      senderInfo.money -= boisson.price;
-      data.caisse += boisson.price;
-      data.xp += 15;
-      data.propreness = Math.max(0, data.propreness - 2); // Un peu de saleté en cuisine
+  // Consommation et paiement
+  senderInfo.money -= boisson.price;
+  data.caisse += boisson.price;
+  data.xp += 15;
+  data.propreness = Math.max(0, data.propreness - 2); // Un peu de saleté en cuisine
 
-      for (const [ing, qte] of Object.entries(boisson.req)) {
-        data.stock[ing] -= qte;
-      }
+  for (const [ing, qte] of Object.entries(boisson.req)) {
+    data.stock[ing] -= qte;
+  }
 
-      await usersData.set(senderID, senderInfo);
-      ajouterJournal(data, "VENTE", `${senderInfo.name} a commandé un ${boisson.name}.`);
-      verifierLevelUp();
-      saveCafeData(data);
+  // 📈 MISE À JOUR DES QUÊTES DAILY (À AJOUTER ICI)
+  data.quetesQuotidiennes.forEach(q => {
+    // Quête 3: Préparer 5 boissons
+    if (q.id === 3) q.progression[senderID] = (q.progression[senderID] || 0) + 1;
+    
+    // Quête 6: Encaisser 1 500$ dans la caisse du café
+    if (q.id === 6) q.progression[senderID] = (q.progression[senderID] || 0) + boisson.price;
+    
+    // Quête 7: Servir 10 boissons sans erreur
+    if (q.id === 7) q.progression[senderID] = (q.progression[senderID] || 0) + 1;
+  });
 
-      const ticket = 
-        `🧾 ━━━━━━━ 𝐓𝐈𝐂𝐊𝐄𝐓 𝐃𝐄 𝐂𝐀𝐈𝐒𝐒𝐄 ━━━━━━━ 🧾\n` +
-        `👤 **Client :** ${senderInfo.name}\n` +
-        `☕ **Boisson :** ${boisson.name}\n` +
-        `💵 **Prix :** ${boisson.price}$\n` +
-        `👛 **Nouveau Solde :** ${senderInfo.money}$\n` +
-        `✨ *Merci pour votre fidélité et bonne dégustation !* ✨`;
-      return message.reply(ticket);
+  await usersData.set(senderID, senderInfo);
+  ajouterJournal(data, "VENTE", `${senderInfo.name} a commandé un ${boisson.name}.`);
+  verifierLevelUp();
+  saveCafeData(data);
+
+  const ticket = 
+    `🧾 ━━━━━━━ 𝐓𝐈𝐂𝐊𝐄𝐓 𝐃𝐄 𝐂𝐀𝐈𝐒𝐒𝐄 ━━━━━━━ 🧾\n` +
+    `👤 **Client :** ${senderInfo.name}\n` +
+    `☕ **Boisson :** ${boisson.name}\n` +
+    `💵 **Prix :** ${boisson.price}$\n` +
+    `👛 **Nouveau Solde :** ${senderInfo.money}$\n` +
+    `✨ *Merci pour votre fidélité et bonne dégustation !* ✨`;
+  return message.reply(ticket);
     }
 
     // 4. POSTULER
