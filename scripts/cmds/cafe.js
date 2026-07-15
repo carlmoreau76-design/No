@@ -647,27 +647,33 @@ module.exports = {
 
     // 13. ACHETER (Achat d'ingrédients pour le café)
     if (subCommand === "acheter") {
-      const ing = args[1]?.toLowerCase();
-      const qte = parseInt(args[2]);
+  const ing = args[1]?.toLowerCase();
+  const qte = parseInt(args[2]);
 
-      if (!ing || isNaN(qte) || qte <= 0) {
-        return message.reply("❌ Syntaxe incorrecte. Exemple: `cafe acheter cafe 10` (achète 10 unités de café).");
-      }
+  if (!ing || isNaN(qte) || qte <= 0) {
+    return message.reply("❌ Syntaxe incorrecte. Exemple: `cafe acheter cafe 10` (achète 10 unités de café).");
+  }
 
-      if (!(ing in data.stock)) {
-        return message.reply(`❌ Ingrédient inconnu. Liste disponible : ${Object.keys(data.stock).join(", ")}`);
-      }
+  if (!(ing in data.stock)) {
+    return message.reply(`❌ Ingrédient inconnu. Liste disponible : ${Object.keys(data.stock).join(", ")}`);
+  }
 
-      const coutTotal = data.prixIngredients[ing] * qte;
-      if (data.caisse < coutTotal) {
-        return message.reply(`💸 Le café ne dispose pas de fonds suffisants en caisse pour cet achat (${coutTotal}$ requis).`);
-      }
+  const coutTotal = data.prixIngredients[ing] * qte;
+  if (data.caisse < coutTotal) {
+    return message.reply(`💸 Le café ne dispose pas de fonds suffisants en caisse pour cet achat (${coutTotal}$ requis).`);
+  }
 
-      data.caisse -= coutTotal;
-      data.stock[ing] += qte;
-      saveCafeData(data);
+  data.caisse -= coutTotal;
+  data.stock[ing] += qte;
 
-      return message.reply(`📦 **𝐑𝐄́𝐀𝐏𝐏𝐑𝐎𝐕𝐈𝐒𝐈𝐎𝐍𝐍𝐄𝐌𝐄𝐍𝐓 !**\nVous avez acheté **${qte}x ${ing}** pour un coût total de **${coutTotal}$** payé par la caisse.`);
+  // 📈 MISE À JOUR DE LA QUÊTE 5 (Achat d'ingrédients)
+  data.quetesQuotidiennes.forEach(q => {
+    if (q.id === 5) q.progression[senderID] = (q.progression[senderID] || 0) + qte;
+  });
+
+  saveCafeData(data);
+
+  return message.reply(`📦 **𝐑𝐄́𝐀𝐏𝐏𝐑𝐎𝐕𝐈𝐒𝐈𝐎𝐍𝐍𝐄𝐌𝐄𝐍𝐓 !**\nVous avez acheté **${qte}x ${ing}** pour un coût total de **${coutTotal}$** payé par la caisse.`);
     }
 
     // 14. CUISINE
