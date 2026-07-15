@@ -4,16 +4,16 @@ const path = require("path");
 
 const ownerInfo = {
   name: "ヾ Kαɪ.夜",
-  facebook: "https://facebook.com/61565898444113",
-  telegram: "@saimx69x",
-  supportGroup: "https://m.me/j/AbZP4jRGu45w70du/"
+  facebook: "https://www.facebook.com/shade.userX",
+  instagram: "x.shade108",
+  supportGroup: "🌚🌝"
 };
 
 module.exports = {
   config: {
     name: "pending",
     version: "2.0",
-    author: "Saimx69x",
+    author: "Shade",
     countDown: 5,
     role: 2,
     shortDescription: {
@@ -113,7 +113,7 @@ module.exports = {
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             `👑 𝐎𝐰𝐧𝐞𝐫: ${ownerInfo.name}`,
             `🌐 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤: ${ownerInfo.facebook}`,
-            `✈️ 𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦: ${ownerInfo.telegram}`,
+            `✈️ 𝐈𝐧𝐬𝐭𝐚𝐠𝐫𝐚𝐦: ${ownerInfo.instagram}`,
             `🤖 𝐒𝐮𝐩𝐩𝐨𝐫𝐭 𝐆𝐂: ${ownerInfo.supportGroup}`
           ].join("\n");
 
@@ -137,7 +137,7 @@ module.exports = {
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             `👑 Owner: ${ownerInfo.name}`,
             `🌐 Facebook: ${ownerInfo.facebook}`,
-            `✈️ Telegram: ${ownerInfo.telegram}`,
+            `✈️ Instagram : ${ownerInfo.instagram}`,
             `🤖 Support GC: ${ownerInfo.supportGroup}`
           ].join("\n");
           api.sendMessage(fallbackMsg, targetThread);
