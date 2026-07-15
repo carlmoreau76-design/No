@@ -740,14 +740,34 @@ module.exports = {
 
     // 21. QUETES
     if (subCommand === "quetes") {
-      let qm = `🎯 **𝐐𝐔𝐄̂𝐓𝐄𝐒 𝐐𝐔𝐎𝐓𝐈𝐃𝐈𝐄𝐍𝐍𝐄𝐒 :**\n━━━━━━━━━━━━━━━━━━━━\n\n`;
-      data.quetesQuotidiennes.forEach(q => {
-        const prog = q.progression[senderID] || 0;
-        const complete = prog >= q.requis;
-        qm += `◽ **${q.desc}**\n   Progression : **${prog}/${q.requis}** ${complete ? "✅ (Terminée)" : "⏳"}\n   Récompense : **+${q.recompense}$**\n\n`;
-      });
-      qm += `💡 *Si une quête est terminée, elle s'ajoute automatiquement à vos fonds.*`;
-      return message.reply(qm);
+  let qm = `🎯 ━━━━━━━ 𝐐𝐔𝐄̂𝐓𝐄𝐒 𝐐𝐔𝐎𝐓𝐈𝐃𝐈𝐄𝐍𝐍𝐄𝐒 ━━━━━━━ 🎯\n\n`;
+  let changement = false;
+
+  data.quetesQuotidiennes.forEach(q => {
+    const prog = q.progression[senderID] || 0;
+    
+    // Si la quête est complétée mais pas encore marquée comme récupérée (par exemple en utilisant un système de "done")
+    // Pour faire simple : si prog >= requis et qu'on ne lui a pas encore donné, on peut lui verser l'argent.
+    // Pour éviter qu'il gagne à l'infini, on peut stocker un état [senderID + "_claimed"] :
+    const claimedKey = `${senderID}_claimed`;
+    const dejàRéclamé = q.progression[claimedKey] || false;
+
+    if (prog >= q.requis && !dejàRéclamé) {
+      senderInfo.money += q.recompense;
+      q.progression[claimedKey] = true;
+      changement = true;
+      qm += `🎉 **Félicitations !** Tu as terminé la quête : _"${q.desc}"_\n🎁 Récompense récupérée : **+${q.recompense}$** !\n\n`;
+    } else {
+      const status = dejàRéclamé ? "✅ Récupérée" : `⏳ ${prog}/${q.requis}`;
+      qm += `◽ **${q.desc}**\n   État : **${status}**\n   Prime : **${q.recompense}$**\n\n`;
+    }
+  });
+
+  if (changement) {
+    await usersData.set(senderID, senderInfo);
+    saveCafeData(data);
+  }
+  return message.reply(qm);
     }
 
     // 22. DEFI
