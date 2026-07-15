@@ -1,174 +1,185 @@
-const fs = require("fs");
+const axios = require("axios");
+const fs = require("fs-extra");
 const path = require("path");
-const { createCanvas } = require("canvas");
 
-const cacheDir = path.join(__dirname, "cache");
-if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+const ownerInfo = {
+  name: "ヾ Kαɪ.夜",
+  facebook: "https://facebook.com/61565898444113",
+  telegram: "@saimx69x",
+  supportGroup: "https://m.me/j/AbZP4jRGu45w70du/"
+};
 
-// 🎨 IMAGE LISTE D'ATTENTE
-function createPendingImage(list) {
-  const canvas = createCanvas(900, 500);
-  const ctx = canvas.getContext("2d");
-
-  ctx.fillStyle = "#0d0d0d";
-  ctx.fillRect(0, 0, 900, 500);
-
-  ctx.strokeStyle = "#00ffcc";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(20, 20, 860, 460);
-
-  ctx.fillStyle = "#00ffcc";
-  ctx.font = "bold 40px Arial";
-  ctx.fillText("📋 PENDING LIST", 260, 80);
-
-  ctx.fillStyle = "#fff";
-  ctx.font = "20px Arial";
-  ctx.fillText(`Total: ${list.length}`, 50, 130);
-
-  let y = 180;
-  list.slice(0, 6).forEach((g, i) => {
-    ctx.fillText(`${i + 1}. ${g.threadName || g.name || "Groupe sans nom"}`, 60, y);
-    ctx.fillText(`ID: ${g.threadID || g.id}`, 60, y + 20);
-    y += 60;
-  });
-
-  const file = path.join(cacheDir, `pending_${Date.now()}.png`);
-  fs.writeFileSync(file, canvas.toBuffer());
-  return file;
-}
-
-// 🎨 IMAGE DE BIENVENUE
-function createWelcomeImage(groupName) {
-  const canvas = createCanvas(900, 400);
-  const ctx = canvas.getContext("2d");
-
-  ctx.fillStyle = "#0d0d0d";
-  ctx.fillRect(0, 0, 900, 400);
-
-  ctx.strokeStyle = "#00ffcc";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(20, 20, 860, 360);
-
-  ctx.fillStyle = "#00ffcc";
-  ctx.font = "bold 40px Arial";
-  ctx.fillText("🤖 BOT CONNECTED", 240, 120);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "25px Arial";
-  ctx.fillText(`Welcome: ${groupName}`, 60, 220);
-  ctx.fillText("Type .help to see commands", 60, 270);
-
-  const file = path.join(cacheDir, `welcome_${Date.now()}.png`);
-  fs.writeFileSync(file, canvas.toBuffer());
-  return file;
-}
-
-// 📦 EXPORTATION STANDARD GOATBOT
 module.exports = {
   config: {
     name: "pending",
-    version: "1.1.0",
-    author: "Shade",
+    version: "2.0",
+    author: "Saimx69x",
     countDown: 5,
-    role: 2, // Réservé au Owner/Admins du bot
-    shortDescription: { en: "Gère les groupes en attente d'approbation" },
-    category: "admin",
-    guide: { en: "pending" }
+    role: 2,
+    shortDescription: {
+      en: "Approve or refuse pending threads"
+    },
+    longDescription: {
+      en: "Reply with thread numbers to approve or reply with c[number(s)] / cancel[number(s)] to refuse."
+    },
+    category: "admin"
   },
 
-  // 📋 LANCEMENT DE LA COMMANDE
-  onStart: async function ({ api, event }) {
-    const { threadID, messageID, senderID } = event;
-
-    // Récupération des groupes en attente via l'instance globale du bot
-    const groups = global.client?.pendingThreads || global.pendingThreads || [];
-
-    if (!groups.length) {
-      return api.sendMessage("📋 Aucun groupe en attente d'approbation.", threadID, messageID);
+  langs: {
+    en: {
+      invaildNumber: "%1 is not a valid number",
+      cancelSuccess: "Refused %1 thread(s)!",
+      approveSuccess: "Approved successfully %1 thread(s)!",
+      cantGetPendingList: "Can't get the pending list!",
+      returnListPending:
+        "»「PENDING」«❮ Total pending threads: %1 ❯\n\n%2\n\n💡 Guide:\n- Approve: reply with numbers (e.g. 1 2 3)\n- Refuse: reply with c[number(s)] or cancel[number(s)] (e.g. c 1 2 or cancel 3 4)",
+      returnListClean: "「PENDING」There is no thread in the pending list"
     }
-
-    const img = createPendingImage(groups);
-
-    const msg = `📋 » PENDING SYSTEM «\n━━━━━━━━━━━━\n👉 Répondez à ce message avec :\n• g[numéro] → Pour approuver (ex: g1)\n• c[numéro] → Pour refuser (ex: c1)\n━━━━━━━━━━━━`;
-
-    return api.sendMessage(
-      { body: msg, attachment: fs.createReadStream(img) },
-      threadID,
-      (err, info) => {
-        if (err) return;
-        
-        // Enregistrement de la session de réponse (Format natif GoatBot)
-        global.GoatBot?.onReply?.set(info.messageID, {
-          commandName: "pending",
-          author: senderID,
-          groups: groups
-        });
-        
-        try { fs.unlinkSync(img); } catch(e) {}
-      },
-      messageID
-    );
   },
 
-  // 🔄 GESTION DES RÉPONSES (onReply remplace handleReply)
-  onReply: async function ({ api, event, Reply }) {
-    const { body, threadID, senderID, messageID } = event;
+  onReply: async function ({ api, event, Reply, getLang }) {
+    if (String(event.senderID) !== String(Reply.author)) return;
+    const { body, threadID, messageID } = event;
+    let count = 0;
+    const BOT_UID = api.getCurrentUserID();
+    const API_ENDPOINT = "https://xsaim8x-xxx-api.onrender.com/api/botconnect";
 
-    // Sécurité : seul l'auteur de la commande originale peut valider
-    if (senderID !== Reply.author) return;
+    const lowerBody = body.trim().toLowerCase();
 
-    const match = body.match(/([gc])(\d+)/i);
-    if (!match) return;
+    if (lowerBody.startsWith("c") || lowerBody.startsWith("cancel")) {
+      
+      const trimmed = body.replace(/^(c|cancel)\s*/i, "").trim();
+      const index = trimmed.split(/\s+/).filter(Boolean);
 
-    const action = match[1].toLowerCase();
-    const index = parseInt(match[2]) - 1;
-
-    const group = Reply.groups[index];
-    if (!group) {
-      return api.sendMessage("❌ Numéro de groupe introuvable dans la liste.", threadID, messageID);
-    }
-
-    const targetID = group.threadID || group.id;
-    const targetName = group.threadName || group.name || "Sans nom";
-
-    // Nettoyage des listes d'attente globales
-    if (global.client?.pendingThreads) {
-      global.client.pendingThreads = global.client.pendingThreads.filter(g => (g.threadID || g.id) !== targetID);
-    }
-    if (global.pendingThreads) {
-      global.pendingThreads = global.pendingThreads.filter(g => (g.threadID || g.id) !== targetID);
-    }
-
-    // ✔ CAS 1 : APPROUVER LE GROUPE (Action: g)
-    if (action === "g") {
-      try {
-        const imgWelcome = createWelcomeImage(targetName);
-
-        await api.sendMessage(
-          {
-            body: `👋 𝐁𝐈𝐄𝐍𝐕𝐄𝐍𝐔𝐄 𝐃𝐀𝐍𝐒 𝐋𝐄 𝐆𝐑𝐎𝐔𝐏𝐄 !\n\n🤖 Bot activé avec succès par l'administrateur.\n📌 Utilisez le préfixe actif pour voir mes commandes.`,
-            attachment: fs.createReadStream(imgWelcome)
-          },
-          targetID
+      if (index.length === 0)
+        return api.sendMessage(
+          "Please provide at least one thread number to cancel.",
+          threadID,
+          messageID
         );
-        
-        try { fs.unlinkSync(imgWelcome); } catch(e) {}
-      } catch (e) {
-        console.error("Erreur envoi bienvenue:", e);
+
+      for (const i of index) {
+        if (isNaN(i) || i <= 0 || i > Reply.pending.length) {
+          api.sendMessage(getLang("invaildNumber", i), threadID);
+          continue;
+        }
+
+        const targetThreadID = Reply.pending[parseInt(i) - 1].threadID;
+        try {
+          await api.removeUserFromGroup(BOT_UID, targetThreadID);
+          count++;
+        } catch (error) {
+          console.error(`⚠️ Failed to remove bot from thread ${targetThreadID}:`, error.message);
+        }
       }
 
-      return api.sendMessage(`✅ **GROUPE APPROUVÉ**\n📌 Nom: ${targetName}\n🆔 ID: ${targetID}`, threadID, messageID);
+      return api.sendMessage(getLang("cancelSuccess", count), threadID, messageID);
     }
 
-    // ❌ CAS 2 : REFUSER ET QUITTE LE GROUPE (Action: c)
-    if (action === "c") {
-      try {
-        await api.removeUserFromGroup(api.getCurrentUserID(), targetID);
-      } catch (e) {
-        console.error("Erreur pour quitter le groupe:", e);
+    else {
+      const index = body.split(/\s+/).filter(Boolean);
+      if (index.length === 0)
+        return api.sendMessage("Please provide at least one thread number to approve.", threadID, messageID);
+
+      for (const i of index) {
+        if (isNaN(i) || i <= 0 || i > Reply.pending.length) {
+          api.sendMessage(getLang("invaildNumber", i), threadID);
+          continue;
+        }
+
+        const targetThread = Reply.pending[parseInt(i) - 1].threadID;
+        const prefix = global.utils.getPrefix(targetThread);
+        const nickNameBot = global.GoatBot.config.nickNameBot || "Sakura Bot";
+
+        try {
+          await api.changeNickname(nickNameBot, targetThread, BOT_UID);
+        } catch (err) {
+          console.warn(`⚠️ Nickname change failed for ${targetThread}:`, err.message);
+        }
+
+        try {
+          const apiUrl = `${API_ENDPOINT}?botuid=${BOT_UID}&prefix=${encodeURIComponent(prefix)}`;
+          const tmpDir = path.join(__dirname, "..", "cache");
+          await fs.ensureDir(tmpDir);
+          const imagePath = path.join(tmpDir, `botconnect_image_${targetThread}.png`);
+
+          const response = await axios.get(apiUrl, { responseType: "arraybuffer" });
+          fs.writeFileSync(imagePath, response.data);
+
+          const textMsg = [
+            "✅ 𝐆𝐫𝐨𝐮𝐩 𝐂𝐨𝐧𝐧𝐞𝐜𝐭𝐞𝐝 𝐒𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲 🎊",
+            `🔹 𝐁𝐨𝐭 𝐏𝐫𝐞𝐟𝐢𝐱: ${prefix}`,
+            `🔸 𝐓𝐲𝐩𝐞: ${prefix}help 𝐭𝐨 𝐬𝐞𝐞 𝐚𝐥𝐥 𝐜𝐨𝐦𝐦𝐚𝐧𝐝𝐬`,
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            `👑 𝐎𝐰𝐧𝐞𝐫: ${ownerInfo.name}`,
+            `🌐 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤: ${ownerInfo.facebook}`,
+            `✈️ 𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦: ${ownerInfo.telegram}`,
+            `🤖 𝐒𝐮𝐩𝐩𝐨𝐫𝐭 𝐆𝐂: ${ownerInfo.supportGroup}`
+          ].join("\n");
+
+          await api.sendMessage(
+            {
+              body: textMsg,
+              attachment: fs.createReadStream(imagePath)
+            },
+            targetThread
+          );
+
+          fs.unlinkSync(imagePath);
+        } catch (err) {
+          console.error(`⚠️ Error sending botconnect message to ${targetThread}:`, err);
+
+          const fallbackMsg = [
+            "❌ Image generation failed. Here's the info:",
+            "✅ Group Connected Successfully 🎊",
+            `🔹 Prefix: ${prefix}`,
+            `🔸 Type: ${prefix}help for commands`,
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            `👑 Owner: ${ownerInfo.name}`,
+            `🌐 Facebook: ${ownerInfo.facebook}`,
+            `✈️ Telegram: ${ownerInfo.telegram}`,
+            `🤖 Support GC: ${ownerInfo.supportGroup}`
+          ].join("\n");
+          api.sendMessage(fallbackMsg, targetThread);
+        }
+
+        count++;
       }
 
-      return api.sendMessage(`❌ **GROUPE REFUSÉ**\n📌 Nom: ${targetName}\n🆔 ID: ${targetID}`, threadID, messageID);
+      return api.sendMessage(getLang("approveSuccess", count), threadID, messageID);
+    }
+  },
+
+  onStart: async function ({ api, event, getLang, commandName }) {
+    const { threadID, messageID } = event;
+    let msg = "", index = 1;
+
+    try {
+      const spam = await api.getThreadList(100, null, ["OTHER"]) || [];
+      const pending = await api.getThreadList(100, null, ["PENDING"]) || [];
+      const list = [...spam, ...pending].filter(g => g.isSubscribed && g.isGroup);
+
+      for (const item of list) msg += `${index++}/ ${item.name} (${item.threadID})\n`;
+
+      if (list.length !== 0) {
+        return api.sendMessage(
+          getLang("returnListPending", list.length, msg),
+          threadID,
+          (err, info) => {
+            global.GoatBot.onReply.set(info.messageID, {
+              commandName,
+              messageID: info.messageID,
+              author: event.senderID,
+              pending: list
+            });
+          },
+          messageID
+        );
+      } else {
+        return api.sendMessage(getLang("returnListClean"), threadID, messageID);
+      }
+    } catch (e) {
+      return api.sendMessage(getLang("cantGetPendingList"), threadID, messageID);
     }
   }
 };
