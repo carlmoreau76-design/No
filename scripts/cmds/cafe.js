@@ -30,7 +30,6 @@ const defaultData = {
   },
   menu: [
     { id: 1, name: "Espresso Serré", price: 50, req: { cafe: 1 }, level: 1 },
-    { id: 1, name: "Espresso Serré", price: 50, req: { cafe: 1 }, level: 1 },
     { id: 2, name: "Cappuccino Onctueux", price: 80, req: { cafe: 1, lait: 1, sucre: 1 }, level: 1 },
     { id: 3, name: "Jus de Fruits Frais", price: 120, req: { fruits: 2 }, level: 1 },
     { id: 4, name: "Iced Latte Gourmand", price: 150, req: { cafe: 1, lait: 1, glacons: 2, sucre: 1 }, level: 2 },
