@@ -178,8 +178,16 @@ prixIngredients: {
   ],
   pnjClients: [], // Liste des clients PNJ actifs en attente [{ id, nom, commandeId, tempsRestant }]
   quetesQuotidiennes: [
-    { id: 1, desc: "Servir 3 boissons", requis: 3, progression: {}, recompense: 200 },
-    { id: 2, desc: "Nettoyer le café", requis: 1, progression: {}, recompense: 100 }
+    { id: 1, desc: "Servir 3 clients PNJ", requis: 3, progression: {}, recompense: 200 },
+    { id: 2, desc: "Nettoyer le café une fois", requis: 1, progression: {}, recompense: 100 },
+    { id: 3, desc: "Préparer 5 boissons", requis: 5, progression: {}, recompense: 350 },
+    { id: 4, desc: "Recevoir 3 pourboires", requis: 3, progression: {}, recompense: 400 },
+    { id: 5, desc: "Acheter 10 ingrédients pour le stock", requis: 10, progression: {}, recompense: 500 },
+    { id: 6, desc: "Encaisser 1 500$ dans la caisse du café", requis: 1500, progression: {}, recompense: 600 },
+    { id: 7, desc: "Servir 10 boissons sans erreur", requis: 10, progression: {}, recompense: 800 },
+    { id: 8, desc: "Augmenter la réputation du café de 10 points", requis: 10, progression: {}, recompense: 900 },
+    { id: 9, desc: "Accueillir 5 nouveaux clients", requis: 5, progression: {}, recompense: 450 },
+    { id: 10, desc: "Terminer le défi quotidien", requis: 1, progression: {}, recompense: 1200 }
   ],
   dernierNettoyage: 0,
   propreness: 100 // Sur 100
