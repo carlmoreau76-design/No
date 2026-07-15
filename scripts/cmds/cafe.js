@@ -551,38 +551,44 @@ module.exports = {
 
     // 7. SERVIR (Servir un client PNJ)
     if (subCommand === "servir") {
-      if (!data.serveuses.includes(senderID)) return message.reply("❌ Seul le personnel de salle peut servir les clients !");
-      if (data.pnjClients.length === 0) return message.reply("🤷‍♂️ Il n'y a aucun client PNJ en attente d'être servi pour le moment.");
+  if (!data.serveuses.includes(senderID)) return message.reply("❌ Seul le personnel de salle peut servir les clients !");
+  if (data.pnjClients.length === 0) return message.reply("🤷‍♂️ Il n'y a aucun client PNJ en attente d'être servi pour le moment.");
 
-      const client = data.pnjClients[0]; // Sert le premier de la file d'attente
-      const boisson = data.menu.find(d => d.id === client.commandeId);
+  const client = data.pnjClients[0];
+  const boisson = data.menu.find(d => d.id === client.commandeId);
 
-      // Vérification ingrédients
-      for (const [ing, qte] of Object.entries(boisson.req)) {
-        if ((data.stock[ing] || 0) < qte) {
-          return message.reply(`⚠️ Stock insuffisant de **${ing}** pour servir la commande de ${client.nom} !`);
-        }
-      }
-
-      // Consommation ingrédients
-      for (const [ing, qte] of Object.entries(boisson.req)) {
-        data.stock[ing] -= qte;
-      }
-
-      // Gains
-      const gainTotal = boisson.price + 50; // Bonus pour service rapide
-      data.caisse += gainTotal;
-      senderInfo.money += 40; // Prime pour la serveuse
-      data.reputation = Math.min(100, data.reputation + 2);
-
-      data.pnjClients.shift(); // Retire le PNJ servi
-
-      await usersData.set(senderID, senderInfo);
-      ajouterJournal(data, "SERVICE_PNJ", `${senderInfo.name} a servi ${client.nom}.`);
-      saveCafeData(data);
-
-      return message.reply(`✨ 🙋‍♂️ **𝐂𝐋𝐈𝐄𝐍𝐓 𝐒𝐄𝐑𝐕𝐈 𝐀𝐕𝐄𝐂 𝐒𝐔𝐂𝐂𝐄̀𝐒 !**\n\nVous avez apporté un succulent **${boisson.name}** à **${client.nom}**.\n💰 **+${gainTotal}$** ajoutés à la caisse !\n💵 Vous recevez une prime de service de **+40$**.`);
+  for (const [ing, qte] of Object.entries(boisson.req)) {
+    if ((data.stock[ing] || 0) < qte) {
+      return message.reply(`⚠️ Stock insuffisant de **${ing}** pour servir la commande de ${client.nom} !`);
     }
+  }
+
+  for (const [ing, qte] of Object.entries(boisson.req)) {
+    data.stock[ing] -= qte;
+  }
+
+  const gainTotal = boisson.price + 50;
+  data.caisse += gainTotal;
+  senderInfo.money += 40;
+  data.reputation = Math.min(100, data.reputation + 2);
+
+  data.pnjClients.shift();
+
+  // 📈 MISE À JOUR DES QUÊTES (1, 3, 6, 7 et 8)
+  data.quetesQuotidiennes.forEach(q => {
+    if (q.id === 1) q.progression[senderID] = (q.progression[senderID] || 0) + 1;
+    if (q.id === 3) q.progression[senderID] = (q.progression[senderID] || 0) + 1;
+    if (q.id === 6) q.progression[senderID] = (q.progression[senderID] || 0) + gainTotal;
+    if (q.id === 7) q.progression[senderID] = (q.progression[senderID] || 0) + 1;
+    if (q.id === 8) q.progression[senderID] = (q.progression[senderID] || 0) + 2;
+  });
+
+  await usersData.set(senderID, senderInfo);
+  ajouterJournal(data, "SERVICE_PNJ", `${senderInfo.name} a servi ${client.nom}.`);
+  saveCafeData(data);
+
+  return message.reply(`✨ 🙋‍♂️ **𝐂𝐋𝐈𝐄𝐍𝐓 𝐒𝐄𝐑𝐕𝐈 𝐀𝐕𝐄𝐂 𝐒𝐔𝐂𝐂𝐄̀𝐒 !**\n\nVous avez apporté un succulent **${boisson.name}** à **${client.nom}**.\n💰 **+${gainTotal}$** ajoutés à la caisse !\n💵 Vous recevez une prime de service de **+40$**.`);
+  }
 
     // 8. SALAIRE
     if (subCommand === "salaire") {
