@@ -283,11 +283,11 @@ module.exports = {
         });
         saveCafeData(data); // Sauvegarde immédiate de la quête
 
-        // Envoi du message de bienvenue esthétique
+        // Envoi du message de bienvenue esthétique (Mention sur le nom sans le @)
         const welcomeMsg = 
-          `🌸 ✨ ━━━━━━━ 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐀𝐔 𝐂𝐀𝐅𝐄́ 𝐑𝐏 ━━━━━━━ ✨ 🌸\n` +
+          `🌸 ✨ ━━━━━━━ 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐀𝐔 𝐂𝐀𝐅𝐄́ 𝐌𝐀𝐋𝐈𝐊𝐀 ━━━━━━━ ✨ 🌸\n` +
           `✨ ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬ ✨\n` +
-          `Bonjour à toi, @${userName} ! 🎉\n\n` +
+          `Bonjour à toi, ${userName} ! 🎉\n\n` +
           `Bienvenue dans notre havre de paix et de gourmandise.\n` +
           `Tu reçois automatiquement le rôle de **Client** de notre établissement !\n` +
           `🎁 Un cadeau de bienvenue de **500$** vient d'être crédité sur ton compte.\n\n` +
@@ -299,7 +299,8 @@ module.exports = {
           `⚠️ *Veille à respecter l'équipe et les autres clients. Bon séjour !* ☕🍰\n` +
           `✨ ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬ ✨`;
 
-        api.sendMessage({ body: welcomeMsg, mentions: [{ tag: `@${userName}`, id: userID }] }, event.threadID);
+        // Ici le "tag" correspond exactement à la variable ${userName} insérée dans le texte
+        api.sendMessage({ body: welcomeMsg, mentions: [{ tag: userName, id: userID }] }, event.threadID);
       }
     }
   },
