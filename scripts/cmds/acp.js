@@ -1,29 +1,29 @@
 const moment = require("moment-timezone");
 const OWNER_ID = "61573867120837";
+const ITEMS_PER_PAGE = 10; // Nombre de demandes affichées par page
 
 module.exports = {
   config: {
     name: "accept",
     aliases: ["acp"],
-    version: "3.5 angel fixed",
-    author: "Shade × Gemini ✨",
+    version: "4.0.0",
+    author: "Shade × Gemini",
     role: 2,
-    description: "🌸 Gestion des demandes d’amis Facebook (Payload Stable)",
+    description: "Gestion des demandes d'amis Facebook avec système de pagination active",
     category: "owner",
     guide: {
-      fr: "Répondez avec : add <num> | del <num> | add all | del all"
+      fr: "• Répondez avec : \n  - add <num> | del <num> | add all | del all\n  - page <num> (pour changer de page, ex: page 2)"
     }
   },
 
   onStart: async function ({ api, event, commandName }) {
     const { threadID, messageID, senderID } = event;
-
     if (senderID !== OWNER_ID) {
-      return api.sendMessage("🌸⛔ Cette commande est réservée à mon Owner.", threadID, messageID);
+      return api.sendMessage("❌ Autorisation refusée. Cette commande est strictement réservée à l'administrateur.", threadID, messageID);
     }
 
     try {
-      try { api.setMessageReaction("⏳", messageID, () => {}, true); } catch(e){}
+      try { api.setMessageReaction("⏳", messageID, () => {}, true); } catch (e) {}
 
       // Requête GraphQL d'origine stable
       const form = {
@@ -39,65 +39,61 @@ module.exports = {
       const listRequest = data?.data?.viewer?.friending_possibilities?.edges || [];
 
       if (!listRequest.length) {
-        try { api.setMessageReaction("💔", messageID, () => {}, true); } catch(e){}
-        return api.sendMessage("🌸 Aucune demande d'ami en attente 💖", threadID, messageID);
+        try { api.setMessageReaction("📦", messageID, () => {}, true); } catch (e) {}
+        return api.sendMessage("💡 Aucune demande d'ami en attente dans les registres.", threadID, messageID);
       }
 
-      let msg = "╔═══ 🪐 𝗛𝗢𝗥𝗜 𝗔𝗖𝗖𝗘𝗣𝗧 🪐 ═══╗\n\n";
-      listRequest.forEach((u, i) => {
-        const timeStr = u.time ? moment(u.time * 1000).tz("Africa/Kinshasa").format("DD/MM/YYYY HH:mm:ss") : "Inconnu";
-        msg += `💠 ${i + 1}. ${u.node?.name || "Utilisateur Facebook"}\n`;
-        msg += `🆔 ${u.node?.id}\n`;
-        msg += `📅 Date : ${timeStr}\n`;
-        msg += `🔗 https://www.facebook.com/${u.node?.id}\n`;
-        msg += "━━━━━━━━━━━━━━━\n";
-      });
-
-      msg += "\n🌸 **Pour interagir, répondez à ce message avec :**\n• `add <num>` (ex: add 1)\n• `del <num>` (ex: del 1)\n• `add all` ou `del all`";
-
-      const sent = await api.sendMessage(msg, threadID, messageID);
-
-      global.GoatBot?.onReply?.set(sent.messageID, {
-        commandName,
-        author: senderID,
-        listRequest,
-        messageID: sent.messageID,
-        unsendTimeout: setTimeout(() => {
-          try { api.unsendMessage(sent.messageID); } catch(e) {}
-        }, 120000) // S'efface automatiquement après 2 minutes
-      });
-
-      try { api.setMessageReaction("🪐", messageID, () => {}, true); } catch(e){}
+      // Envoi de la première page (Page 1)
+      await sendPage(api, event, listRequest, 1, commandName);
+      try { api.setMessageReaction("🪐", messageID, () => {}, true); } catch (e) {}
 
     } catch (e) {
       console.error(e);
-      try { api.setMessageReaction("❌", messageID, () => {}, true); } catch(err){}
-      return api.sendMessage("❌ Erreur lors du chargement des demandes 💔", threadID, messageID);
+      try { api.setMessageReaction("❌", messageID, () => {}, true); } catch (err) {}
+      return api.sendMessage("❌ Erreur lors du chargement des demandes d'amis.", threadID, messageID);
     }
   },
 
-  onReply: async function ({ api, event, Reply }) {
+  onReply: async function ({ api, event, Reply, commandName }) {
     const { threadID, messageID, senderID, body } = event;
     const { author, listRequest, messageID: replyMsgID } = Reply || {};
 
     if (senderID !== OWNER_ID || senderID !== author) return;
 
-    const args = (body || "").trim().replace(/ +/g, " ").toLowerCase().split(" ");
+    const cleanBody = (body || "").trim().replace(/ +/g, " ");
+    const args = cleanBody.toLowerCase().split(" ");
     const action = args[0];
 
+    // 📄 SYSTEME DE PAGINATION (Changement de page via réponse)
+    if (action === "page") {
+      const targetPage = parseInt(args[1], 10);
+      const totalPages = Math.ceil(listRequest.length / ITEMS_PER_PAGE);
+
+      if (isNaN(targetPage) || targetPage < 1 || targetPage > totalPages) {
+        return api.sendMessage(`⚠️ Page invalide. Veuillez choisir une page entre 1 et ${totalPages}.`, threadID, messageID);
+      }
+
+      // Supprime l'ancien menu pour ne pas encombrer le chat
+      try { api.unsendMessage(replyMsgID); } catch (e) {}
+
+      // Envoie la nouvelle page demandée
+      await sendPage(api, event, listRequest, targetPage, commandName);
+      return;
+    }
+
+    // Actions d'acceptation / rejet standards
     if (action !== "add" && action !== "del") {
-      return api.sendMessage("⚠️ Action invalide. Utilisez `add` ou `del`.", threadID, messageID);
+      return api.sendMessage("⚠️ Action invalide. Utilisez `add <num>`, `del <num>` ou `page <num>`.", threadID, messageID);
     }
 
     try {
-      try { api.setMessageReaction("⏳", messageID, () => {}, true); } catch(e){}
+      try { api.setMessageReaction("⏳", messageID, () => {}, true); } catch ( e) {}
       clearTimeout(Reply?.unsendTimeout);
 
       if (!Array.isArray(listRequest) || listRequest.length === 0) {
-        return api.sendMessage("❌ Liste expirée ou introuvable 💔", threadID, messageID);
+        return api.sendMessage("❌ Liste expirée ou introuvable.", threadID, messageID);
       }
 
-      // Structure des variables calquée sur le modèle fonctionnel
       const form = {
         av: api.getCurrentUserID(),
         fb_api_caller_class: "RelayModern",
@@ -114,10 +110,10 @@ module.exports = {
 
       if (action === "add") {
         form.fb_api_req_friendly_name = "FriendingCometFriendRequestConfirmMutation";
-        form.doc_id = "3147613905362928"; // Doc ID fonctionnel
+        form.doc_id = "3147613905362928";
       } else {
         form.fb_api_req_friendly_name = "FriendingCometFriendRequestDeleteMutation";
-        form.doc_id = "4108254489275063"; // Doc ID fonctionnel
+        form.doc_id = "4108254489275063";
       }
 
       let targetPositions = args.slice(1);
@@ -131,59 +127,99 @@ module.exports = {
       const newTargetIDs = [];
       const promiseFriends = [];
 
-      // Préparation et parallélisation des requêtes HTTP
       for (const stt of targetPositions) {
         const index = parseInt(stt, 10) - 1;
         const u = listRequest[index];
         if (!u || !u.node?.id) {
-          failed.push(`Pos #${stt} Introuvable`);
+          failed.push(`Position #${stt} introuvable`);
           continue;
         }
-
         form.variables.input.friend_requester_id = u.node.id;
         const payload = {
           ...form,
           variables: JSON.stringify(form.variables)
         };
-
         newTargetIDs.push(u);
         promiseFriends.push(api.httpPost("https://www.facebook.com/api/graphql/", payload));
       }
 
-      // Résolution et analyse des statuts de retour
       for (let i = 0; i < newTargetIDs.length; i++) {
         const name = newTargetIDs[i].node.name || newTargetIDs[i].node.id;
         try {
           const res = await promiseFriends[i];
           const resParsed = typeof res === "string" ? JSON.parse(res) : res;
-
           if (resParsed && resParsed.errors) {
             failed.push(`❌ ${name}`);
           } else {
-            success.push(`✨ ${name}`);
+            success.push(`✓ ${name}`);
           }
         } catch (e) {
           failed.push(`❌ ${name} (Réseau)`);
         }
       }
 
-      try { api.setMessageReaction("✅", messageID, () => {}, true); } catch(e){}
-      try { api.unsendMessage(replyMsgID); } catch(e){} // Nettoie le menu d'invitation initial
+      try { api.setMessageReaction("✅", messageID, () => {}, true); } catch (e) {}
+      try { api.unsendMessage(replyMsgID); } catch (e) {}
 
-      let msg = "🪐 𝗛𝗢𝗥𝗜 𝗔𝗖𝗖𝗘𝗣𝗧 𝗥𝗘𝗦𝗨𝗟𝗧 🪐\n\n";
+      let msg = "╭─ 🪐 𝗛𝗢𝗥𝗜 𝗔𝗖𝗖𝗘𝗣𝗧 𝗥𝗘𝗦𝗨𝗟𝗧 ─╮\n\n";
       if (success.length) {
-        msg += `✅ **Action réussie pour ${success.length} personne(s) :**\n${success.join("\n")}\n\n`;
+        msg += `✅ **Traitement validé pour (${success.length}) :**\n${success.join("\n")}\n\n`;
       }
       if (failed.length) {
         msg += `⚠️ **Échecs rencontrés (${failed.length}) :**\n${failed.join("\n")}`;
       }
-
+      msg += "\n╰─────────────────────────╯";
       return api.sendMessage(msg, threadID, messageID);
 
     } catch (globalErr) {
       console.error(globalErr);
-      try { api.setMessageReaction("❌", messageID, () => {}, true); } catch(e){}
-      return api.sendMessage("❌ Une erreur interne est survenue lors du traitement 💔", threadID, messageID);
+      try { api.setMessageReaction("❌", messageID, () => {}, true); } catch (e) {}
+      return api.sendMessage("❌ Une erreur interne est survenue lors de l'application des modifications.", threadID, messageID);
     }
   }
 };
+
+// ⚙️ FONCTION DE RENDU DU MENU PAGINÉ
+async function sendPage(api, event, listRequest, page, commandName) {
+  const { threadID, messageID, senderID } = event;
+  const totalItems = listRequest.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+  const startIndex = (page - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
+  const pageItems = listRequest.slice(startIndex, endIndex);
+
+  let msg = `╭─ 🪐 𝗛𝗢𝗥𝗜 𝗔𝗖𝗖𝗘𝗣𝗧 𝗦𝗬𝗦𝗧𝗘𝗠 ─╮\n`;
+  msg += `│ 📊 Demandes totales : ${totalItems}\n`;
+  msg += `│ 📄 Index actuel : Page [${page}/${totalPages}]\n`;
+  msg += `├──────────────────────────┤\n\n`;
+
+  pageItems.forEach((u, i) => {
+    const globalIndex = startIndex + i + 1;
+    const timeStr = u.time ? moment(u.time * 1000).tz("Africa/Kinshasa").format("DD/MM/YYYY HH:mm") : "Inconnu";
+    msg += ` • ${globalIndex}. ${u.node?.name || "Utilisateur Inconnu"}\n`;
+    msg += `   └─ ID : ${u.node?.id}\n`;
+    msg += `   └─ Date : ${timeStr}\n`;
+    msg += `   └─ Lien : fb.com/${u.node?.id}\n`;
+  });
+
+  msg += `\n├──────────────────────────┤\n`;
+  msg += `│ ⚙️ NAVIGATION\n`;
+  msg += `│ • Répondre : 'page <num>' (ex: page 2)\n`;
+  msg += `│ • Actions : \n`;
+  msg += `│   - 'add <num>' ou 'add all'\n`;
+  msg += `│   - 'del <num>' ou 'del all'\n`;
+  msg += `╰──────────────────────────╯`;
+
+  const sent = await api.sendMessage(msg, threadID, messageID);
+
+  global.GoatBot?.onReply?.set(sent.messageID, {
+    commandName,
+    author: senderID,
+    listRequest,
+    messageID: sent.messageID,
+    unsendTimeout: setTimeout(() => {
+      try { api.unsendMessage(sent.messageID); } catch (e) {}
+    }, 120000) // Autodestruction après 2 minutes pour libérer la mémoire
+  });
+                    }
