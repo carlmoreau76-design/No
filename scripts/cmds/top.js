@@ -1,9 +1,7 @@
 const { createCanvas, loadImage } = require("canvas");
 const path = require("path");
 const fs = require("fs");
-const axios = require("axios");
 
-// Même système d'abréviation intelligent que BalanceC et Give
 function formatCompactMoney(num) {
   const absoluteNum = Number(num);
   if (isNaN(absoluteNum) || absoluteNum === 0) return "0 $";
@@ -20,7 +18,6 @@ function formatCompactMoney(num) {
   return `${formatted.replace(/\.0$/, "")} ${suffixes[i]} $`;
 }
 
-// Dessin des rectangles arrondis de précision (Style Balance Card)
 function drawModernCard(ctx, x, y, width, height, radius) {
   ctx.beginPath();
   ctx.moveTo(x + radius, y);
@@ -35,13 +32,12 @@ function drawModernCard(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-// Badge Émeraude pour le classement de la liste
 function drawRankBadge(ctx, x, y, size, rank) {
-  let color = "#22c55e"; // Vert émeraude standard
-  if (rank === 1) color = "#4ade80"; // Vert clair brillant
-  if (rank === 2) color = "#2ee59d"; // Menthe
-  if (rank === 3) color = "#16a34a"; // Vert sombre
-
+  let color = "#22c55e"; 
+  if (rank === 1) color = "#4ade80"; 
+  if (rank === 2) color = "#2ee59d"; 
+  if (rank === 3) color = "#16a34a"; 
+  
   ctx.save();
   ctx.shadowColor = color;
   ctx.shadowBlur = 10;
@@ -65,7 +61,7 @@ function drawRankBadge(ctx, x, y, size, rank) {
 module.exports = {
   config: {
     name: "top",
-    version: "7.0.0",
+    version: "7.1.0",
     author: "Shade × Gemini",
     role: 0,
     category: "economy",
@@ -79,17 +75,17 @@ module.exports = {
       let page = parseInt(args[0]) || 1;
       
       if (page < 1) page = 1;
-      if (page > 3) page = 3; // Limite stricte à 3 pages maximum
-
+      if (page > 3) page = 3; 
+      
       const perPage = 7; 
       const cacheDir = path.join(__dirname, "cache");
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
-
+      
       let allUsers = await usersData.getAll();
       if (!allUsers || !Array.isArray(allUsers)) {
         return api.sendMessage("❌ Impossible d'accéder à la base de données.", threadID, messageID);
       }
-
+      
       let sortedUsers = allUsers
         .map(u => {
           if (!u || !u.userID) return null;
@@ -98,9 +94,8 @@ module.exports = {
         })
         .filter(Boolean)
         .sort((a, b) => b.money - a.money);
-
+        
       const totalUsers = sortedUsers.length;
-      // Calcul bridé à 3 pages max
       const totalPages = Math.min(3, Math.ceil((totalUsers - 3) / perPage) + 1 || 1);
       const currentPage = page > totalPages ? totalPages : page;
       
@@ -108,8 +103,7 @@ module.exports = {
       const canvasHeight = 1000;
       const canvas = createCanvas(canvasWidth, canvasHeight);
       const ctx = canvas.getContext("2d");
-
-      // 🌌 FOND MATRIX DÉGRADÉ ÉMERAUDE (Identique à BalanceC)
+      
       const bgGrad = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
       bgGrad.addColorStop(0, '#0a0f0d');
       bgGrad.addColorStop(0.3, '#0d1f17');
@@ -117,22 +111,19 @@ module.exports = {
       bgGrad.addColorStop(1, '#0a0f0d');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-      // Lignes de sécurité fines de la Balance Card
+      
       ctx.strokeStyle = 'rgba(34, 197, 94, 0.03)';
       ctx.lineWidth = 1;
       for (let i = -canvasHeight; i < canvasWidth; i += 60) {
         ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + canvasHeight, canvasHeight); ctx.stroke();
       }
-
-      // Lueur émeraude centrale
+      
       const emeraldGlow = ctx.createRadialGradient(canvasWidth/2, canvasHeight/2, 100, canvasWidth/2, canvasHeight/2, 600);
       emeraldGlow.addColorStop(0, "rgba(34, 197, 94, 0.06)");
       emeraldGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = emeraldGlow;
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-      // --- EN-TÊTE ÉMERAUDE REVISITÉ ---
+      
       ctx.save();
       ctx.shadowColor = "#22c55e";
       ctx.shadowBlur = 20;
@@ -140,30 +131,27 @@ module.exports = {
       ctx.font = "italic bold 48px sans-serif";
       ctx.fillText(" GLOBAL DIGITAL ELITE", 50, 85);
       ctx.restore();
-
+      
       ctx.fillStyle = "rgba(187, 247, 208, 0.6)";
       ctx.font = "600 16px monospace";
       ctx.fillText(`SYSTEM STATUS: ACTIVE | PAGE ${currentPage}/${totalPages} | ELITES: ${totalUsers}`, 60, 115);
-
+      
       let listYStart = 200;
-
-      // =========================================================================
-      // --- PODIUM DES 3 PREMIERS (UNIQUEMENT SUR LA PAGE 1) ---
-      // =========================================================================
+      
+      // Podium Page 1
       if (currentPage === 1) {
         listYStart = 680;
-
         const podiums = [
-          { rank: 2, x: 100, y: 220, w: 350, h: 420, color: "#2ee59d", avSize: 200 }, // Menthe
-          { rank: 1, x: 480, y: 150, w: 440, h: 490, color: "#4ade80", avSize: 250 }, // Émeraude Brillant
-          { rank: 3, x: 950, y: 250, w: 350, h: 390, color: "#16a34a", avSize: 180 }  // Vert Sombre
+          { rank: 2, x: 100, y: 220, w: 350, h: 420, color: "#2ee59d", avSize: 200 },
+          { rank: 1, x: 480, y: 150, w: 440, h: 490, color: "#4ade80", avSize: 250 },
+          { rank: 3, x: 950, y: 250, w: 350, h: 390, color: "#16a34a", avSize: 180 }
         ];
-
+        
         for (const p of podiums) {
           const u = sortedUsers[p.rank - 1];
           const name = u ? (await usersData.getName(u.userID) || "Player") : "EMPTY";
           const cash = u ? formatCompactMoney(u.money) : "0 $";
-
+          
           ctx.save();
           ctx.shadowColor = p.color;
           ctx.shadowBlur = 25;
@@ -173,30 +161,26 @@ module.exports = {
           drawModernCard(ctx, p.x, p.y, p.w, p.h, 24);
           ctx.fill(); ctx.stroke();
           ctx.restore();
-
+          
           if (p.rank === 1) {
             ctx.fillStyle = p.color;
             ctx.font = "70px sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("👑", p.x + p.w / 2, p.y - 20);
+            ctx.fillText("🜲", p.x + p.w / 2, p.y - 20);
             ctx.textAlign = "left";
           }
-
+          
           if (u) {
             let img = null;
-            const token = "6628568379%7Cc1e620fa708a1d5696fb991c1bde5662";
-            const avatarURL = `https://graph.facebook.com/${u.userID}/picture?width=512&height=512&access_token=${token}`;
-            
             try {
-              const res = await axios.get(avatarURL, { responseType: "arraybuffer", timeout: 10000 });
-              img = await loadImage(Buffer.from(res.data));
+              img = await loadImage(await usersData.getAvatarUrl(u.userID));
             } catch (err) {
-              console.log(`Avatar failed for podium: ${err.message}`);
+              try { img = await loadImage("https://i.imgur.com/I3VsBEt.png"); } catch(e){}
             }
-
+            
             const centerX = p.x + p.w / 2;
             const centerY = p.y + p.h / 3.2;
-
+            
             if (img) {
               ctx.save();
               ctx.beginPath();
@@ -205,7 +189,7 @@ module.exports = {
               ctx.clip();
               ctx.drawImage(img, centerX - p.avSize/2, centerY - p.avSize/2, p.avSize, p.avSize);
               ctx.restore();
-
+              
               ctx.save();
               ctx.shadowColor = p.color;
               ctx.shadowBlur = 20;
@@ -215,42 +199,36 @@ module.exports = {
               ctx.restore();
             }
           }
-
+          
           ctx.textAlign = "center";
           ctx.fillStyle = p.color;
           ctx.font = `bold ${p.rank === 1 ? "48px" : "38px"} sans-serif`;
           ctx.fillText(`#${p.rank}`, p.x + p.w / 2, p.y + p.h - 100);
-
           ctx.fillStyle = "#ffffff";
           ctx.font = "bold 24px sans-serif";
           ctx.fillText(name.length > 18 ? name.slice(0, 16) + "..." : name, p.x + p.w / 2, p.y + p.h - 65);
-
           ctx.fillStyle = "#4ade80";
           ctx.font = "bold 26px monospace";
           ctx.fillText(cash, p.x + p.w / 2, p.y + p.h - 30);
           ctx.textAlign = "left";
         }
       }
-
-      // =========================================================================
-      // --- LISTE DU CLASSEMENT COMPLÉMENTAIRE ---
-      // =========================================================================
+      
+      // Liste complémentaire
       const dataIdxOffset = currentPage === 1 ? 3 : 3 + (currentPage - 2) * perPage;
       const listData = sortedUsers.slice(dataIdxOffset, dataIdxOffset + perPage);
       const richestMoney = sortedUsers[0]?.money || 1;
-
       const cardWidth = canvasWidth - 100;
       const rowHeight = 100;
       const gap = 15;
-
+      
       for (let i = 0; i < listData.length; i++) {
         const u = listData[i];
         const actualRank = dataIdxOffset + i + 1;
         const y = listYStart + i * (rowHeight + gap);
-
         const playerName = await usersData.getName(u.userID) || "Player";
         const playerMoney = formatCompactMoney(u.money);
-
+        
         ctx.save();
         ctx.fillStyle = "rgba(10, 15, 13, 0.75)";
         ctx.strokeStyle = "rgba(34, 197, 94, 0.1)";
@@ -262,26 +240,26 @@ module.exports = {
         drawModernCard(ctx, 50, y, cardWidth, rowHeight, 16);
         ctx.fill(); ctx.stroke();
         ctx.restore();
-
+        
         drawRankBadge(ctx, 80, y + 20, 60, actualRank);
+        
         ctx.textAlign = "center";
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 22px sans-serif";
         ctx.fillText(actualRank.toString(), 110, y + 55);
         ctx.textAlign = "left";
-
+        
         const avSize = 70;
         const avX = 180;
         const avY = y + 15;
         let img = null;
-        const token = "6628568379%7Cc1e620fa708a1d5696fb991c1bde5662";
-        const avatarURL = `https://graph.facebook.com/${u.userID}/picture?width=512&height=512&access_token=${token}`;
         
         try {
-          const res = await axios.get(url = avatarURL, { responseType: "arraybuffer", timeout: 10000 });
-          img = await loadImage(Buffer.from(res.data));
-        } catch (err) {}
-
+          img = await loadImage(await usersData.getAvatarUrl(u.userID));
+        } catch (err) {
+          try { img = await loadImage("https://i.imgur.com/I3VsBEt.png"); } catch(e){}
+        }
+        
         if (img) {
           ctx.save();
           ctx.beginPath();
@@ -290,7 +268,7 @@ module.exports = {
           ctx.clip();
           ctx.drawImage(img, avX, avY, avSize, avSize);
           ctx.restore();
-
+          
           ctx.save();
           ctx.shadowColor = "#22c55e";
           ctx.shadowBlur = 10;
@@ -299,44 +277,43 @@ module.exports = {
           ctx.beginPath(); ctx.arc(avX + avSize / 2, avY + avSize / 2, avSize / 2, 0, Math.PI * 2); ctx.stroke();
           ctx.restore();
         }
-
+        
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 24px sans-serif";
         const cleanName = playerName.length > 25 ? playerName.slice(0, 22) + "..." : playerName;
         ctx.fillText(cleanName, 300, y + 45);
-
-        // Barre de richesse émeraude proportionnelle
+        
         const barWidth = 300;
         const wealthPercentage = Math.max(0.05, Math.min(1, u.money / richestMoney));
         
         ctx.fillStyle = "rgba(34, 197, 94, 0.05)";
         drawModernCard(ctx, 300, y + 60, barWidth, 10, 5);
         ctx.fill();
-
+        
         ctx.fillStyle = "#22c55e";
         ctx.beginPath();
         drawModernCard(ctx, 300, y + 60, barWidth * wealthPercentage, 10, 5);
         ctx.fill();
-
+        
         ctx.textAlign = "right";
         ctx.fillStyle = "#4ade80";
         ctx.font = "bold 30px monospace";
         ctx.fillText(playerMoney, canvasWidth - 100, y + rowHeight / 2 + 10);
         ctx.textAlign = "left";
       }
-
-      if (currentPage === 1 && sortedUsers.length > 3) {
+      
+      if (currentPage === 1 && sortedUsers.length > 3) { 
          ctx.fillStyle = "rgba(187, 247, 208, 0.4)";
          ctx.font = "16px monospace";
          ctx.textAlign = "center";
          ctx.fillText("💬 Répond avec un numéro de page (ex: '2') pour naviguer (Max Page 3).", canvasWidth/2, canvasHeight - 20);
          ctx.textAlign = "left";
       }
-
+      
       const pathSave = path.join(cacheDir, `top_emerald_ui_${threadID}_${currentPage}.png`);
       const out = fs.createWriteStream(pathSave);
       canvas.createPNGStream().pipe(out);
-
+      
       out.on("finish", () => {
         api.sendMessage(
           {
@@ -367,16 +344,16 @@ module.exports = {
     try {
       const { body, senderID, threadID, messageID } = event;
       if (senderID !== Reply.author) return;
-
+      
       const page = parseInt(body);
       if (isNaN(page) || page < 1 || page > 3) {
         return api.sendMessage("⚠️ Saisissez un numéro de page valide entre 1 et 3.", threadID, messageID);
       }
-
+      
       if (global.GoatBot?.onReply) {
         global.GoatBot.onReply.delete(event.messageReply.messageID);
       }
-
+      
       return this.onStart({
         api,
         event: { ...event, args: [page.toString()] },
