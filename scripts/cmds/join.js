@@ -1,130 +1,131 @@
 module.exports = {
   config: {
     name: "join",
-    version: "4.0.0",
+    version: "5.0.0",
     author: "Christus × Shade × Gemini",
     countDown: 5,
-    role: 2, // 🛡️ Accès restreint nativement aux Admins/Owners du bot
-    description: "🪐 Rejoindre l'un des groupes où le bot est présent",
+    role: 2, // Limité aux Admins/Owners
+    description: "Rejoindre l'un des groupes où le bot est présent.",
     category: "utility",
     guide: {
-      en: "{p}{n} [page | next | prev]"
+      fr: "Tapez la commande, puis répondez au message avec 'page [numéro]' pour changer de page, ou le [numéro du groupe] pour le rejoindre."
     }
   },
 
-  onStart: async function ({ api, event, args, message }) {
+  onStart: async function ({ api, event, args, message, commandName }) {
     const { threadID, messageID, senderID } = event;
+    const OWNER_ID = "61573867120837";
+
+    if (senderID !== OWNER_ID) {
+      return message.reply("❌ Cette commande est réservée à mon Owner.");
+    }
 
     try {
-      // Récupération de la liste des conversations du bot
-      const groupList = await api.getThreadList(400, null, ["INBOX"]);
+      const groupList = await api.getThreadList(400, null, ["INBOX"]) || [];
       const filteredList = groupList.filter(g => g.isGroup && g.isSubscribed);
 
       if (!filteredList.length) {
         return message.reply("❌ Aucun groupe trouvé dans la base de données du bot.");
       }
 
-      const pageSize = 10; 
-      const totalPages = Math.ceil(filteredList.length / pageSize);
-
-      if (!global.joinPage) global.joinPage = {};
-            
-      let page = 1;
-      if (args[0]) {
-        const input = args[0].toLowerCase();
-        if (input === "next") page = (global.joinPage[threadID] || 1) + 1;
-        else if (input === "prev") page = (global.joinPage[threadID] || 1) - 1;
-        else if (input.includes("/")) page = parseInt(input.split("/")[0]) || 1;
-        else page = parseInt(input) || 1;
-      }
-
-      if (page < 1) page = 1;
-      if (page > totalPages) page = totalPages;
-      global.joinPage[threadID] = page;
-
-      const startIndex = (page - 1) * pageSize;
-      const currentGroups = filteredList.slice(startIndex, startIndex + pageSize);
-
-      // Construction de la liste formatée (Style épuré)
-      const formatted = currentGroups.map((g, i) => {
-        const globalIndex = startIndex + i + 1;
-        return `│ [${globalIndex}] ${g.threadName || "Groupe sans nom"}\n│ 👥 Membres : ${g.participantIDs?.length || 0}\n│ 🆔 ${g.threadID}\n│`;
-      });
-
-      let msg = `╭─ 🪐 𝗛𝗢𝗥𝗜 𝗦𝗬𝗦𝗧𝗘𝗠 - 𝗚𝗥𝗢𝗨𝗣 𝗟𝗜𝗦𝗧 ─╮\n`;
-      msg += formatted.join("\n");
-      msg += `\n├─────────────────────────────────────────┤\n`;
-      msg += `│ 📄 Page : ${page}/${totalPages}\n`;
-      msg += `│ 💡 Répondez avec le numéro pour intégrer le groupe\n`;
-      msg += `╰─────────────────────────────────────────╯`;
-
-      const sentMessage = await api.sendMessage(msg, threadID, messageID);
-
-      // Configuration du gestionnaire de réponse (onReply)
-      global.GoatBot?.onReply?.set(sentMessage.messageID, {
-        commandName: this.config.name,
-        messageID: sentMessage.messageID,
-        author: senderID,
-        list: filteredList
-      });
+      const requestedPage = parseInt(args[0]) || 1;
+      await sendGroupPage(api, event, filteredList, requestedPage, commandName);
 
     } catch (e) {
       console.error(e);
-      return message.reply("❌ Erreur lors du chargement de la liste des serveurs.");
+      return message.reply("❌ Erreur lors du chargement des groupes.");
     }
   },
 
-  onReply: async function ({ api, event, Reply, message }) {
+  onReply: async function ({ api, event, Reply, message, commandName }) {
     const { threadID, messageID, senderID, body } = event;
-    const { author, list } = Reply;
+    const { author, filteredList, messageID: replyMsgID } = Reply || {};
+    const OWNER_ID = "61573867120837";
 
-    // Vérification de sécurité sur l'auteur initial du menu
-    if (senderID !== author) return;
+    if (senderID !== OWNER_ID || senderID !== author) return;
 
-    const chosenIndex = parseInt(body.trim(), 10);
-        
-    if (isNaN(chosenIndex) || chosenIndex < 1 || chosenIndex > list.length) {
-      return message.reply("❌ Index invalide ou hors limites.");
-    }
+    const args = (body || "").trim().replace(/ +/g, " ").toLowerCase().split(" ");
+    const action = args[0];
 
-    const selectedGroup = list[chosenIndex - 1];
+    // Changer de page via reply
+    if (action === "page") {
+      const targetPage = parseInt(args[1], 10);
+      const itemsPerPage = 10;
+      const totalPages = Math.ceil(filteredList.length / itemsPerPage);
 
-    try {
-      await message.reply(`⏳ Tentative d'intégration à : "${selectedGroup.threadName || "Ce groupe"}"...`);
-      
-      // Méthode 1 : Ajout direct
-      await api.addUserToGroup(senderID, selectedGroup.threadID);
-            
-      return api.sendMessage(
-        `✓ Intégration réussie ! Vous avez été ajouté au groupe "${selectedGroup.threadName || "Groupe"}".`,
-        threadID,
-        messageID
-      );
-    } catch (directError) {
-      console.log("L'ajout direct a échoué, génération d'une alternative...");
-
-      // Méthode 2 : Lien de secours
-      try {
-        const groupData = await api.getThreadInfo(selectedGroup.threadID);
-                
-        if (groupData) {
-          const inviteLink = `https://m.me/j/${selectedGroup.threadID}/`;
-                    
-          return api.sendMessage(
-            `⚠️ L'ajout direct est restreint par les règles de confidentialité Facebook.\n\n🔗 Passerelle alternative :\n${inviteLink}\n\nCliquez sur le lien ci-dessus pour rejoindre manuellement.`,
-            threadID,
-            messageID
-          );
-        }
-      } catch (linkError) {
-        console.error(linkError);
+      if (isNaN(targetPage) || targetPage < 1 || targetPage > totalPages) {
+        return message.reply(`⚠️ Page invalide (choisissez entre 1 et ${totalPages}).`);
       }
 
-      return api.sendMessage(
-        `❌ Opération avortée.\n\nLe bot n'a pas pu configurer d'accès pour "${selectedGroup.threadName}". Assurez-vous que le bot dispose des droits d'administration ou modifiez vos options de confidentialité Facebook.`,
-        threadID,
-        messageID
-      );
+      try { api.unsendMessage(replyMsgID); } catch (e) {}
+      await sendGroupPage(api, event, filteredList, targetPage, commandName);
+      return;
+    }
+
+    // Intégrer un groupe via son index numérique
+    const chosenIndex = parseInt(body.trim(), 10);
+    if (!isNaN(chosenIndex) && chosenIndex >= 1 && chosenIndex <= filteredList.length) {
+      const selectedGroup = filteredList[chosenIndex - 1];
+      
+      try {
+        await message.reply(`⏳ Tentative d'intégration à : "${selectedGroup.threadName || "Ce groupe"}"...`);
+        
+        // Nettoyer le menu
+        try { api.unsendMessage(replyMsgID); } catch (e) {}
+
+        // Méthode 1 : Ajout direct
+        await api.addUserToGroup(senderID, selectedGroup.threadID);
+        return api.sendMessage(
+          `✓ Intégration réussie ! Vous avez été ajouté au groupe "${selectedGroup.threadName || "Groupe"}".`,
+          threadID,
+          messageID
+        );
+      } catch (directError) {
+        // Méthode 2 : Lien de secours si l'ajout direct bloque
+        const inviteLink = `https://m.me/j/${selectedGroup.threadID}/`;
+        return api.sendMessage(
+          `⚠️ L'ajout direct est bloqué par vos paramètres ou ceux du groupe.\n\n🔗 Rejoindre via ce lien :\n${inviteLink}`,
+          threadID,
+          messageID
+        );
+      }
     }
   }
 };
+
+async function sendGroupPage(api, event, filteredList, page, commandName) {
+  const { threadID, messageID, senderID } = event;
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+
+  if (page < 1) page = 1;
+  if (page > totalPages) page = totalPages;
+
+  const startIdx = (page - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedGroups = filteredList.slice(startIdx, endIdx);
+
+  let msg = `🪐 **[ Liste des groupes - Page ${page}/${totalPages} ]**\n`;
+  msg += `Groupes disponibles : ${filteredList.length}\n\n`;
+
+  paginatedGroups.forEach((g, i) => {
+    const globalIndex = startIdx + i + 1;
+    msg += `${globalIndex}. ${g.threadName || "Groupe sans nom"}\n👥 Membres : ${g.participantIDs?.length || 0}\nID : ${g.threadID}\n\n`;
+  });
+
+  msg += `👉 **Répondez à ce message avec :**\n`;
+  msg += `• "page [numéro]" (ex: page 2)\n`;
+  msg += `• "[numéro du groupe]" pour y être ajouté (ex: 3)`;
+
+  const sent = await api.sendMessage(msg, threadID, messageID);
+
+  global.GoatBot?.onReply?.set(sent.messageID, {
+    commandName,
+    author: senderID,
+    filteredList,
+    messageID: sent.messageID,
+    unsendTimeout: setTimeout(() => {
+      try { api.unsendMessage(sent.messageID); } catch (e) {}
+    }, 120000)
+  });
+}
