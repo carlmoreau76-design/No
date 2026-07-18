@@ -1,28 +1,23 @@
 /**
  * @author Zetsu & Shade
  * @title Pinterest Catalogue Premium
- * @name pinterest
+ * @name pin
  * @class pinterest
- * @version 2.0.0
+ * @version 2.1.0
  * @description Recherche des images sur Pinterest sous forme de catalogue Canvas interactif par Reply.
  * @usage pinterest [terme]
  * @alt pin
  */
-
 const { createCanvas, loadImage } = require("canvas");
 const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 
-// Stockage temporaire des sessions de recherche en mémoire vive
-global.pinSessions = global.pinSessions || new Map();
-
 async function createCatalogueCanvas(imagesUrls, query, page) {
-    // Grille de 2 colonnes x 5 lignes = 10 images
     const canvas = createCanvas(800, 1600);
     const ctx = canvas.getContext("2d");
 
-    // Fond sombre style Hori / Épuré
+    // Fond sombre style Épuré
     ctx.fillStyle = "#0d0e12";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -30,12 +25,12 @@ async function createCatalogueCanvas(imagesUrls, query, page) {
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 32px sans-serif";
     ctx.fillText(`📌 CATALOGUE PINTEREST : ${query.toUpperCase()}`, 40, 60);
-    
+        
     ctx.fillStyle = "#6b7280";
     ctx.font = "20px sans-serif";
     ctx.fillText(`Page ${page} • Répondez avec le [Numéro] ou "page [N°]"`, 40, 95);
 
-    // Dessin de la grille de sous-images
+    // Dessin de la grille de sous-images (2 colonnes x 5 lignes)
     const startX = 40, startY = 140;
     const itemWidth = 340, itemHeight = 260;
     const gapX = 40, gapY = 30;
@@ -50,12 +45,10 @@ async function createCatalogueCanvas(imagesUrls, query, page) {
         const x = startX + col * (itemWidth + gapX);
         const y = startY + row * (itemHeight + gapY);
 
-        // Conteneur de l'image
         ctx.fillStyle = "#161820";
         ctx.fillRect(x, y, itemWidth, itemHeight);
 
         if (loadedImages[i]) {
-            // Dessiner l'image ajustée (Center Crop simulé)
             ctx.drawImage(loadedImages[i], x, y, itemWidth, itemHeight);
         } else {
             ctx.fillStyle = "#374151";
@@ -65,10 +58,9 @@ async function createCatalogueCanvas(imagesUrls, query, page) {
             ctx.textAlign = "left";
         }
 
-        // Pastille de numérotation néon en haut à gauche de chaque sous-photo
+        // Pastille de numérotation
         ctx.fillStyle = "#ef4444";
         ctx.fillRect(x + 10, y + 10, 45, 45);
-
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 22px sans-serif";
         ctx.textAlign = "center";
@@ -78,9 +70,10 @@ async function createCatalogueCanvas(imagesUrls, query, page) {
         ctx.textBaseline = "alphabetic";
     }
 
-    const cachePath = path.join(__dirname, "cache", `pin_cat_${Date.now()}.png`);
-    fs.ensureDirSync(path.dirname(cachePath));
-    fs.writeFileSync(cachePath, canvas.toBuffer("image/png"));
+    const cacheDir = path.join(__dirname, "cache");
+    await fs.ensureDir(cacheDir);
+    const cachePath = path.join(cacheDir, `pin_cat_${Date.now()}.png`);
+    await fs.writeFile(cachePath, canvas.toBuffer("image/png"));
     return cachePath;
 }
 
@@ -88,7 +81,7 @@ module.exports = {
     config: {
         name: "pin",
         aliases: ["pinterest"],
-        version: "2.0.0",
+        version: "2.1.0",
         author: "Zetsu & Shade",
         countDown: 5,
         role: 0,
@@ -98,7 +91,7 @@ module.exports = {
         }
     },
 
-    onStart: async function ({ api, event, message, args }) {
+    onStart: async function ({ api, event, message, args, commandName }) {
         const { threadID, messageID, senderID } = event;
         const query = args.join(" ");
 
@@ -106,36 +99,39 @@ module.exports = {
             return message.reply("❌ Veuillez entrer un mot-clé pour lancer la recherche interactive.");
         }
 
-        // On demande 30 résultats au total à l'API pour pouvoir gérer les pages (3 pages de 10)
         const apiUrl = `https://zetbot-page.onrender.com/api/pinterest?query=${encodeURIComponent(query)}&limit=30`;
 
         try {
-            message.reply("🔍 Génération du catalogue de miniatures en cours...");
-
+            const loadingMsg = await message.reply("🔍 Génération du catalogue de miniatures en cours...");
             const response = await axios.get(apiUrl);
+
             if (!response.data.status || !response.data.pins || response.data.pins.length === 0) {
+                try { api.unsendMessage(loadingMsg.messageID); } catch(e){}
                 return message.reply("❌ Aucun résultat trouvé pour cette recherche.");
             }
 
             const allPins = response.data.pins;
             const pageUrls = allPins.slice(0, 10).map(p => p.image);
-
             const imgPath = await createCatalogueCanvas(pageUrls, query, 1);
 
-            return api.sendMessage({
+            try { api.unsendMessage(loadingMsg.messageID); } catch(e){}
+
+            const sentMessage = await api.sendMessage({
                 body: `📸 **𝖢𝖠𝖳𝖠𝖫𝖮𝖦𝖴𝖤 𝖯𝖨𝖭𝖳𝖤𝖱𝖤𝖲𝖳**\n\n💬 **Instructions :**\n• Répondez avec un chiffre de \`1\` à \`10\` pour recevoir la photo seule en HD.\n• Répondez \`page 2\` ou \`page 3\` pour faire défiler la liste.`,
                 attachment: fs.createReadStream(imgPath)
-            }, threadID, (err, info) => {
-                if (!err) {
-                    global.pinSessions.set(info.messageID, {
-                        author: senderID,
-                        query: query,
-                        allPins: allPins,
-                        currentPage: 1
-                    });
-                }
-                if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-            }, messageID);
+            }, threadID, messageID);
+
+            // Enregistrement de la session dans le gestionnaire global de GoatBot
+            global.GoatBot?.onReply?.set(sentMessage.messageID, {
+                commandName,
+                author: senderID,
+                query: query,
+                allPins: allPins,
+                currentPage: 1,
+                messageID: sentMessage.messageID
+            });
+
+            if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
 
         } catch (error) {
             console.error(error);
@@ -143,80 +139,89 @@ module.exports = {
         }
     },
 
-    onReply: async function ({ api, event, Reply, message }) {
+    onReply: async function ({ api, event, Reply, message, commandName }) {
         const { senderID, threadID, messageID, body } = event;
-        const session = global.pinSessions.get(Reply.messageID);
+        const { author, query, allPins, currentPage, messageID: replyMsgID } = Reply || {};
 
-        if (!session) return;
-        if (senderID !== session.author) return;
+        if (senderID !== author) return;
 
-        const input = body?.trim().toLowerCase();
+        const input = (body || "").trim().toLowerCase();
 
-        // ---- LOGIQUE DE NAVIGATION DE PAGES (Scroller) ----
+        // ---- LOGIQUE DE NAVIGATION DE PAGES ----
         if (input.startsWith("page ")) {
-            const targetPage = parseInt(input.split(" ")[1]);
+            const targetPage = parseInt(input.split(" ")[1], 10);
             if (isNaN(targetPage) || targetPage < 1 || targetPage > 3) {
                 return message.reply("❌ Page invalide. Le catalogue comprend les pages 1, 2 et 3.");
             }
 
             const startIdx = (targetPage - 1) * 10;
             const endIdx = startIdx + 10;
-            const pagePins = session.allPins.slice(startIdx, endIdx);
+            const pagePins = allPins.slice(startIdx, endIdx);
 
             if (pagePins.length === 0) {
                 return message.reply("❌ Plus aucune image disponible pour cette page.");
             }
 
-            // Nettoyer l'ancien catalogue visuel
-            try { api.unsendMessage(Reply.messageID); } catch(e){}
+            // Supprimer l'ancien catalogue
+            try { api.unsendMessage(replyMsgID); } catch (e) {}
 
-            session.currentPage = targetPage;
             const pageUrls = pagePins.map(p => p.image);
-            const imgPath = await createCatalogueCanvas(pageUrls, session.query, targetPage);
+            const imgPath = await createCatalogueCanvas(pageUrls, query, targetPage);
 
-            return api.sendMessage({
+            const sentMessage = await api.sendMessage({
                 body: `📸 **𝖢𝖠𝖳𝖠𝖫𝖮𝖦𝖴𝖤 : 𝖯𝖠𝖦𝖤 ${targetPage}**\n\n• Répondez avec un numéro (1-10) pour extraire l'image.\n• Tapez \`page [numéro]\` pour scroller.`,
                 attachment: fs.createReadStream(imgPath)
-            }, threadID, (err, info) => {
-                if (!err) {
-                    global.pinSessions.delete(Reply.messageID);
-                    global.pinSessions.set(info.messageID, session);
-                }
-                if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+            }, threadID, messageID);
+
+            // Mettre à jour la session de Reply
+            global.GoatBot?.onReply?.set(sentMessage.messageID, {
+                commandName,
+                author: senderID,
+                query: query,
+                allPins: allPins,
+                currentPage: targetPage,
+                messageID: sentMessage.messageID
             });
+
+            if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+            return;
         }
 
         // ---- LOGIQUE DE SÉLECTION D'UNE IMAGE (1 À 10) ----
-        const selection = parseInt(input);
+        const selection = parseInt(input, 10);
         if (!isNaN(selection) && selection >= 1 && selection <= 10) {
-            const actualIndex = ((session.currentPage - 1) * 10) + (selection - 1);
-            const selectedPin = session.allPins[actualIndex];
+            const actualIndex = ((currentPage - 1) * 10) + (selection - 1);
+            const selectedPin = allPins[actualIndex];
 
             if (!selectedPin || !selectedPin.image) {
                 return message.reply("❌ Données de l'image introuvables.");
             }
 
             const ext = selectedPin.image.split('.').pop().split('?')[0] || "jpg";
-            const cachePath = path.join(__dirname, "cache", `pin_hd_${Date.now()}.${ext}`);
+            const cacheDir = path.join(__dirname, "cache");
+            await fs.ensureDir(cacheDir);
+            const cachePath = path.join(cacheDir, `pin_hd_${Date.now()}.${ext}`);
 
             try {
-                message.reply(`📥 Extraction et envoi de l'image HD n°${selection}...`);
+                const downloadNotice = await message.reply(`📥 Extraction et envoi de l'image HD n°${selection}...`);
 
-                const imgRes = await axios({
+                const response = await axios({
                     method: "get",
                     url: selectedPin.image,
                     responseType: "stream"
                 });
 
                 const writer = fs.createWriteStream(cachePath);
-                imgRes.data.pipe(writer);
+                response.data.pipe(writer);
 
                 await new Promise((resolve, reject) => {
                     writer.on("finish", resolve);
                     writer.on("error", reject);
                 });
 
-                return api.sendMessage({
+                try { api.unsendMessage(downloadNotice.messageID); } catch(e){}
+
+                await api.sendMessage({
                     body: `✨ **𝖨𝖬𝖠𝖦𝖤 𝖤𝖷𝖳𝖱𝖠𝖨𝖳𝖤** ✨\n\n📝 Titre : ${selectedPin.title || "Sans titre"}\n👤 Compte : ${selectedPin.uploader?.username || "Inconnu"}`,
                     attachment: fs.createReadStream(cachePath)
                 }, threadID, () => {
@@ -224,8 +229,9 @@ module.exports = {
                 }, messageID);
 
             } catch (e) {
+                console.error(e);
                 if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
-                return message.reply("❌ Impossible de télécharger l'image d'origine en haute résolution.");
+                return message.reply("❌ Impossible de récupérer cette image en haute résolution.");
             }
         }
     }
