@@ -2,7 +2,7 @@ module.exports = {
   config: {
     name: "badwords",
     aliases: ["badword", "filter"],
-    version: "7.0.0",
+    version: "7.0.1",
     author: "Shade × Gemini",
     countDown: 5,
     role: 2,
@@ -11,6 +11,19 @@ module.exports = {
   },
 
   langs: {
+    en: {
+      noPermission: "❌ Access denied. Only the main administrator can configure this module.",
+      added: "✓ Term added to the filter list: \"%1\"",
+      deleted: "✓ Term removed from the filter list: \"%1\"",
+      listEmpty: "📦 No forbidden words are currently registered for this group.",
+      list: "╭─ 🪐 𝗙𝗜𝗟𝗧𝗘𝗥 𝗟𝗜𝗦𝗧 ─╮\n\n%1\n\n╰──────────────────╯",
+      on: "✓ Security system [BadWords] successfully enabled.",
+      off: "❌ Security system [BadWords] disabled.",
+      warn1: "⚠️ Security Warning.\n• Member: %1\n• Reason: Restricted term detected (\"%2\").\n• Status: Next infraction will result in a kick.",
+      kicked: "✓ User %1 has been kicked from the group for recidivism.",
+      emojiSpam: "🚫 Moderation Alert: Emoji spam detected (%1x identical). Please stabilize the chat flow.",
+      needAdmin: "⚠️ Action impossible. The bot requires administrator privileges to execute the kick."
+    },
     fr: {
       noPermission: "❌ Accès refusé. Seul l'administrateur principal peut configurer ce module.",
       added: "✓ Terme ajouté à la liste de filtrage : \"%1\"",
@@ -33,7 +46,6 @@ module.exports = {
       return message.reply(getLang("noPermission"));
     }
 
-    // Initialisation sécurisée de la structure des données
     let data = await threadsData.get(event.threadID, "data.badWords") || {};
     if (!data.words) data.words = [];
     if (!data.warns) data.warns = {};
@@ -41,10 +53,9 @@ module.exports = {
     const action = args[0]?.toLowerCase();
 
     switch (action) {
-      // ➕ AJOUTER UN MOT
       case "add": {
         const word = args.slice(1).join(" ").toLowerCase().trim();
-        if (!word) return message.reply("❌ Veuillez spécifier le terme à interdire.");
+        if (!word) return message.reply("❌ Please specify the term to forbid / Veuillez spécifier le terme à interdire.");
         
         if (!data.words.includes(word)) {
           data.words.push(word);
@@ -54,14 +65,13 @@ module.exports = {
         return message.reply(getLang("added", word));
       }
 
-      // 🗑️ SUPPRIMER UN MOT
       case "del":
       case "delete": {
         const word = args.slice(1).join(" ").toLowerCase().trim();
-        if (!word) return message.reply("❌ Veuillez spécifier le terme à retirer.");
+        if (!word) return message.reply("❌ Please specify the term to remove / Veuillez spécifier le terme à retirer.");
         
         if (!data.words.includes(word)) {
-          return message.reply("❌ Ce mot ne figure pas dans la liste globale.");
+          return message.reply("❌ This word is not in the list.");
         }
 
         data.words = data.words.filter(w => w !== word);
@@ -69,7 +79,6 @@ module.exports = {
         return message.reply(getLang("deleted", word));
       }
 
-      // 📜 LISTE DES MOTS
       case "list": {
         if (!data.words.length) return message.reply(getLang("listEmpty"));
         return message.reply(
@@ -77,20 +86,18 @@ module.exports = {
         );
       }
 
-      // 🟢 ACTIVER
       case "on": {
         await threadsData.set(event.threadID, true, "settings.badWords");
         return message.reply(getLang("on"));
       }
 
-      // 🔴 DÉSACTIVER
       case "off": {
         await threadsData.set(event.threadID, false, "settings.badWords");
         return message.reply(getLang("off"));
       }
 
       default:
-        return message.reply("💡 Options disponibles : `add [mot]`, `del [mot]`, `list`, `on`, `off`.");
+        return message.reply("💡 Options: `add [word]`, `del [word]`, `list`, `on`, `off`.");
     }
   },
 
@@ -105,7 +112,6 @@ module.exports = {
     const warns = data.warns || {};
     const body = event.body.toLowerCase();
 
-    // 🕵️ DÉTECTION DES TERMES INTERDITS
     for (const word of words) {
       if (body.includes(word)) {
         if (!warns[event.senderID]) {
@@ -115,11 +121,9 @@ module.exports = {
           await threadsData.set(event.threadID, data, "data.badWords");
           return message.reply(getLang("warn1", `@${event.senderID}`, word));
         } else {
-          // Récidive : Tentative d'expulsion
           try {
             await api.removeUserFromGroup(event.senderID, event.threadID);
             
-            // Réinitialisation des avertissements de l'utilisateur après le kick
             delete warns[event.senderID];
             data.warns = warns;
             await threadsData.set(event.threadID, data, "data.badWords");
@@ -132,7 +136,6 @@ module.exports = {
       }
     }
 
-    // 🛡️ DÉTECTION DU SPAM D'ÉMOJIS IDENTIQUES
     const emojiRegex = /([\p{Emoji_Presentation}\p{Extended_Pictographic}])/gu;
     const emojis = body.match(emojiRegex);
     
