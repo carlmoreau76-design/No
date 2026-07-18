@@ -1,8 +1,8 @@
 module.exports = {
 	config: {
 		name: "count",
-		version: "2.5", 
-		author: "Shade", 
+		version: "2.6.0", 
+		author: "Shade × Gemini", 
 		countDown: 10,
 		role: 0,
 		description: {
@@ -17,9 +17,6 @@ module.exports = {
 			en: "   {pn}: View your activity card."
 				+ "\n   {pn} @tag: View the activity card of tagged users."
 				+ "\n   {pn} all: View the leaderboard of all members."
-		},
-		envConfig: {
-			"ACCESS_TOKEN": "6628568379%7Cc1e620fa708a1d5696fb991c1bde5662"
 		}
 	},
 
@@ -62,10 +59,8 @@ module.exports = {
 		const { resolve } = require("path");
 		const { existsSync, mkdirSync } = require("fs-extra");
 		const { registerFont } = require("canvas");
-
 		const assetsPath = resolve(__dirname, "assets", "count");
 		if (!existsSync(assetsPath)) mkdirSync(assetsPath, { recursive: true });
-
 		try {
 			registerFont(resolve(assetsPath, "font.ttf"), { family: "BeVietnamPro" });
 		} catch (e) {
@@ -78,7 +73,6 @@ module.exports = {
 		const { resolve } = require("path");
 		const { readJsonSync, writeJsonSync, ensureFileSync } = require("fs-extra");
 		const moment = require("moment-timezone");
-
 		try {
 			const members = await threadsData.get(threadID, "members");
 			const findMember = members.find(user => user.userID == senderID);
@@ -88,8 +82,7 @@ module.exports = {
 					name: await usersData.getName(senderID),
 					nickname: null,
 					inGroup: true,
-					count: 1
-				});
+					count: 1				});
 			} else {
 				findMember.count = (findMember.count || 0) + 1;
 			}
@@ -100,7 +93,6 @@ module.exports = {
 
 		const dataPath = resolve(__dirname, "cache", "count_activity.json");
 		ensureFileSync(dataPath);
-
 		let activityData = {};
 		try {
 			activityData = readJsonSync(dataPath);
@@ -117,7 +109,6 @@ module.exports = {
 
 		const user = activityData[threadID][senderID];
 		const today = moment().tz("Asia/Ho_Chi_Minh").format("YYYY-MM-DD");
-
 		user.total = (user.total || 0) + 1;
 		user.daily[today] = (user.daily[today] || 0) + 1;
 
@@ -133,23 +124,18 @@ module.exports = {
 		if (sortedDays.length > 7) {
 			for (let i = 7; i < sortedDays.length; i++) delete user.daily[sortedDays[i]];
 		}
-
 		writeJsonSync(dataPath, activityData, { spaces: 2 });
 	},
 
-	onStart: async function ({ args, threadsData, message, event, api, getLang, envCommands }) {
+	onStart: async function ({ args, threadsData, usersData, message, event, api, getLang }) {
 		const { Canvas, loadImage } = require("canvas");
 		const { resolve } = require("path");
 		const { createWriteStream, readJsonSync, ensureFileSync } = require("fs-extra");
-		const axios = require("axios");
 		const moment = require("moment-timezone");
 		const { threadID, senderID, mentions } = event;
 
-		const ACCESS_TOKEN = envCommands.count.ACCESS_TOKEN;
-
 		// === GALAXY BACKGROUND FUNCTION ===
 		function drawGalaxyBackground(ctx, W, H) {
-			// 1) BASE SPACE GRADIENT
 			const spaceGrad = ctx.createLinearGradient(0, 0, 0, H);
 			spaceGrad.addColorStop(0, "#020409");
 			spaceGrad.addColorStop(0.5, "#050814");
@@ -157,7 +143,6 @@ module.exports = {
 			ctx.fillStyle = spaceGrad;
 			ctx.fillRect(0, 0, W, H);
 
-			// Helper sparkle function
 			function drawSparkle(kx, ky, size, color) {
 				ctx.save();
 				ctx.translate(kx, ky);
@@ -165,21 +150,17 @@ module.exports = {
 				ctx.fillStyle = color;
 				ctx.shadowColor = color;
 				ctx.shadowBlur = size * 2;
-
 				ctx.moveTo(0, -size);
 				ctx.quadraticCurveTo(size / 4, -size / 4, size, 0);
 				ctx.quadraticCurveTo(size / 4, size / 4, 0, size);
 				ctx.quadraticCurveTo(-size / 4, size / 4, -size, 0);
 				ctx.quadraticCurveTo(-size / 4, -size / 4, 0, -size);
-
 				ctx.fill();
 				ctx.restore();
 			}
 
-			// 2) NEBULA GLOW
 			ctx.save();
 			ctx.globalCompositeOperation = "lighter";
-
 			const nebula1 = ctx.createRadialGradient(W * 0.2, H * 0.3, 0, W * 0.2, H * 0.3, 700);
 			nebula1.addColorStop(0, "rgba(0, 200, 255, 0.15)");
 			nebula1.addColorStop(1, "transparent");
@@ -197,23 +178,19 @@ module.exports = {
 			nebula3.addColorStop(1, "transparent");
 			ctx.fillStyle = nebula3;
 			ctx.fillRect(0, 0, W, H);
-
 			ctx.restore();
 
-			// 3) SMALL WHITE STARS
 			ctx.save();
 			const seed = (s) => () => {
 				s = Math.sin(s) * 10000;
 				return s - Math.floor(s);
 			};
 			const starRnd = seed(12345);
-
 			for (let i = 0; i < 1500; i++) {
 				const x = starRnd() * W;
 				const y = starRnd() * H;
 				const radius = starRnd() * 1.5;
 				const alpha = starRnd() * 0.8 + 0.2;
-
 				ctx.beginPath();
 				ctx.globalAlpha = alpha;
 				ctx.fillStyle = (starRnd() > 0.9) ? "#aaddff" : "#ffffff";
@@ -222,25 +199,20 @@ module.exports = {
 			}
 			ctx.restore();
 
-			// 4) BIG COLORFUL SPARKLE STARS
 			ctx.save();
 			ctx.globalCompositeOperation = "lighter";
 			for (let i = 0; i < 60; i++) {
 				const x = starRnd() * W;
 				const y = starRnd() * H;
-
 				const sizeBoost = (Math.abs(x - W / 2) < 300 && Math.abs(y - H / 2) < 300) ? 2 : 0;
 				const size = starRnd() * 4 + 2 + sizeBoost;
-
 				let color = "#ffffff";
 				if (i % 3 === 0) color = "#00f2ff";
 				if (i % 3 === 1) color = "#ff0055";
-
 				drawSparkle(x, y, size, color);
 			}
 			ctx.restore();
 
-			// 5) SOFT COLOR GLOW
 			const g1 = ctx.createRadialGradient(W * 0.15, H * 0.2, 0, W * 0.15, H * 0.2, 600);
 			g1.addColorStop(0, "rgba(0,242,255,0.08)");
 			g1.addColorStop(1, "rgba(0,242,255,0)");
@@ -253,17 +225,14 @@ module.exports = {
 			ctx.fillStyle = g2;
 			ctx.fillRect(0, 0, W, H);
 
-			// 6) VIGNETTE DARK EDGES
 			ctx.globalCompositeOperation = "multiply";
 			const vignette = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) / 1.1);
 			vignette.addColorStop(0, "rgba(0,0,0,0)");
 			vignette.addColorStop(1, "rgba(0,0,0,0.6)");
 			ctx.fillStyle = vignette;
 			ctx.fillRect(0, 0, W, H);
-
 			ctx.globalCompositeOperation = "source-over";
 		}
-		// === END GALAXY BACKGROUND FUNCTION ===
 
 		const threadData = await threadsData.get(threadID);
 		const dataPath = resolve(__dirname, "cache", "count_activity.json");
@@ -275,7 +244,6 @@ module.exports = {
 
 		const usersInGroup = (await api.getThreadInfo(threadID)).participantIDs;
 		let combinedData = [];
-
 		for (const user of threadData.members) {
 			if (!usersInGroup.includes(user.userID)) continue;
 			const activity = activityData[user.userID] || {
@@ -305,25 +273,28 @@ module.exports = {
 
 		const getAvatar = async (uid, name) => {
 			try {
-				const url = `https://graph.facebook.com/${uid}/picture?width=512&height=512&access_token=${ACCESS_TOKEN}`;
-				const response = await axios.get(url, { responseType: 'arraybuffer' });
-				return await loadImage(response.data);
+				// Utilisation de la méthode interne stable de GoatBot pour récupérer l'avatar sans token
+				return await loadImage(await usersData.getAvatarUrl(uid));
 			} catch (error) {
-				console.error("Failed to fetch avatar for", uid, "Falling back to placeholder.");
-				const canvas = new Canvas(512, 512);
-				const ctx = canvas.getContext('2d');
-				const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722'];
-				const bgColor = colors[parseInt(uid) % colors.length];
-				ctx.fillStyle = bgColor;
-				ctx.fillRect(0, 0, 512, 512);
-				ctx.fillStyle = '#FFFFFF';
-				ctx.font = '256px sans-serif';
-				ctx.textAlign = 'center';
-				ctx.textBaseline = 'middle';
-				ctx.fillText(name.charAt(0).toUpperCase(), 256, 256);
-				return await loadImage(canvas.toBuffer());
+				try {
+					return await loadImage("https://i.imgur.com/I3VsBEt.png");
+				} catch {
+					const canvas = new Canvas(512, 512);
+					const ctx = canvas.getContext('2d');
+					const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722'];
+					const bgColor = colors[parseInt(uid) % colors.length] || '#4caf50';
+					ctx.fillStyle = bgColor;
+					ctx.fillRect(0, 0, 512, 512);
+					ctx.fillStyle = '#FFFFFF';
+					ctx.font = '256px sans-serif';
+					ctx.textAlign = 'center';
+					ctx.textBaseline = 'middle';
+					ctx.fillText(name.charAt(0).toUpperCase(), 256, 256);
+					return await loadImage(canvas.toBuffer());
+				}
 			}
 		};
+
 		const drawGlowingText = (ctx, text, x, y, color, size, blur = 15) => {
 			ctx.font = `bold ${size}px "BeVietnamPro", "sans-serif"`;
 			ctx.shadowColor = color;
@@ -332,6 +303,7 @@ module.exports = {
 			ctx.fillText(text, x, y);
 			ctx.shadowBlur = 0;
 		};
+
 		const fitText = (ctx, text, maxWidth) => {
 			let currentText = text;
 			if (ctx.measureText(currentText).width > maxWidth) {
@@ -342,6 +314,7 @@ module.exports = {
 			}
 			return currentText;
 		};
+
 		const drawCircularAvatar = (ctx, avatar, x, y, radius) => {
 			ctx.save();
 			ctx.beginPath();
@@ -358,16 +331,13 @@ module.exports = {
 			const totalPages = Math.ceil(leaderboardUsers.length / usersPerPage) || 1;
 			let page = parseInt(args[1]) || 1;
 			if (page < 1 || page > totalPages) page = 1;
-
 			const startIndex = (page - 1) * usersPerPage;
 			const pageUsers = leaderboardUsers.slice(startIndex, startIndex + usersPerPage);
-
+			
 			const canvas = new Canvas(1200, 1700);
 			const ctx = canvas.getContext('2d');
 			
-			// === REPLACED GRADIENT WITH GALAXY BACKGROUND ===
 			drawGalaxyBackground(ctx, 1200, 1700);
-			// === END REPLACEMENT ===
 			
 			ctx.textAlign = 'center';
 			drawGlowingText(ctx, getLang("leaderboardTitle"), 600, 100, theme.primary, 60);
@@ -389,8 +359,10 @@ module.exports = {
 				ctx.arc(pos.x, pos.y, pos.r + 5, 0, Math.PI * 2);
 				ctx.stroke();
 				ctx.shadowBlur = 0;
+				
 				const avatar = await getAvatar(user.uid, user.name);
 				drawCircularAvatar(ctx, avatar, pos.x, pos.y, pos.r);
+				
 				ctx.textAlign = 'center';
 				ctx.font = `bold ${pos.r * 0.3}px "BeVietnamPro", "sans-serif"`;
 				ctx.fillStyle = '#FFFFFF';
@@ -398,6 +370,7 @@ module.exports = {
 				ctx.font = `normal ${pos.r * 0.25}px "BeVietnamPro", "sans-serif"`;
 				ctx.fillStyle = theme.secondary;
 				ctx.fillText(`${user.count} msgs`, pos.x, pos.y + pos.r + 75);
+				
 				ctx.fillStyle = podColors[i];
 				ctx.beginPath();
 				ctx.arc(pos.x, pos.y - pos.r + 10, 25, 0, Math.PI * 2);
@@ -416,7 +389,7 @@ module.exports = {
 				ctx.font = `bold 30px "BeVietnamPro", "sans-serif"`;
 				ctx.fillStyle = theme.secondary;
 				ctx.fillText(`#${user.rank}`, 60, currentY + 58);
-
+				
 				const avatar = await getAvatar(user.uid, user.name);
 				drawCircularAvatar(ctx, avatar, 160, currentY + 45, 30);
 				
@@ -424,18 +397,17 @@ module.exports = {
 				ctx.fillText(fitText(ctx, user.name, 350), 210, currentY + 58);
 				
 				const barWidth = 350;
-                const barX = 700;
+				const barX = 700;
 				const progress = (user.count / (top3[0]?.count || user.count)) * barWidth;
 				ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
 				ctx.fillRect(barX, currentY + 35, barWidth, 20);
 				ctx.fillStyle = theme.primary;
 				ctx.fillRect(barX, currentY + 35, progress, 20);
-                
+				
 				ctx.textAlign = 'right';
 				ctx.font = `bold 30px "BeVietnamPro", "sans-serif"`;
 				ctx.fillStyle = theme.primary;
 				ctx.fillText(user.count, 1140, currentY + 58);
-
 				currentY += 105;
 			}
 			
@@ -444,7 +416,7 @@ module.exports = {
 			ctx.font = `normal 24px "BeVietnamPro", "sans-serif"`;
 			ctx.fillText(getLang("page", page, totalPages), 600, 1630);
 			ctx.fillText(getLang("reply"), 600, 1660);
-
+			
 			const path = resolve(__dirname, 'cache', `leaderboard_${threadID}.png`);
 			const out = createWriteStream(path);
 			const stream = canvas.createPNGStream();
@@ -454,13 +426,15 @@ module.exports = {
 					attachment: require('fs').createReadStream(path)
 				}, (err, info) => {
 					if (err) return console.error(err);
-					global.GoatBot.onReply.set(info.messageID, {
-						commandName: this.config.name,
-						messageID: info.messageID,
-						author: senderID,
-						threadID: threadID,
-						type: 'leaderboard'
-					});
+					if (global.GoatBot?.onReply) {
+						global.GoatBot.onReply.set(info.messageID, {
+							commandName: this.config.name,
+							messageID: info.messageID,
+							author: senderID,
+							threadID: threadID,
+							type: 'leaderboard'
+						});
+					}
 				});
 			});
 		}
@@ -470,14 +444,10 @@ module.exports = {
 			for(const uid of targetUsers) {
 				const user = combinedData.find(u => u.uid == uid);
 				if (!user) continue;
-
 				const canvas = new Canvas(800, 1200);
 				const ctx = canvas.getContext('2d');
-
-				// === REPLACED GRADIENT WITH GALAXY BACKGROUND ===
+				
 				drawGalaxyBackground(ctx, 800, 1200);
-				// === END REPLACEMENT ===
-
 				drawGlowingText(ctx, getLang("userCardTitle"), 400, 70, theme.primary, 45);
 				
 				ctx.shadowColor = theme.primary;
@@ -490,7 +460,6 @@ module.exports = {
 				ctx.font = `bold 40px "BeVietnamPro", "sans-serif"`;
 				ctx.fillStyle = '#FFFFFF';
 				ctx.fillText(fitText(ctx, user.name, 600), 400, 340);
-
 				ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
 				ctx.fillRect(50, 400, 700, 120);
 				
@@ -503,12 +472,11 @@ module.exports = {
 				ctx.shadowBlur = 10;
 				ctx.stroke();
 				ctx.shadowBlur = 0;
-
+				
 				ctx.fillStyle = theme.secondary;
 				ctx.font = `bold 24px "BeVietnamPro", "sans-serif"`;
 				ctx.fillText(getLang("serverRank"), 225, 440);
 				ctx.fillText(getLang("totalMessages"), 575, 440);
-
 				ctx.fillStyle = theme.primary;
 				ctx.font = `bold 48px "BeVietnamPro", "sans-serif"`;
 				ctx.fillText(`#${user.rank}`, 225, 490);
@@ -535,14 +503,14 @@ module.exports = {
 				ctx.fillStyle = '#FFFFFF';
 				ctx.font = `bold 32px "BeVietnamPro", "sans-serif"`;
 				ctx.fillText(busiestDay.count > 0 ? `${busiestDay.label} - ${busiestDay.count} msgs` : 'N/A', 400, 625);
-
+				
 				ctx.textAlign = 'left';
 				ctx.fillStyle = theme.secondary;
 				ctx.font = `bold 24px "BeVietnamPro", "sans-serif"`;
 				ctx.fillText(getLang("dailyActivity"), 50, 700);
 				
 				const graphX = 80, graphW = 640, graphH = 120;
-                const graphY = 850;
+				const graphY = 850;
 				ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
 				ctx.lineWidth = 1;
 				ctx.strokeRect(graphX, graphY - graphH, graphW, graphH);
@@ -558,19 +526,18 @@ module.exports = {
 					const x = graphX + (i / 6) * graphW;
 					const y = graphY - (day.count / maxCount * graphH);
 					ctx.lineTo(x, y);
-
 					ctx.textAlign = 'center';
 					ctx.fillStyle = theme.secondary;
 					ctx.font = '18px "BeVietnamPro", "sans-serif"';
 					ctx.fillText(day.shortLabel, x, graphY + 25);
 				});
 				ctx.stroke();
-
+				
 				ctx.textAlign = 'left';
 				ctx.fillStyle = theme.secondary;
 				ctx.font = `bold 24px "BeVietnamPro", "sans-serif"`;
 				ctx.fillText(getLang("messageBreakdown"), 50, 920);
-
+				
 				const types = user.activity.types;
 				const totalTypes = types.text + types.sticker + types.media;
 				const breakdownData = [
@@ -579,11 +546,10 @@ module.exports = {
 					{ label: getLang("media"), value: types.media, color: '#F4E409' }
 				];
 				
-                const donutY = 1025;
-                const donutR = 60;
+				const donutY = 1025;
+				const donutR = 60;
 				const donutX = 200;
 				let startAngle = -0.5 * Math.PI;
-
 				if(totalTypes > 0) {
 					breakdownData.forEach(item => {
 						const sliceAngle = (item.value / totalTypes) * 2 * Math.PI;
@@ -616,7 +582,7 @@ module.exports = {
 					ctx.textAlign = 'left';
 					legendY += 45;
 				});
-
+				
 				const path = resolve(__dirname, 'cache', `usercard_${uid}.png`);
 				const out = createWriteStream(path);
 				const stream = canvas.createPNGStream();
@@ -627,10 +593,9 @@ module.exports = {
 			}
 		}
 	},
-	
+
 	onReply: async function ({ event, Reply, message, getLang }) {
 		if (event.senderID !== Reply.author || Reply.type !== 'leaderboard') return;
-
 		const page = parseInt(event.body);
 		if (isNaN(page)) return;
 		
@@ -647,5 +612,4 @@ module.exports = {
 			message.reply(getLang("invalidPage"));
 		}
 	}
-
 };
