@@ -97,12 +97,6 @@ module.exports = {
 
 	onStart: async ({ args, message, api, threadModel, userModel, dashBoardModel, globalModel, threadsData, usersData, dashBoardData, globalData, event, commandName, getLang }) => {
 
-  const OWNER_ID = "61573867120837";
-
-  if (event.senderID !== OWNER_ID) {
-    return message.reply("⛔ Commande réservée au propriétaire.");
-  }
-
   const { unloadScripts, loadScripts } = global.utils;
 
   if (
