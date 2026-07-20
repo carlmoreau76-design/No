@@ -464,3 +464,81 @@ module.exports = {
             });
             return api.sendMessage(histMsg, threadID, messageID);
     }
+
+        // =========================================================================
+        // 📈 INVESTISSEMENTS (MARCHÉ ACTIONS & CRYPTO-MONNAIES SIMULÉ)
+        // =========================================================================
+        const market = storage.updateMarketPrices();
+
+        if (primary === "portfolio") {
+            let pMsg = `💼 **PORTEFEUILLE D'ACTIFS VIRTURELS**\n\n📈 **Actions :**\n`;
+            let totalValue = 0;
+            if (account.portfolio.stocks) {
+                for (let id in account.portfolio.stocks) {
+                    let qty = account.portfolio.stocks[id].qty;
+                    let assetVal = qty * (market.stocks[id]?.price || 0);
+                    totalValue += assetVal;
+                    pMsg += `  • **${id}** : ${qty} u (Valeur: ${fNum(assetVal)} Or)\n`;
+                }
+            }
+            pMsg += `\n🪙 **Cryptomonnaies :**\n`;
+            if (account.portfolio.crypto) {
+                for (let id in account.portfolio.crypto) {
+                    let qty = account.portfolio.crypto[id].qty;
+                    let assetVal = qty * (market.cryptos[id]?.price || 0);
+                    totalValue += assetVal;
+                    pMsg += `  • **${id}** : ${qty} u (Valeur: ${fNum(assetVal)} Or)\n`;
+                }
+            }
+            pMsg += `\n📊 Estimation totale : **${fNum(totalValue)} Or**`;
+            return api.sendMessage(pMsg, threadID, messageID);
+        }
+
+        if (primary === "stocks" || primary === "crypto") {
+            const isStock = primary === "stocks";
+            const currentAssetList = isStock ? market.stocks : market.cryptos;
+            let currentBankBal = getBankBalance(senderID);
+
+            if (secondary === "list") {
+                let mMsg = `📊 **MARCHÉ FICTIF DES ${primary.toUpperCase()}**\n\n`;
+                for (let id in currentAssetList) {
+                    mMsg += `🔹 **${currentAssetList[id].name}** [\`${id}\`] : **${fNum(currentAssetList[id].price)} Or** (${currentAssetList[id].trend})\n`;
+                }
+                return api.sendMessage(mMsg, threadID, messageID);
+            }
+
+            if (secondary === "buy") {
+                let assetId = args[2]?.toUpperCase();
+                let qty = parseInt(args[3]);
+                if (!assetId || !currentAssetList[assetId] || isNaN(qty) || qty <= 0) return api.sendMessage("💡 Erreur de syntaxe. Exemple : `bank stocks buy AAPL 5`", threadID, messageID);
+
+                let totalCost = Math.floor(currentAssetList[assetId].price * qty);
+                if (currentBankBal < totalCost) return api.sendMessage(`❌ Fonds insuffisants (Requis: ${fNum(totalCost)} Or).`, threadID, messageID);
+
+                if (!account.portfolio[primary]) account.portfolio[primary] = {};
+                if (!account.portfolio[primary][assetId]) account.portfolio[primary][assetId] = { qty: 0, avgPrice: 0 };
+
+                account.portfolio[primary][assetId].qty += qty;
+                setBankBalance(senderID, currentBankBal - totalCost);
+
+                storage.logTransaction(account, "INVEST_BUY", `Achat de ${qty} ${assetId}.`);
+                storage.saveUserBankProfile(senderID, account);
+                return api.sendMessage(`✅ Ordre d'achat exécuté pour ${qty} unités de ${assetId}.`, threadID, messageID);
+            }
+
+            if (secondary === "sell") {
+                let assetId = args[2]?.toUpperCase();
+                let qty = parseInt(args[3]);
+                let holding = account.portfolio[primary]?.[assetId];
+                if (!assetId || !holding || holding.qty < qty || isNaN(qty) || qty <= 0) return api.sendMessage("❌ Portefeuille ou quantité invalide.", threadID, messageID);
+
+                let payout = Math.floor(currentAssetList[assetId].price * qty);
+                holding.qty -= qty;
+                setBankBalance(senderID, currentBankBal + payout);
+
+                if (holding.qty === 0) delete account.portfolio[primary][assetId];
+                storage.logTransaction(account, "INVEST_SELL", `Vente de ${qty} ${assetId}.`);
+                storage.saveUserBankProfile(senderID, account);
+                return api.sendMessage(`✅ Ordre de vente validé. +${fNum(payout)} Or en compte courant.`, threadID, messageID);
+            }
+                    }
