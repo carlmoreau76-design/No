@@ -48,6 +48,7 @@ async function getAttachmentContent(message) {
 module.exports = {
     config: {
         name: "hedgehoggpt",
+        aliases: ["ggpt"],
         version: "1.0.0",
         author: "Hedgehog Developer",
         countDown: 5,
