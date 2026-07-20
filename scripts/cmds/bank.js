@@ -26,17 +26,20 @@ module.exports = {
         const { threadID, messageID, senderID } = event;
         const now = Date.now();
 
-        // Récupération sécurisée du nom du joueur
-        const senderName = event.senderName || `Aventurier #${senderID.slice(-4)}`;
+        // Récupération stable du profil et du vrai nom depuis la base de données
+        const userData = await usersData.get(senderID);
+        const senderName = userData ? userData.name : `Aventurier #${senderID.slice(-4)}`;
                 
         // Chargement du profil d'extension bancaire secondaire
         const account = storage.getUserBankProfile(senderID, senderName);
         const fNum = storage.formatMoney;
 
-        // --- SYNCHRONISATION NATIVE AVEC LES SYSTEMES DE STOCKAGE GOATBOT ---
-        let walletCash = global.data && global.data.allUserData?.[senderID] ? (global.data.allUserData[senderID].money || 0) : 0;
+        // Récupération du VRAI cash de l'utilisateur mis à jour
+        let walletCash = userData ? (userData.money || 0) : 0;
         
-        const syncWalletCash = (uid, amount) => {
+        // Système de synchronisation direct avec la base de données GoatBot
+        const syncWalletCash = async (uid, amount) => {
+            await usersData.set(uid, { money: Math.max(0, Math.floor(amount)) });
             if (global.data && global.data.allUserData?.[uid]) {
                 global.data.allUserData[uid].money = Math.max(0, Math.floor(amount));
             }
