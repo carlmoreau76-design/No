@@ -22,10 +22,29 @@ function initData() {
 // Fonction pour appeler l'API de l'IA (Version gratuite et automatique)
 async function callAI(prompt, systemInstruction = "Tu es Hedgehog Copilot, un assistant expert en développement logiciel.") {
     try {
-        const response = await axios.get(`https://api.samir.xyz/api/gpt4?q=${encodeURIComponent(systemInstruction + "\n\n" + prompt)}`);
-        return response.data.content || response.data.reply; 
+        // On récupère le token que tu as déjà mis dans ton fichier .env
+        const token = process.env.GITHUB_TOKEN; 
+        
+        const response = await axios.post(
+            'https://models.inference.ai.azure.com/chat/completions', 
+            {
+                model: "gpt-4o-mini", // Utilise un modèle puissant et ultra-rapide
+                messages: [
+                    { role: "system", content: systemInstruction },
+                    { role: "user", content: prompt }
+                ]
+            }, 
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        return response.data.choices[0].message.content;
     } catch (error) {
-        throw new Error("Impossible de joindre l'API de l'IA. Vérifiez le lien ou la connexion.");
+        throw new Error("Impossible de joindre l'API GitHub AI. Vérifie que ton GITHUB_TOKEN a bien accès aux modèles d'IA.");
     }
 }
 
