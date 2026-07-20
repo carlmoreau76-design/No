@@ -302,3 +302,165 @@ module.exports = {
             storage.saveUserBankProfile(senderID, account);
             return api.sendMessage(`✅ RETRAIT EFFECTUÉ : ${fNum(amountToWithdraw)} Or replacés dans votre portefeuille liquide.`, threadID, messageID);
         }
+
+        // =========================================================================
+        // 💸 TRANSFERT SECURISE INTER-JOUEURS (COMPTE A COMPTE) - TEXTE PUR MENTION
+        // =========================================================================
+        if (primary === "transfer") {
+            let targetID = null;
+            if (event.type === "message_reply") {
+                targetID = event.messageReply.senderID;
+            } else if (Object.keys(event.mentions).length > 0) {
+                targetID = Object.keys(event.mentions)[0];
+            } else if (args[1] && !isNaN(args[1])) {
+                targetID = args[1];
+            }
+            let amountIndex = (event.type === "message_reply") ? 1 : 2;
+            let amountStr = args[amountIndex];
+            let amountToTransfer = parseInt(amountStr);
+            let currentBankBal = getBankBalance(senderID);
+
+            if (!targetID || isNaN(amountToTransfer) || amountToTransfer <= 0) {
+                return api.sendMessage("💡 Usage : Indiquez l'UID ou répondez à son message : `bank transfer <uid> <montant>`", threadID, messageID);
+            }
+            if (targetID === senderID) return api.sendMessage("❌ Impossible de cibler votre propre compte.", threadID, messageID);
+            if (currentBankBal < amountToTransfer) return api.sendMessage("❌ Solde bancaire insuffisant.", threadID, messageID);
+
+            const tax = Math.floor(amountToTransfer * 0.02);
+            const netReceived = amountToTransfer - tax;
+
+            const targetName = global.data?.allUserData?.[targetID]?.name || `Client #${targetID.slice(-4)}`;
+            const targetAccount = storage.getUserBankProfile(targetID, targetName);
+            let targetBankBal = getBankBalance(targetID);
+
+            setBankBalance(senderID, currentBankBal - amountToTransfer);
+            setBankBalance(targetID, targetBankBal + netReceived);
+            
+            account.totalTransferred += amountToTransfer;
+
+            storage.logTransaction(account, "TRANSFER", `Virement émis vers ${targetName} : -${fNum(amountToTransfer)} Or.`);
+            storage.logTransaction(targetAccount, "TRANSFER", `Virement reçu de ${account.name} : +${fNum(netReceived)} Or.`);
+
+            storage.saveUserBankProfile(senderID, account);
+            storage.saveUserBankProfile(targetID, targetAccount);
+
+            let transMsg = `💸 VIREMENT EFFECTUÉ\n\n`;
+            transMsg += `📤 Émetteur : ${account.name}\n`;
+            transMsg += `📥 Bénéficiaire : ${targetName}\n`;
+            transMsg += `🏛️ Frais (2%) : ${fNum(tax)} Or\n`;
+            transMsg += `💰 Montant Net Reçu : ${fNum(netReceived)} Or`;
+            return api.sendMessage(transMsg, threadID, messageID);
+        }
+
+        // =========================================================================
+        // 🔐 COFFRE-FORT SECURISE
+        // =========================================================================
+        if (primary === "vault") {
+            let currentBankBal = getBankBalance(senderID);
+            if (!secondary) {
+                let vaultMsg = `╭───────────────────────────────────────╮\n`;
+                vaultMsg += `│ 🔐 **COFFRE-FORT DE HAUTE SECURITE**\n`;
+                vaultMsg += `├───────────────────────────────────────┤\n`;
+                vaultMsg += `│ Protégé à 100% contre les commandes de vol.\n`;
+                vaultMsg += `├───────────────────────────────────────┤\n`;
+                vaultMsg += `│ 🔐 Solde du Coffre : **${fNum(account.vaultBalance)} Or**\n`;
+                vaultMsg += `├───────────────────────────────────────┤\n`;
+                vaultMsg += `│ 💡 \`bank vault deposit <montant>\`\n`;
+                vaultMsg += `│ 💡 \`bank vault withdraw <montant>\`\n`;
+                vaultMsg += `╰───────────────────────────────────────╯`;
+                return api.sendMessage(vaultMsg, threadID, messageID);
+            }
+            let amount = parseInt(args[2]);
+            if (secondary === "deposit") {
+                if (isNaN(amount) || amount <= 0) return api.sendMessage("❌ Montant invalide.", threadID, messageID);
+                if (currentBankBal < amount) return api.sendMessage("❌ Fonds insuffisants en compte courant.", threadID, messageID);
+                
+                setBankBalance(senderID, currentBankBal - amount);
+                account.vaultBalance += amount;
+                
+                storage.logTransaction(account, "VAULT_IN", `Mise sous clé de ${fNum(amount)} Or.`);
+                storage.saveUserBankProfile(senderID, account);
+                return api.sendMessage(`🔐 COFFRE MIS A JOUR : +${fNum(amount)} Or sécurisés.`, threadID, messageID);
+            }
+            if (secondary === "withdraw") {
+                if (isNaN(amount) || amount <= 0) return api.sendMessage("❌ Montant invalide.", threadID, messageID);
+                if (account.vaultBalance < amount) return api.sendMessage("❌ Le coffre ne contient pas cette somme.", threadID, messageID);
+                
+                account.vaultBalance -= amount;
+                setBankBalance(senderID, currentBankBal + amount);
+                
+                storage.logTransaction(account, "VAULT_OUT", `Retrait de ${fNum(amount)} Or depuis le coffre.`);
+                storage.saveUserBankProfile(senderID, account);
+                return api.sendMessage(`🔓 RETRAIT COFFRE : +${fNum(amount)} Or replacés en compte courant.`, threadID, messageID);
+            }
+        }
+
+        // =========================================================================
+        // 💳 CREDIT, PRÊTS & HISTORIQUE
+        // =========================================================================
+        if (primary === "loan") {
+            let currentBankBal = getBankBalance(senderID);
+            let amountToLoan = parseInt(args[1]);
+            let maxLoanAllowed = Math.floor((account.creditScore / 500) * 250000);
+            if (isNaN(amountToLoan) || amountToLoan <= 0) {
+                return api.sendMessage(`💡 Usage : \`bank loan <montant>\` (Votre limite : **${fNum(maxLoanAllowed)} Or**)`, threadID, messageID);
+            }
+            if (account.loan.hasActiveLoan) return api.sendMessage("❌ Vous avez déjà un emprunt actif.", threadID, messageID);
+            if (amountToLoan > maxLoanAllowed) return api.sendMessage(`❌ Plafond dépassé pour votre score actuel.`, threadID, messageID);
+
+            let debtWithInterest = Math.floor(amountToLoan * 1.15);
+            account.loan = {
+                hasActiveLoan: true,
+                principal: amountToLoan,
+                remainingDebt: debtWithInterest,
+                dueDate: now + (24 * 60 * 60 * 1000 * 3),
+                lastPenaltyAt: now
+            };
+            
+            setBankBalance(senderID, currentBankBal + amountToLoan);
+            account.creditScore = Math.max(300, account.creditScore - 15);
+            
+            storage.logTransaction(account, "LOAN", `Emprunt de ${fNum(amountToLoan)} Or.`);
+            storage.saveUserBankProfile(senderID, account);
+            return api.sendMessage(`✅ EMPRUNT ACCORDÉ : +${fNum(amountToLoan)} Or en compte. À rembourser : ${fNum(debtWithInterest)} Or.`, threadID, messageID);
+        }
+
+        if (primary === "repay") {
+            if (!account.loan.hasActiveLoan) return api.sendMessage("❌ Aucune dette active.", threadID, messageID);
+            let currentBankBal = getBankBalance(senderID);
+            let amountStr = args[1];
+            let amountToRepay = amountStr && amountStr.toLowerCase() === "all" ? account.loan.remainingDebt : parseInt(amountStr);
+            if (isNaN(amountToRepay) || amountToRepay <= 0) return api.sendMessage("💡 Usage : `bank repay <montant|all>`", threadID, messageID);
+            if (currentBankBal < amountToRepay) return api.sendMessage("❌ Solde bancaire insuffisant.", threadID, messageID);
+
+            setBankBalance(senderID, currentBankBal - amountToRepay);
+            account.loan.remainingDebt -= amountToRepay;
+
+            if (account.loan.remainingDebt <= 0) {
+                account.loan.hasActiveLoan = false;
+                account.loan.remainingDebt = 0;
+                account.creditScore = Math.min(850, account.creditScore + 45);
+                storage.logTransaction(account, "LOAN_CLOSE", "Remboursement intégral.");
+            } else {
+                storage.logTransaction(account, "LOAN_REPAY", `Remboursement partiel.`);
+            }
+            storage.saveUserBankProfile(senderID, account);
+            return api.sendMessage(`📉 Dette mise à jour. Reste dû : ${fNum(account.loan.remainingDebt)} Or.`, threadID, messageID);
+        }
+
+        if (primary === "credit") {
+            let status = "Médiocre";
+            if (account.creditScore > 700) status = "Excellent";
+            else if (account.creditScore > 600) status = "Bon";
+            else if (account.creditScore > 450) status = "Stable";
+            return api.sendMessage(`📊 CONFIANCE BANCAIRE : **${account.creditScore} pts** [**${status}**]`, threadID, messageID);
+        }
+
+        if (primary === "history") {
+            if (!account.history || account.history.length === 0) return api.sendMessage("📭 Aucun flux récent.", threadID, messageID);
+            let histMsg = `📜 RELEVÉ DE COMPTE DE : ${account.name.toUpperCase()}\n\n`;
+            account.history.slice(-10).forEach((log, idx) => {
+                histMsg += `${idx + 1}. [${log.type}] ${log.message}\n`;
+            });
+            return api.sendMessage(histMsg, threadID, messageID);
+    }
