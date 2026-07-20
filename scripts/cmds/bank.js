@@ -686,8 +686,9 @@ module.exports = {
                 targetAccount.robberyState.shieldUntil = now + (2 * 60 * 60 * 1000);
                 account.robberyState.robSuccess = (account.robberyState.robSuccess || 0) + 1;
 
-                syncWalletCash(senderID, walletCash);
-                syncWalletCash(targetID, targetCash);
+                // 🟢 Ajout des await ici pour la réussite
+                await syncWalletCash(senderID, walletCash);
+                await syncWalletCash(targetID, targetCash);
                 storage.saveUserBankProfile(senderID, account);
                 storage.saveUserBankProfile(targetID, targetAccount);
 
@@ -698,15 +699,16 @@ module.exports = {
                 targetCash += fine;
                 account.creditScore = Math.max(300, account.creditScore - 30);
 
-                syncWalletCash(senderID, walletCash);
-                syncWalletCash(targetID, targetCash);
+                // 🟢 Ajout des await ici pour l'échec (l'amende)
+                await syncWalletCash(senderID, walletCash);
+                await syncWalletCash(targetID, targetCash);
                 storage.saveUserBankProfile(senderID, account);
                 storage.saveUserBankProfile(targetID, targetAccount);
 
                 return api.sendMessage(`🚨 ÉCHEC ! Les caméras ont capturé votre visage chez ${targetName}. Amende de -${fNum(fine)} Or prélevée.`, threadID, messageID);
             }
         }
-
+        
         if (primary === "networth") {
             let bizVal = 0, propVal = 0;
             for (let id in account.businesses) bizVal += (BIZ_PRESETS[id]?.price || 0) * account.businesses[id].level;
