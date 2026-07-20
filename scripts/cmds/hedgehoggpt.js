@@ -19,30 +19,17 @@ function initData() {
     }
 }
 
-// Fonction pour appeler l'API de l'IA (À adapter selon votre clé / API Hedgehog ou OpenAI)
+// Fonction pour appeler l'API de l'IA (Version gratuite et automatique)
 async function callAI(prompt, systemInstruction = "Tu es Hedgehog Copilot, un assistant expert en développement logiciel.") {
     try {
-        // Mettez ici votre endpoint API et vos configurations
-        // Exemple générique avec une structure standard
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: "gpt-4o-mini", // Ou le modèle de votre choix
-            messages: [
-                { role: "system", content: systemInstruction },
-                { role: "user", content: prompt }
-            ]
-        }, {
-            headers: {
-                'Authorization': `Bearer VOTRE_CLE_API_ICI`,
-                'Content-Type': 'application/json'
-            }
-        });
-        return response.data.choices[0].message.content;
+        const response = await axios.get(`https://api.samir.xyz/api/gpt4?q=${encodeURIComponent(systemInstruction + "\n\n" + prompt)}`);
+        return response.data.content || response.data.reply; 
     } catch (error) {
-        // En cas d'échec de l'API réelle, mode simulation / message d'erreur clair
-        throw new Error("Erreur lors de la communication avec l'API IA. Vérifiez votre configuration de clé d'API.");
+        throw new Error("Impossible de joindre l'API de l'IA. Vérifiez le lien ou la connexion.");
     }
 }
 
+// ... Tout le reste du code (module.exports, onStart, subCmd, etc.) reste identique !
 // Récupérer le contenu d'une pièce jointe (texte, js, json, html, etc.)
 async function getAttachmentContent(message) {
     if (!message.attachments || message.attachments.length === 0) return null;
