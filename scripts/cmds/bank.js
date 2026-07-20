@@ -298,7 +298,7 @@ module.exports = {
             walletCash += amountToWithdraw;
             
             setBankBalance(senderID, currentBankBal);
-            syncWalletCash(senderID, walletCash);
+            await syncWalletCash(senderID, walletCash);
             
             account.totalWithdrawn += amountToWithdraw;
             storage.logTransaction(account, "WITHDRAW", `Retrait de ${fNum(amountToWithdraw)} Or.`);
