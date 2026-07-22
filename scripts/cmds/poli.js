@@ -24,7 +24,7 @@ module.exports = {
     description: {
       en: "Generate an image",
     },
-    category: "image generator",
+    category: "image",
     guide: {
       en: "{pn} <prompt>\nExample: ${prefix}poli futuristic dragon flying in space",
     },
